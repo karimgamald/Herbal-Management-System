@@ -1,0 +1,6 @@
+@PhytoIntellect.Api_HostAddress = http://localhost:5189
+
+GET {{PhytoIntellect.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

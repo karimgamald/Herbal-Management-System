@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="PhytoIntellect.Api/PhytoIntellect.Api.csproj" />
+  <Project Path="PhytoIntellect.Application/PhytoIntellect.Application.csproj" />
+  <Project Path="PhytoIntellect.Core/PhytoIntellect.Core.csproj" />
+  <Project Path="PhytoIntellect.Infrastructure/PhytoIntellect.Infrastructure.csproj" />
+</Solution>
