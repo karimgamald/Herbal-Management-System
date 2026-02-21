@@ -1,4 +1,8 @@
-﻿namespace Herbal_System.Entities
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace PhytoIntellect.Core.Entities
 {
     public class RefreshToken
     {
@@ -10,6 +14,4 @@
         public int UserId { get; set; }
         public User User { get; set; } = null!;
     }
-
-
 }

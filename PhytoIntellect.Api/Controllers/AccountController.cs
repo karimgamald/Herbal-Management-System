@@ -1,9 +1,9 @@
-﻿using Herbal_System.DTOs;
-using Herbal_System.Entities;
-using Herbal_System.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using PhytoIntellect.Api.DTOs;
+using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 
 [ApiController]

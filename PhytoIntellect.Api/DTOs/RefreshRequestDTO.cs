@@ -1,4 +1,4 @@
-﻿namespace Herbal_System.DTOs
+﻿namespace PhytoIntellect.Api.DTOs
 {
     public class RefreshRequestDTO
     {

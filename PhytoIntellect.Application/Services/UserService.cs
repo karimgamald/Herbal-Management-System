@@ -1,8 +1,11 @@
-﻿using Herbal_System.Entities;
-using Herbal_System.Interfaces;
+﻿using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.Presistence;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace Herbal_System.Services
+namespace PhytoIntellect.Application.Services
 {
     public class UserService : IUserService
     {
@@ -28,5 +31,4 @@ namespace Herbal_System.Services
             return user;
         }
     }
-
 }

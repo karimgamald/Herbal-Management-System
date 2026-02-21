@@ -1,7 +1,9 @@
-﻿using System.Security.Cryptography;
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Text;
 
-namespace Herbal_System.Entities
+namespace PhytoIntellect.Core.Entities
 {
     public class TokenHasher
     {

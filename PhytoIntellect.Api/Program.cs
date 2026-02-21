@@ -1,8 +1,8 @@
-using Herbal_System.Interfaces;
-using Herbal_System.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using PhytoIntellect.Application.Services;
+using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 using System.Security.Claims;
 using System.Text;

@@ -1,13 +1,15 @@
-﻿using Herbal_System.Entities;
-using Herbal_System.Interfaces;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Core.Interfaces;
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Herbal_System.Services
+namespace PhytoIntellect.Application.Services
 {
     public class TokenService : ITokenService
     {
@@ -27,7 +29,7 @@ namespace Herbal_System.Services
                 // ⭐ THIS IS THE MOST IMPORTANT LINE => for determine the roles in the access token
                 new Claim(ClaimTypes.Role, user.Role)
             };
-            
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -52,5 +54,4 @@ namespace Herbal_System.Services
             return Convert.ToBase64String(randomBytes);
         }
     }
-
 }
