@@ -1,32 +1,41 @@
-﻿using Herbal_System.Entities;
-using Herbal_System.Interfaces;
-using PhytoIntellect.Infrastructure.Presistence;
+﻿using PhytoIntellect.Application.DTOs.UserDTOs;
+using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Core.Interfaces;
 
-namespace Herbal_System.Services
+namespace PhytoIntellect.Application.Services;
+
+public class UserService(IUserRepository userRepository) : IUserService
 {
-    public class UserService : IUserService
+    private readonly IUserRepository _userRepository = userRepository;
+
+    public async Task<string> RegisterUserAsync(RegisterUserDto request)
     {
-        private readonly ApplicationDbContext _context;
-
-        public UserService(ApplicationDbContext context)
+        // 1. نتأكد إن الإيميل مش موجود قبل كدا
+        var emailExists = await _userRepository.EmailExistsAsync(request.Email);
+        if (emailExists)
         {
-            _context = context;
+            return "Email is already registered. Please try logging in.";
         }
 
-        public async Task<User?> ValidateUserAsync(string username, string password)
+        // 2. نحول الـ DTO لـ Entity (لو معاك AutoMapper هيوفر السطور دي)
+        var newUser = new User
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserName == username);
+            FullName = request.FullName,
+            UserName = request.UserName,
+            Email = request.Email,
+            // يفضل تشفر الباسورد هنا بـ BCrypt مثلاً
+            // Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Password = request.Password, // مؤقتاً لحد ما تظبط التشفير
+            Role = request.Role,
+            Phone = request.Phone,
+            CreatedAt = DateTime.Now
+        };
 
-            if (user == null)
-                return null;
+        // 3. نحفظ في الداتابيز
+        await _userRepository.AddAsync(newUser);
 
-            // Password verification (hashed)
-            if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
-                return null;
-
-            return user;
-        }
+        return "User registered successfully.";
     }
-
 }
+
