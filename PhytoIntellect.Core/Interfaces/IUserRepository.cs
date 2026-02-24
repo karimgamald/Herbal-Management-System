@@ -1,6 +1,6 @@
 ﻿using PhytoIntellect.Core.Entities;
 
-namespace PhytoIntellect.Core.Interfaces.RepositoryInterfaces;
+namespace PhytoIntellect.Core.Interfaces;
 
 public interface IUserRepository
 {

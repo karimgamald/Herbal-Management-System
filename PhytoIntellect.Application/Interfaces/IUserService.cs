@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PhytoIntellect.Core.Interfaces
+namespace PhytoIntellect.Application.Interfaces
 {
     public interface IUserService
     {

@@ -1,8 +1,6 @@
-
-using PhytoIntellect.Api;
+using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application;
 using PhytoIntellect.Infrastructure;
-
 
 
 var builder = WebApplication.CreateBuilder(args);

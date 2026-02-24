@@ -1,6 +1,6 @@
 ﻿using Microsoft.OpenApi.Models;
 
-namespace PhytoIntellect.Api;
+namespace PhytoIntellect.Api.Extensions;
 
 public static class SwaggerConfiguration
 {

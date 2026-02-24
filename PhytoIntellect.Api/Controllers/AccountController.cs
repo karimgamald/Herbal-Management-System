@@ -7,8 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Api.DTOs.UserDTOs;
 using PhytoIntellect.Application.DTOs.UserDTOs;
+using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
-using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 using PhytoIntellect.Infrastructure.Repository;
 
@@ -102,7 +102,7 @@ namespace PhytoIntellect.Api.Controllers
             });
 
         }
-        [HttpPost("Reset Password")]
+        [HttpPost("rese-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
         {
             var user = await _userService.ValidateByUserNameAsync(model.UserName);

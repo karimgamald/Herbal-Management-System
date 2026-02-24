@@ -1,7 +1,7 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Core.Entities;
-using PhytoIntellect.Core.Interfaces.RepositoryInterfaces;
+using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 
 namespace PhytoIntellect.Infrastructure.Repository;

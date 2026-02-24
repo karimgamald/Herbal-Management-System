@@ -13,7 +13,7 @@ public class Patient
     public int UserId { get; set; }
 
     public DateTime BirthDate { get; set; } 
-    public Gender Gender { get; set; } // يفضل قدام تحولها لـ Enum
+    public Gender Gender { get; set; }
 
     // Navigation Properties
     public User User { get; set; }

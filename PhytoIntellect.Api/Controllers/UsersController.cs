@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.DTOs.UserDTOs;
-using PhytoIntellect.Core.Interfaces;
+using PhytoIntellect.Application.Interfaces;
 
 namespace PhytoIntellect.Api.Controllers;
 
