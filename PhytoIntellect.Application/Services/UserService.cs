@@ -1,41 +1,40 @@
-﻿using PhytoIntellect.Application.DTOs.UserDTOs;
-using PhytoIntellect.Application.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Interfaces;
+using PhytoIntellect.Core.Interfaces.RepositoryInterfaces;
 
 namespace PhytoIntellect.Application.Services;
 
-public class UserService(IUserRepository userRepository) : IUserService
+public class UserService : IUserService
 {
-    private readonly IUserRepository _userRepository = userRepository;
+    private readonly IUserRepository _userRepository;
 
-    public async Task<string> RegisterUserAsync(RegisterUserDto request)
+    public UserService(IUserRepository userRepository)
     {
-        // 1. نتأكد إن الإيميل مش موجود قبل كدا
-        var emailExists = await _userRepository.EmailExistsAsync(request.Email);
-        if (emailExists)
-        {
-            return "Email is already registered. Please try logging in.";
-        }
+        _userRepository = userRepository;
+    }
 
-        // 2. نحول الـ DTO لـ Entity (لو معاك AutoMapper هيوفر السطور دي)
-        var newUser = new User
-        {
-            FullName = request.FullName,
-            UserName = request.UserName,
-            Email = request.Email,
-            // يفضل تشفر الباسورد هنا بـ BCrypt مثلاً
-            // Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Password = request.Password, // مؤقتاً لحد ما تظبط التشفير
-            Role = request.Role,
-            Phone = request.Phone,
-            CreatedAt = DateTime.Now
-        };
+    public async Task<User?> ValidateUserAsync(string username, string password)
+    {
+        var user = await _userRepository.GetByUserNameAsync(username);
 
-        // 3. نحفظ في الداتابيز
-        await _userRepository.AddAsync(newUser);
+        if (user == null)
+            return null;
 
-        return "User registered successfully.";
+        // Password verification (hashed)
+        if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+            return null;
+
+        return user;
+    }
+    public async Task<User?> ValidateByUserNameAsync(string username)
+    {
+        var user = await _userRepository.GetByUserNameAsync(username);
+
+        if (user == null)
+            return null;
+
+        return user;
     }
 }
 

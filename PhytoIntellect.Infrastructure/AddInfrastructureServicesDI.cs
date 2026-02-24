@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using PhytoIntellect.Core.Interfaces;
+using PhytoIntellect.Core.Interfaces.RepositoryInterfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 using PhytoIntellect.Infrastructure.Repository;
 using System.Security.Claims;
