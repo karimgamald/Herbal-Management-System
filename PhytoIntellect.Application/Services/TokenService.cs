@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
-using PhytoIntellect.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;

@@ -1,7 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Services;
-using PhytoIntellect.Core.Interfaces;
+using System.Reflection;
 namespace PhytoIntellect.Application;
 
 public static class AddApplicationServicesDI
@@ -10,7 +11,10 @@ public static class AddApplicationServicesDI
     {
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
 
+        // 2. تسجيل الـ AutoMapper (السطر السحري ده بيقرا كل الـ Profiles لوحده)
+        services.AddAutoMapper(Assembly.GetExecutingAssembly());
 
         return services;
     }
