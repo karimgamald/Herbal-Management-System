@@ -6,15 +6,15 @@ namespace PhytoIntellect.Infrastructure.UOW
     public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext _context;
-        public ICRUDRepository<User> UserRepository { get; private set; }
-        public ICRUDRepository<Patient> PatientRepository { get; private set; }
-        public ICRUDRepository<Herbalist> HerbalistRepository { get; private set; }
-        public ICRUDRepository<RefreshToken> RefreshTokenRepository { get; private set; }
+        public IRepository<User> UserRepository { get; private set; }
+        public IRepository<Patient> PatientRepository { get; private set; }
+        public IRepository<Herbalist> HerbalistRepository { get; private set; }
+        public IRepository<RefreshToken> RefreshTokenRepository { get; private set; }
 
         //Injection
-        public UnitOfWork(ApplicationDbContext context,ICRUDRepository<User> userRepository
-            ,ICRUDRepository<Patient> patientRepository,ICRUDRepository<Herbalist> herbalistRepository,
-            ICRUDRepository<RefreshToken> refreshTokenRepository)
+        public UnitOfWork(ApplicationDbContext context,IRepository<User> userRepository
+            ,IRepository<Patient> patientRepository,IRepository<Herbalist> herbalistRepository,
+            IRepository<RefreshToken> refreshTokenRepository)
         {
             _context = context;
             UserRepository = userRepository;

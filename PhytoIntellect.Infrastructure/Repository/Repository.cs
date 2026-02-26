@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace PhytoIntellect.Infrastructure.Repository;
 
-public class CRUDRepository<T>(ApplicationDbContext context) : ICRUDRepository<T> where T : class
+public class Repository<T>(ApplicationDbContext context) : IRepository<T> where T : class
 {
     protected readonly DbSet<T> _dbSet = context.Set<T>();
     public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true)

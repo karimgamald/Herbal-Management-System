@@ -7,7 +7,7 @@ using System.Diagnostics.Metrics;
 
 namespace PhytoIntellect.Infrastructure.Repository;
 
-public class UserRepository(ApplicationDbContext context) : CRUDRepository<User>(context), IUserRepository
+public class UserRepository(ApplicationDbContext context) : Repository<User>(context), IUserRepository
 {
     // هنا تقدر تستخدم context أو _dbSet براحتك
     // مثلا:
