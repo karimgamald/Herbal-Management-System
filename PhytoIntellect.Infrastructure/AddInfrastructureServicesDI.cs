@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 using PhytoIntellect.Infrastructure.Repository;
+using PhytoIntellect.Infrastructure.UOW;
 using System.Security.Claims;
 using System.Text;
 
@@ -16,6 +17,9 @@ public static class AddInfrastructureServicesDI
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
         return services;
     }
 

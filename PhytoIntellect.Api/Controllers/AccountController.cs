@@ -1,10 +1,5 @@
-﻿using Azure.Core;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Api.DTOs.UserDTOs;
 using PhytoIntellect.Application.DTOs.UserDTOs;
 using PhytoIntellect.Application.Interfaces;
@@ -19,17 +14,19 @@ namespace PhytoIntellect.Api.Controllers
     public class AccountController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IAuthService _authService;
         private readonly ITokenService _tokenService;
-        private readonly ApplicationDbContext _context;
 
-        public AccountController(IUserService userService, ITokenService tokenService, ApplicationDbContext context)
+        public AccountController(
+            IUserService userService,
+            IAuthService authService,
+            ITokenService tokenService)
         {
             _userService = userService;
+            _authService = authService;
             _tokenService = tokenService;
-            _context = context;
         }
 
-        //Allow anonymous access
         [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterUserDTO model)
@@ -37,35 +34,15 @@ namespace PhytoIntellect.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // 1️⃣ Check if username already exists
-            if (await _context.Users.AnyAsync(u => u.UserName == model.UserName))
-                return BadRequest("Username already exists");
+            // Register user using AuthService (which will hash password internally)
+            var result = await _authService.RegisterAsync(model);
 
-            // 2️⃣ check the password and confirm password
-            if (model.Password != model.ConfirmPassword)
-            {
-                return BadRequest("Password and ConfirmPassword do not match");
-            }
+            if (!result.Success)
+                return BadRequest(result.Message);
 
-            // 3 Hash the password
-            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.Password);
-
-            // 4 Create user entity
-            var user = new User
-            {
-                UserName = model.UserName,
-                PasswordHash = hashedPassword,
-                Role = model.Role
-            };
-
-            // 5 Save to database
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return Ok("User registered successfully");
+            return Ok(result.Message);
         }
 
-        //Allow anonymous access
         [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserDTO model)
@@ -73,36 +50,26 @@ namespace PhytoIntellect.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            //Validate user credentials
-            var user = await _userService.ValidateUserAsync(
-                model.UserName, model.Password);
+            var result = await _authService.LoginAsync(model);
 
-            if (user == null)
-                return Unauthorized("Invalid username or password");
+            if (!result.Success)
+                return Unauthorized(result.Message);
 
-            var accessToken = _tokenService.CreateAccessToken(user);
-            var refreshToken = _tokenService.CreateRefreshToken();
-
-            var refreshTokenEntity = new RefreshToken
-            {
-                UserId = user.Id,
-                TokenHash = TokenHasher.HashToken(refreshToken),
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
-                IsRevoked = false
-            };
-
-            _context.RefreshTokens.Add(refreshTokenEntity);
-            await _context.SaveChangesAsync();
-
-            //Return token
-            return Ok(new
-            {
-                accessToken,
-                refreshToken
-            });
-
+            return Ok(result.Data); // Contains accessToken + refreshToken
         }
-        [HttpPost("rese-password")]
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
+        {
+            // Reset password via UserService (it will hash the new password)
+            var result = await _userService.ResetPasswordAsync(model);
+
+            if (!result.Success)
+                return BadRequest(result.Message);
+
+            return Ok(result.Message);
+        }
+        [HttpPost("Reset Password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
         {
             var user = await _userService.ValidateByUserNameAsync(model.UserName);
@@ -115,62 +82,27 @@ namespace PhytoIntellect.Api.Controllers
             _context.Update(user);
             await _context.SaveChangesAsync();
 
-            return Ok("Password reset successfully.");
-        }
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh(RefreshRequestDTO model)
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequestDTO model)
         {
-            var tokenHash = TokenHasher.HashToken(model.RefreshToken);
+            var result = await _authService.RefreshAsync(model.RefreshToken);
 
-            var storedToken = await _context.RefreshTokens
-                .FirstOrDefaultAsync(x =>
-                    x.TokenHash == tokenHash &&
-                    !x.IsRevoked &&
-                    x.ExpiresAt > DateTime.UtcNow);
+            if (!result.Success)
+                return Unauthorized(result.Message);
 
-            if (storedToken == null)
-                return Unauthorized();
-
-            // revoke old token
-            storedToken.IsRevoked = true;
-
-            // Generate new tokens
-            var newAccessToken = _tokenService.CreateAccessToken(storedToken.User);
-            var newRefreshToken = _tokenService.CreateRefreshToken();
-
-            // rotate refresh token
-            storedToken.IsRevoked = true;
-
-            _context.RefreshTokens.Add(new RefreshToken
-            {
-                TokenHash = TokenHasher.HashToken(newRefreshToken),
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
-                IsRevoked = false
-            });
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                accessToken = newAccessToken,
-                refreshToken = newRefreshToken
-            });
+            return Ok(result.Data); // Contains new accessToken + refreshToken
         }
 
         [Authorize]
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout(RefreshRequestDTO model)
+        public async Task<IActionResult> Logout([FromBody] RefreshRequestDTO model)
         {
-            var token = await _context.RefreshTokens
-                .FirstOrDefaultAsync(x => x.TokenHash == model.RefreshToken);
+            var result = await _authService.LogoutAsync(model.RefreshToken);
 
-            if (token == null)
-                return BadRequest();
+            if (!result.Success)
+                return BadRequest(result.Message);
 
-            token.IsRevoked = true;
-            await _context.SaveChangesAsync();
-
-            return Ok("Logged out");
+            return Ok(result.Message);
         }
     }
 }
