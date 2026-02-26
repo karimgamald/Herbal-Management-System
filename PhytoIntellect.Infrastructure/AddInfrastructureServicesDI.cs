@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Services;
 using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 using PhytoIntellect.Infrastructure.Repository;
@@ -17,8 +19,11 @@ public static class AddInfrastructureServicesDI
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        services.AddScoped(typeof(ICRUDRepository<>), typeof(CRUDRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ITokenService, TokenService>();
+
+
 
         return services;
     }

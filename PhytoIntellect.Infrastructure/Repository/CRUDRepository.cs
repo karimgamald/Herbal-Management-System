@@ -1,21 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PhytoIntellect.Core.Interfaces.RepositoryInterfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 using System.Linq.Expressions;
 
 namespace PhytoIntellect.Infrastructure.Repository;
 
-public class Repository<T> : IRepository<T> where T : class
+public class CRUDRepository<T>(ApplicationDbContext context) : ICRUDRepository<T> where T : class
 {
-    private readonly ApplicationDbContext _context;
-    private readonly DbSet<T> _dbSet;
-
-    public Repository(ApplicationDbContext context)
-    {
-        _context = context;
-        _dbSet = _context.Set<T>();
-    }
-
+    protected readonly DbSet<T> _dbSet = context.Set<T>();
     public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true)
     {
         IQueryable<T> query = _dbSet;

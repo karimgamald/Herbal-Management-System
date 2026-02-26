@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\PhytoIntellect.Application\PhytoIntellect.Application.csproj" />
     <ProjectReference Include="..\PhytoIntellect.Core\PhytoIntellect.Core.csproj" />
   </ItemGroup>
 

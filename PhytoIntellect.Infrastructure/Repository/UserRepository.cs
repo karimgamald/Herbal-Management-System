@@ -7,13 +7,10 @@ using System.Diagnostics.Metrics;
 
 namespace PhytoIntellect.Infrastructure.Repository;
 
-public class UserRepository : Repository<User>, IUserRepository
+public class UserRepository(ApplicationDbContext context) : CRUDRepository<User>(context), IUserRepository
 {
-    private readonly ApplicationDbContext _context;
-    public UserRepository(ApplicationDbContext context) : base(context)
-    {
-        _context = context;
-    }
-
-    
+    // هنا تقدر تستخدم context أو _dbSet براحتك
+    // مثلا:
+    // public async Task<bool> EmailExistsAsync(string email) 
+    //     => await _dbSet.AnyAsync(u => u.Email == email);
 }

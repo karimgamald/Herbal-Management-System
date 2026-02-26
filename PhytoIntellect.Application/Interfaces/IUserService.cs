@@ -1,9 +1,6 @@
-﻿using PhytoIntellect.Application.DTOs;
-using PhytoIntellect.Application.DTOs.PhytoIntellect.Application.DTOs;
+﻿using PhytoIntellect.Application.DTOs.PhytoIntellect.Application.DTOs;
 using PhytoIntellect.Application.DTOs.UserDTOs;
 using PhytoIntellect.Core.Entities;
-using System;
-using System.Collections.Generic;
 
 namespace PhytoIntellect.Application.Interfaces
 {

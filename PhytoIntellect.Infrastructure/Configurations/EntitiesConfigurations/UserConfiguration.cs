@@ -1,9 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PhytoIntellect.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace PhytoIntellect.Infrastructure.Configurations.EntitiesConfigurations;
 
