@@ -7,13 +7,8 @@ namespace PhytoIntellect.Infrastructure.Presistence;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
-    //public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    //    : base(options)
-    //{
-    //}
-
-    // Tables
     public DbSet<User> Users { get; set; }
+    public DbSet<Patient> Patients { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,15 +1,12 @@
-﻿using PhytoIntellect.Api.DTOs.UserDTOs;
-using PhytoIntellect.Application.DTOs;
-using PhytoIntellect.Application.DTOs.PhytoIntellect.Application.DTOs;
-using PhytoIntellect.Application.DTOs.UserDTOs;
+﻿using PhytoIntellect.Application.DTOs;
+using PhytoIntellect.Application.DTOs.AuthDTOs;
 
-namespace PhytoIntellect.Application.Interfaces
+namespace PhytoIntellect.Application.Interfaces;
+
+public interface IAuthService
 {
-    public interface IAuthService
-    {
-        Task<AuthResultDTO> RegisterAsync(RegisterUserDTO model);
-        Task<AuthResultDTO> LoginAsync(UserDTO model);
-        Task<AuthResultDTO> RefreshAsync(string refreshToken);
-        Task<AuthResultDTO> LogoutAsync(string refreshToken);
-    }
+    Task<AuthResultDto> RegisterAsync(RegisterUserAuthDto model, CancellationToken cancellationToken = default);
+    Task<AuthResultDto> LoginAsync(LoginDto model, CancellationToken cancellationToken = default);
+    Task<AuthResultDto> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+    Task<AuthResultDto> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
 }

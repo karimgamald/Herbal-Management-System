@@ -1,18 +1,22 @@
 ﻿using AutoMapper;
+using PhytoIntellect.Application.DTOs.AuthDTOs;
 using PhytoIntellect.Application.DTOs.UserDTOs;
 using PhytoIntellect.Core.Entities;
 
-namespace PhytoIntellect.Application.Mappings
-{
-    internal class UserProfile : Profile
-    {
-        public UserProfile()
-        {
-            // 1. تحويل من Entity لـ DTO (عشان تعرض الداتا)
-            CreateMap<User, UserDTO>();
+namespace PhytoIntellect.Application.Mappings;
 
-            // 2. تحويل من DTO لـ Entity (عشان تسجل يوزر جديد مثلاً)
-            CreateMap<RegisterUserDTO, User>();
-        }
+internal class UserProfile : Profile
+{
+    public UserProfile()
+    {
+        // بتاعة الـ Auth
+        CreateMap<User, UserAuthDto>();
+        CreateMap<RegisterUserAuthDto, User>()
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore());// بنشفره مانيوال
+
+        // بتوع الـ Users Management
+        CreateMap<User, UserDto>();
+        CreateMap<CreateUserDto, User>()
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore());
     }
 }

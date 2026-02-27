@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PhytoIntellect.Api.DTOs.UserDTOs;
-using PhytoIntellect.Application.DTOs.UserDTOs;
+using PhytoIntellect.Application.DTOs.AuthDTOs;
 using PhytoIntellect.Application.Interfaces;
 
 
@@ -9,75 +8,40 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class AccountController(IUserService userService, IAuthService authService) : ControllerBase
+public class AccountController(IAuthService authService) : ControllerBase
 {
-    private readonly IUserService _userService = userService;
-    private readonly IAuthService _authService = authService;
-
-
     [AllowAnonymous]
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterUserDTO model)
+    public async Task<IActionResult> Register([FromBody] RegisterUserAuthDto model, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        // Register user using AuthService (which will hash password internally)
-        var result = await _authService.RegisterAsync(model);
-
-        if (!result.Success)
-            return BadRequest(result.Message);
-
-        return Ok(result.Message);
+        var result = await authService.RegisterAsync(model, cancellationToken);
+        if (!result.Success) return BadRequest(new { result.Message });
+        return Ok(new { result.Message });
     }
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] UserDTO model)
+    public async Task<IActionResult> Login([FromBody] LoginDto model, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        var result = await _authService.LoginAsync(model);
-
-        if (!result.Success)
-            return Unauthorized(result.Message);
-
-        return Ok(result.Data); // Contains accessToken + refreshToken
-    }
-
-    [HttpPost("reset-password")]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
-    {
-        // Reset password via UserService (it will hash the new password)
-        var result = await _userService.ResetPasswordAsync(model);
-
-        if (!result.Success)
-            return BadRequest(result.Message);
-
-        return Ok(result.Message);
+        var result = await authService.LoginAsync(model, cancellationToken);
+        if (!result.Success) return Unauthorized(new { result.Message });
+        return Ok(result.Data);
     }
 
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshRequestDTO model)
+    public async Task<IActionResult> Refresh([FromBody] TokenRequestDto model, CancellationToken cancellationToken)
     {
-        var result = await _authService.RefreshAsync(model.RefreshToken);
-
-        if (!result.Success)
-            return Unauthorized(result.Message);
-
-        return Ok(result.Data); // Contains new accessToken + refreshToken
+        var result = await authService.RefreshTokenAsync(model.RefreshToken, cancellationToken);
+        if (!result.Success) return Unauthorized(new { result.Message });
+        return Ok(result.Data);
     }
 
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] RefreshRequestDTO model)
+    public async Task<IActionResult> Logout([FromBody] TokenRequestDto model, CancellationToken cancellationToken)
     {
-        var result = await _authService.LogoutAsync(model.RefreshToken);
-
-        if (!result.Success)
-            return BadRequest(result.Message);
-
-        return Ok(result.Message);
+        var result = await authService.LogoutAsync(model.RefreshToken, cancellationToken);
+        if (!result.Success) return BadRequest(new { result.Message });
+        return Ok(new { result.Message });
     }
 }

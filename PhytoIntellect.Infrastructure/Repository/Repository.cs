@@ -1,13 +1,19 @@
-﻿using Microsoft.EntityFrameworkCore;
-using PhytoIntellect.Infrastructure.Presistence;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using PhytoIntellect.Infrastructure.Presistence;
 
 namespace PhytoIntellect.Infrastructure.Repository;
 
 public class Repository<T>(ApplicationDbContext context) : IRepository<T> where T : class
 {
     protected readonly DbSet<T> _dbSet = context.Set<T>();
-    public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true)
+
+    public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, CancellationToken cancellationToken = default)
     {
         IQueryable<T> query = _dbSet;
 
@@ -17,35 +23,36 @@ public class Repository<T>(ApplicationDbContext context) : IRepository<T> where 
         if (filter != null)
             query = query.Where(filter);
 
-        return await query.ToListAsync();
+        // بصينا الـ token هنا
+        return await query.ToListAsync(cancellationToken);
     }
 
-    public async Task<T?> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true)
+    public async Task<T?> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, CancellationToken cancellationToken = default)
     {
         IQueryable<T> query = _dbSet;
 
         if (!tracked)
             query = query.AsNoTracking();
 
+        // بصينا الـ token هنا
         return filter == null
-            ? await query.FirstOrDefaultAsync()
-            : await query.FirstOrDefaultAsync(filter);
+            ? await query.FirstOrDefaultAsync(cancellationToken)
+            : await query.FirstOrDefaultAsync(filter, cancellationToken);
     }
 
-    public async Task CreateAsync(T entity)
+    public async Task CreateAsync(T entity, CancellationToken cancellationToken = default)
     {
-        await _dbSet.AddAsync(entity);
+        // بصينا الـ token هنا
+        await _dbSet.AddAsync(entity, cancellationToken);
     }
 
-    public Task UpdateAsync(T entity)
+    public void Update(T entity)
     {
         _dbSet.Update(entity);
-        return Task.CompletedTask;
     }
 
-    public Task RemoveAsync(T entity)
+    public void Remove(T entity)
     {
         _dbSet.Remove(entity);
-        return Task.CompletedTask;
     }
 }

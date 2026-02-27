@@ -4,13 +4,11 @@ using System.Text;
 
 namespace PhytoIntellect.Application.DTOs.UserDTOs;
 
-public class RegisterUserDTO
+// للتعديل (من غير الباسورد، الباسورد ليه Endpoint لوحده للـ Reset)
+public class UpdateUserDto
 {
     public string FullName { get; set; } = string.Empty;
-    public string UserName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public string ConfirmPassword { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
 }

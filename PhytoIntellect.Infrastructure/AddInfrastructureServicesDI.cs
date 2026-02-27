@@ -18,10 +18,11 @@ public static class AddInfrastructureServicesDI
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPatientRepository, PatientRepository>();
+        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 
 

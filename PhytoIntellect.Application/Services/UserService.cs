@@ -1,149 +1,76 @@
-﻿using PhytoIntellect.Application.DTOs.PhytoIntellect.Application.DTOs;
+﻿using AutoMapper;
 using PhytoIntellect.Application.DTOs.UserDTOs;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Core.Interfaces;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace PhytoIntellect.Application.Services
+namespace PhytoIntellect.Application.Services;
+
+public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
 {
-    public class UserService : IUserService
+    public async Task<IEnumerable<UserDto>> GetAllUsersAsync(CancellationToken cancellationToken = default)
     {
-        private readonly IUnitOfWork _unitOfWork;
+        var users = await unitOfWork.UserRepository.GetAllAsync(tracked: false, cancellationToken: cancellationToken);
+        return mapper.Map<IEnumerable<UserDto>>(users);
+    }
 
-        public UserService(IUnitOfWork unitOfWork)
-        {
-            _unitOfWork = unitOfWork;
-        }
+    public async Task<UserDto?> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: false, cancellationToken);
+        return user == null ? null : mapper.Map<UserDto>(user);
+    }
 
-        // --------------------- VALIDATE USER ---------------------
-        public async Task<User?> ValidateUserAsync(string username, string password)
-        {
-            var user = await _unitOfWork.UserRepository.GetAsync(u => u.UserName == username);
+    public async Task<string> CreateUserAsync(CreateUserDto request, CancellationToken cancellationToken = default)
+    {
+        // 1. Validation للـ Role
+        if (!AppRoles.IsValidRole(request.Role))
+            return $"Invalid Role. Must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'.";
 
-            if (user == null)
-                return null;
+        // 2. Validation لليوزرنيم
+        var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.UserName == request.UserName, tracked: false, cancellationToken);
+        if (existingUser != null) return "Username is already taken.";
 
-            // Verify hashed password
-            if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
-                return null;
+        var user = mapper.Map<User>(request);
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            return user;
-        }
+        await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        public async Task<User?> ValidateByUserNameAsync(string username)
-        {
-            return await _unitOfWork.UserRepository.GetAsync(u => u.UserName == username);
-        }
+        return "User created successfully.";
+    }
 
-        // --------------------- CRUD ---------------------
-        public async Task<IEnumerable<User?>> GetAllUsersAsync()
-        {
-            return await _unitOfWork.UserRepository.GetAllAsync();
-        }
+    public async Task<string> UpdateUserAsync(int id, UpdateUserDto request, CancellationToken cancellationToken = default)
+    {
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken);
+        if (user == null) return "User not found.";
 
-        public async Task<User?> AddUserAsync(User user)
-        {
-            await _unitOfWork.UserRepository.CreateAsync(user);
-            await _unitOfWork.SaveChangesAsync();
-            return user;
-        }
+        if (!AppRoles.IsValidRole(request.Role))
+            return $"Invalid Role. Must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'.";
 
-        public async Task<User?> UpdateUserAsync(User user)
-        {
-            await _unitOfWork.UserRepository.UpdateAsync(user);
-            await _unitOfWork.SaveChangesAsync();
-            return user;
-        }
+        // تحديث الداتا
+        user.FullName = request.FullName;
+        user.Email = request.Email;
+        user.Phone = request.Phone;
+        user.Role = request.Role;
 
-        public async Task<User?> DeleteUserAsync(User user)
-        {
-            await _unitOfWork.UserRepository.RemoveAsync(user);
-            await _unitOfWork.SaveChangesAsync();
-            return user;
-        }
+        unitOfWork.UserRepository.Update(user); // مفيش await عشان دي Void
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // --------------------- RESET PASSWORD ---------------------
-        public async Task<AuthResultDTO> ResetPasswordAsync(ResetPasswordDTO model)
-        {
-            var user = await ValidateByUserNameAsync(model.UserName);
-            if (user == null)
-                return new AuthResultDTO { Success = false, Message = "User not found." };
+        return "User updated successfully.";
+    }
 
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+    public async Task<string> DeleteUserAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken);
+        if (user == null) return "User not found.";
 
-            await _unitOfWork.UserRepository.UpdateAsync(user);
-            await _unitOfWork.SaveChangesAsync();
+        unitOfWork.UserRepository.Remove(user); // مفيش await
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return new AuthResultDTO { Success = true, Message = "Password reset successfully." };
-        }
-
-        // --------------------- REFRESH TOKEN MANAGEMENT ---------------------
-
-        public async Task AddRefreshTokenAsync(int userId, string refreshToken)
-        {
-            var tokenEntity = new RefreshToken
-            {
-                UserId = userId,
-                TokenHash = TokenHasher.HashToken(refreshToken),
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
-                IsRevoked = false
-            };
-
-            await _unitOfWork.RefreshTokenRepository.CreateAsync(tokenEntity);
-            await _unitOfWork.SaveChangesAsync();
-        }
-
-        public async Task<AuthResultDTO> RefreshTokenAsync(string refreshToken, ITokenService tokenService)
-        {
-            var tokenHash = TokenHasher.HashToken(refreshToken);
-
-            var storedToken = await _unitOfWork.RefreshTokenRepository.GetAsync(
-                t => t.TokenHash == tokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow
-            );
-
-            if (storedToken == null)
-                return new AuthResultDTO { Success = false, Message = "Invalid or expired refresh token." };
-
-            // Revoke old token
-            storedToken.IsRevoked = true;
-            await _unitOfWork.RefreshTokenRepository.UpdateAsync(storedToken);
-
-            // Generate new tokens
-            var newAccessToken = tokenService.CreateAccessToken(storedToken.User);
-            var newRefreshToken = tokenService.CreateRefreshToken();
-
-            var newTokenEntity = new RefreshToken
-            {
-                UserId = storedToken.UserId,
-                TokenHash = TokenHasher.HashToken(newRefreshToken),
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
-                IsRevoked = false
-            };
-
-            await _unitOfWork.RefreshTokenRepository.CreateAsync(newTokenEntity);
-            await _unitOfWork.SaveChangesAsync();
-
-            return new AuthResultDTO
-            {
-                Success = true,
-                Data = new { AccessToken = newAccessToken, RefreshToken = newRefreshToken }
-            };
-        }
-
-        public async Task<bool> RevokeRefreshTokenAsync(string refreshToken)
-        {
-            var tokenHash = TokenHasher.HashToken(refreshToken);
-
-            var storedToken = await _unitOfWork.RefreshTokenRepository.GetAsync(
-                t => t.TokenHash == tokenHash && !t.IsRevoked
-            );
-
-            if (storedToken == null)
-                return false;
-
-            storedToken.IsRevoked = true;
-            await _unitOfWork.RefreshTokenRepository.UpdateAsync(storedToken);
-            await _unitOfWork.SaveChangesAsync();
-            return true;
-        }
+        return "User deleted successfully.";
     }
 }
