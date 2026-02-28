@@ -8,7 +8,7 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class AccountController(IAuthService authService) : ControllerBase
+public class AccountsController(IAuthService authService) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("register")]

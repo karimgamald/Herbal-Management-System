@@ -2,6 +2,7 @@
 using PhytoIntellect.Application.DTOs.PatientDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Core.Interfaces;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,56 +11,40 @@ namespace PhytoIntellect.Application.Services;
 
 public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientService
 {
-    public async Task<string> CreatePatientAsync(CreatePatientDto request, CancellationToken cancellationToken = default)
+    // 1. المريض بيجيب بروفايله
+    public async Task<PatientDto?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var patient = mapper.Map<Patient>(request);
+        // بنستخدم الـ UserId للبحث مش الـ PatientId
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken);
+        return patient == null ? null : mapper.Map<PatientDto>(patient);
+    }
 
-        await unitOfWork.PatientRepository.CreateAsync(patient, cancellationToken);
+    // 2. المريض بيستكمل/يعدل بياناته
+    public async Task<string> UpdateMyProfileAsync(int userId, UpdatePatientDto request, CancellationToken cancellationToken = default)
+    {
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: true, cancellationToken);
+        if (patient == null) return "Patient profile not found.";
+
+        patient.BirthDate = request.BirthDate;
+        patient.Gender = (PhytoIntellect.Core.Enums.Gender)request.Gender; // Casting
+
+        unitOfWork.PatientRepository.Update(patient); // دي ميثود void عندك
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return "Patient created successfully.";
+        return "Profile updated successfully.";
     }
-
-    public async Task<PatientDto?> GetPatientByIdAsync(int id, CancellationToken cancellationToken = default)
+   
+    // 3. العشاب بيجيب بروفايل مريض معين
+    public async Task<PatientDto?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default)
     {
-        // tracked: false عشان إحنا بنقرا بس ومش هنعدل
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == id, tracked: false, cancellationToken);
-        if (patient == null) return null;
-
-        return mapper.Map<PatientDto>(patient);
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == patientId, tracked: false, cancellationToken);
+        return patient == null ? null : mapper.Map<PatientDto>(patient);
     }
 
+    // 4. الإدارة بتعرض كل المرضى
     public async Task<IEnumerable<PatientDto>> GetAllPatientsAsync(CancellationToken cancellationToken = default)
     {
         var patients = await unitOfWork.PatientRepository.GetAllAsync(tracked: false, cancellationToken: cancellationToken);
         return mapper.Map<IEnumerable<PatientDto>>(patients);
-    }
-
-    public async Task<string> UpdatePatientAsync(int id, UpdatePatientDto request, CancellationToken cancellationToken = default)
-    {
-        // tracked: true عشان الـ Entity Framework يحس بالتعديل
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == id, tracked: true, cancellationToken);
-        if (patient == null) return "Patient not found.";
-
-        patient.BirthDate = request.BirthDate;
-        patient.Gender = (PhytoIntellect.Core.Enums.Gender)request.Gender;
-
-        // مفيش await هنا لأن الميثود void في الـ Repo بتاعك
-        unitOfWork.PatientRepository.Update(patient);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return "Patient updated successfully.";
-    }
-
-    public async Task<string> DeletePatientAsync(int id, CancellationToken cancellationToken = default)
-    {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == id, tracked: true, cancellationToken);
-        if (patient == null) return "Patient not found.";
-
-        // مفيش await هنا برضه
-        unitOfWork.PatientRepository.Remove(patient);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return "Patient deleted successfully.";
     }
 }

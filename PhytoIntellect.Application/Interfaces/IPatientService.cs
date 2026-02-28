@@ -5,9 +5,11 @@ namespace PhytoIntellect.Application.Interfaces;
 
 public interface IPatientService
 {
-    Task<string> CreatePatientAsync(CreatePatientDto request, CancellationToken cancellationToken = default);
-    Task<PatientDto?> GetPatientByIdAsync(int id, CancellationToken cancellationToken = default);
+    // للمريض
+    Task<PatientDto?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default);
+    Task<string> UpdateMyProfileAsync(int userId, UpdatePatientDto request, CancellationToken cancellationToken = default);
+
+    // للإدارة والعشابين
+    Task<PatientDto?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default);
     Task<IEnumerable<PatientDto>> GetAllPatientsAsync(CancellationToken cancellationToken = default);
-    Task<string> UpdatePatientAsync(int id, UpdatePatientDto request, CancellationToken cancellationToken = default);
-    Task<string> DeletePatientAsync(int id, CancellationToken cancellationToken = default);
 }

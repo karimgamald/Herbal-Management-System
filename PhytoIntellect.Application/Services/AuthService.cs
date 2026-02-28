@@ -1,36 +1,72 @@
 ﻿using AutoMapper;
-using BCrypt.Net;
 using PhytoIntellect.Application.DTOs.AuthDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
+using Microsoft.Extensions.Configuration; // ضيف دي عشان الـ Configuration
 
 namespace PhytoIntellect.Application.Services;
 
-public class AuthService(IUnitOfWork unitOfWork, ITokenService tokenService, IMapper mapper) : IAuthService
+public class AuthService(
+    IUnitOfWork unitOfWork,
+    ITokenService tokenService,
+    IMapper mapper,
+    IConfiguration _config) : IAuthService // ضفنا الـ Configuration هنا
 {
     public async Task<AuthResultDto> RegisterAsync(RegisterUserAuthDto model, CancellationToken cancellationToken = default)
     {
-        // 1. التحقق من صحة الـ Role (بناءً على طلبك)
+        // 1. التحقق من الـ Role
         if (!AppRoles.IsValidRole(model.Role))
-            return new AuthResultDto { Success = false, Message = $"Invalid Role. Role must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'." };
+            return new AuthResultDto
+            {
+                Success = false,
+                Message = $"Invalid Role. Role must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'."
+            };
 
-        // 2. التحقق من إن اليوزر مش موجود
+        // 2. التحقق من تكرار اليوزر
         var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.UserName == model.UserName, tracked: false, cancellationToken);
         if (existingUser != null)
             return new AuthResultDto { Success = false, Message = "Username already exists." };
 
-        // 3. التحويل والتشفير
+        // 3. تحويل الداتا وتشفير الباسورد
         var user = mapper.Map<User>(model);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
-        // 4. الحفظ
-        await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
+        // 4. الربط الذكي (Navigation Property)
+        // هنا إحنا مش بنحط UserId يدوي، إحنا بنرمي الـ object كامل للـ EF وهو بيتصرف
+        if (user.Role == AppRoles.Patient)
+        {
+            var newPatient = new Patient
+            {
+                User = user, // كدا الـ EF هيفهم إن ده الـ Parent بتاعه
+                BirthDate =  null, // قيمة افتراضية أو سيبها لو هي Nullable
+                Gender = PhytoIntellect.Core.Enums.Gender.Unknown // قيمة افتراضية
+            };
+            await unitOfWork.PatientRepository.CreateAsync(newPatient, cancellationToken);
+        }
+        else if (user.Role == AppRoles.Herbalist)
+        {
+            // لو عندك جدول Herbalist فك الكومنت ده
+            /*
+            var newHerbalist = new Herbalist { User = user };
+            await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);
+            */
+
+            // لو لسه مجهزتش الـ HerbalistRepository، سجل اليوزر بس حالياً عشان ميضربش
+            await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
+        }
+        else
+        {
+            // لأي Role تانية (زي Admin)
+            await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
+        }
+
+        // 5. حفظ الكل (Atomic Transaction)
+        // السطر ده هيبعت لـ SQL: الـ User أولاً، ياخد الـ ID، يحطه في الـ Patient، يبعت الـ Patient
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResultDto { Success = true, Message = "User registered successfully." };
+        return new AuthResultDto { Success = true, Message = "User registered successfully with profile." };
     }
-
     public async Task<AuthResultDto> LoginAsync(LoginDto model, CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.UserName == model.UserName, tracked: false, cancellationToken);
@@ -40,11 +76,14 @@ public class AuthService(IUnitOfWork unitOfWork, ITokenService tokenService, IMa
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();
 
+        // 🕒 سحب مدة الـ Refresh Token من الإعدادات (لو مش موجودة هنخليها 7 أيام افتراضياً)
+        var refreshDuration = double.Parse(_config["JwtSettings:RefreshTokenDurationInDays"] ?? "7");
+
         var tokenEntity = new RefreshToken
         {
             UserId = user.Id,
             TokenHash = TokenHasher.HashToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            ExpiresAt = DateTime.UtcNow.AddDays(refreshDuration), // مدة ديناميكية
             IsRevoked = false
         };
 
@@ -57,24 +96,29 @@ public class AuthService(IUnitOfWork unitOfWork, ITokenService tokenService, IMa
     public async Task<AuthResultDto> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
         var tokenHash = TokenHasher.HashToken(refreshToken);
-        var storedToken = await unitOfWork.RefreshTokenRepository.GetAsync(t => t.TokenHash == tokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow, tracked: true, cancellationToken);
+        var storedToken = await unitOfWork.RefreshTokenRepository.GetAsync(
+            t => t.TokenHash == tokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow,
+            tracked: true, cancellationToken);
 
         if (storedToken == null)
             return new AuthResultDto { Success = false, Message = "Invalid or expired refresh token." };
 
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == storedToken.UserId, tracked: false, cancellationToken);
 
+        // إلغاء التوكن القديم (Rotation)
         storedToken.IsRevoked = true;
         unitOfWork.RefreshTokenRepository.Update(storedToken);
 
         var newAccessToken = tokenService.CreateAccessToken(user!);
         var newRefreshToken = tokenService.CreateRefreshToken();
 
+        var refreshDuration = double.Parse(_config["JwtSettings:RefreshTokenDurationInDays"] ?? "7");
+
         var newTokenEntity = new RefreshToken
         {
             UserId = storedToken.UserId,
             TokenHash = TokenHasher.HashToken(newRefreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            ExpiresAt = DateTime.UtcNow.AddDays(refreshDuration), // مدة ديناميكية
             IsRevoked = false
         };
 

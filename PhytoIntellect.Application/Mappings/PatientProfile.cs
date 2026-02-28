@@ -8,9 +8,8 @@ public class PatientProfile : Profile
 {
     public PatientProfile()
     {
-        CreateMap<CreatePatientDto, Patient>();
-
         CreateMap<Patient, PatientDto>()
+            // بنحول الـ Enum بتاع الـ Gender لـ String عشان يتقري بسهولة في الموبايل
             .ForMember(dest => dest.GenderName, opt => opt.MapFrom(src => src.Gender.ToString()));
     }
 }

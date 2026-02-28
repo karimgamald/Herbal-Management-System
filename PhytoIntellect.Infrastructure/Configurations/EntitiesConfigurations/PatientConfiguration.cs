@@ -10,15 +10,16 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
     {
         builder.HasKey(p => p.PatientId);
 
-        builder.HasOne(p => p.MedicalHistory)
-               .WithOne()
-               .HasForeignKey<Patient>(p => p.MedicalHistoryId)
-               .IsRequired(); 
-
         // 3. علاقة الـ One-to-One بين Patient و User
         builder.HasOne(p => p.User)
                .WithOne(u => u.Patient)
                .HasForeignKey<Patient>(p => p.UserId)
                .OnDelete(DeleteBehavior.Cascade); 
+
+        builder.HasOne(p => p.MedicalHistory)
+               .WithOne() // 1-to-1
+               .HasForeignKey<Patient>(p => p.MedicalHistoryId) // الـ FK في جدول الـ Patient
+               .IsRequired(false) // عشان يسمح بـ Null (تخطي)
+               .OnDelete(DeleteBehavior.SetNull); // لو مسحنا التاريخ المرضي، المريض ميتمسحش
     }
 }

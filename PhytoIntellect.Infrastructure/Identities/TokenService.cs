@@ -7,49 +7,52 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace PhytoIntellect.Application.Services
+namespace PhytoIntellect.Application.Services;
+
+public class TokenService(IConfiguration config) : ITokenService
 {
-    public class TokenService : ITokenService
+    private readonly IConfiguration _config = config;
+
+    public string CreateAccessToken(User user)
     {
-        private readonly IConfiguration _config;
-
-        public TokenService(IConfiguration config)
+        // 1. تحضير الـ Claims
+        var claims = new List<Claim>
         {
-            _config = config;
-        }
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.UserName!),
+            new Claim(ClaimTypes.Role, user.Role),
+            // إضافة الـ Jti (Unique ID للتوكن نفسه) - ممارسة احترافية
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
 
-        public string CreateAccessToken(User user)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.UserName),
-                // ⭐ THIS IS THE MOST IMPORTANT LINE => for determine the roles in the access token
-                new Claim(ClaimTypes.Role, user.Role)
-            };
+        // 2. سحب البيانات من الـ AppSettings
+        var keyStr = _config["JwtSettings:Key"];
+        var issuer = _config["JwtSettings:Issuer"];
+        var audience = _config["JwtSettings:Audience"];
+        // سحب المدة (بالأيام) اللي اتفقنا نكبرها
+        var durationInDays = double.Parse(_config["JwtSettings:DurationInDays"] ?? "7");
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr!));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        // 3. بناء التوكن
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddDays(durationInDays), // استخدام المدة الجديدة هنا
+            signingCredentials: creds
+        );
 
-            var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(15),
-                signingCredentials: creds
-            );
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
+    public string CreateRefreshToken()
+    {
+        var randomBytes = new byte[64];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
 
-        public string CreateRefreshToken()
-        {
-            var randomBytes = new byte[64];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomBytes);
-
-            return Convert.ToBase64String(randomBytes);
-        }
+        return Convert.ToBase64String(randomBytes);
     }
 }

@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.DTOs.UserDTOs;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Services;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,6 +44,24 @@ public class UsersController(IUserService userService) : ControllerBase
         var result = await userService.UpdateUserAsync(id, request, cancellationToken);
         if (result.Contains("Invalid") || result.Contains("not found")) return BadRequest(new { Message = result });
         return Ok(new { Message = result });
+    }
+
+    [Authorize]
+    [HttpPatch("update-my-address")]
+    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model, CancellationToken cancellationToken)
+    {
+        // سحب الـ Id من التوكن (Claims)
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+
+        var userId = int.Parse(userIdClaim);
+
+        var result = await userService.UpdateAddressAsync(userId, model, cancellationToken);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
     }
 
     [HttpDelete("delete/{id}")]

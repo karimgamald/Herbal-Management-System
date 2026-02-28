@@ -11,14 +11,15 @@ public class UnitOfWork(
     IRepository<User> userRepository,
     IRepository<Patient> patientRepository,
     IRepository<Herbalist> herbalistRepository,
-    IRepository<RefreshToken> refreshTokenRepository) : IUnitOfWork
+    IRepository<RefreshToken> refreshTokenRepository,
+    IRepository<MedicalHistory> medicalHistoryRepository) : IUnitOfWork
 {
     // ربطنا الخصائص بالـ Parameters اللي جيالنا من فوق
     public IRepository<User> UserRepository { get; } = userRepository;
     public IRepository<Patient> PatientRepository { get; } = patientRepository;
     public IRepository<Herbalist> HerbalistRepository { get; } = herbalistRepository;
     public IRepository<RefreshToken> RefreshTokenRepository { get; } = refreshTokenRepository;
-
+    public IRepository<MedicalHistory> MedicalHistoryRepository { get; } = medicalHistoryRepository;
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // هنا الداتابيز بتضرب لو اليوزر لغى الريكويست

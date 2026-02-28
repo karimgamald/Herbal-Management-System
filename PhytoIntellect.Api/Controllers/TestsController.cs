@@ -7,7 +7,7 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class TestController : ControllerBase
+public class TestsController : ControllerBase
 {
     // 1. Endpoint عامة (أي حد معاه توكن سليم يدخل)
     [Authorize]

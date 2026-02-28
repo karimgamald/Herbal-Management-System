@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace PhytoIntellect.Core.Entities;
+namespace PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
 
-public class MedicalHistory
+// 2. DTO للإنشاء والتعديل (Upsert)
+public class ManageMedicalHistoryDto
 {
-    public int MedicalHistoryId { get; set; }
     public bool Diabetes { get; set; }
     public bool Hypertension { get; set; }
     public bool Asthma { get; set; }

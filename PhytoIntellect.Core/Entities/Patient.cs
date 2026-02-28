@@ -9,13 +9,13 @@ public class Patient
 {
     public int PatientId { get; set; }
 
-    public int MedicalHistoryId { get; set; }
+    public int? MedicalHistoryId { get; set; }
     public int UserId { get; set; }
 
-    public DateTime BirthDate { get; set; } 
+    public DateOnly? BirthDate { get; set; } 
     public Gender Gender { get; set; }
 
     // Navigation Properties
     public User User { get; set; }
-    public MedicalHistory MedicalHistory { get; set; }
+    public MedicalHistory? MedicalHistory { get; set; }
 }

@@ -9,6 +9,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<Patient> PatientRepository { get; }
     IRepository<Herbalist> HerbalistRepository { get; }
     IRepository<RefreshToken> RefreshTokenRepository { get; }
+    IRepository<MedicalHistory> MedicalHistoryRepository { get; }
 
     // ضفنا الـ CancellationToken هنا
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

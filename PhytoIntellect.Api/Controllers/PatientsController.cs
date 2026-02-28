@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.DTOs.PatientDTOs;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Core.Constants;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,21 +13,38 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class PatientsController(IPatientService patientService) : ControllerBase
 {
-    [HttpPost("create")]
-    public async Task<IActionResult> CreatePatient([FromBody] CreatePatientDto request, CancellationToken cancellationToken)
+    // Endpoints خاصة بالمريض
+
+    [Authorize(Roles = AppRoles.Patient)]
+    [HttpGet("me")]
+    public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
     {
-        var result = await patientService.CreatePatientAsync(request, cancellationToken);
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+
+        var patient = await patientService.GetMyProfileAsync(userId, cancellationToken);
+        if (patient == null) return NotFound(new { Message = "Profile not found." });
+
+        return Ok(patient);
+    }
+
+    [Authorize(Roles = AppRoles.Patient)]
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdatePatientDto request, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+
+        var result = await patientService.UpdateMyProfileAsync(userId, request, cancellationToken);
+        if (result == "Patient profile not found.") return NotFound(new { Message = result });
+
         return Ok(new { Message = result });
     }
 
-    [HttpGet("get-all")]
-    public async Task<IActionResult> GetAllPatients(CancellationToken cancellationToken)
-    {
-        var patients = await patientService.GetAllPatientsAsync(cancellationToken);
-        return Ok(patients);
-    }
+    // Endpoints خاصة بالعشاب / الإدارة
 
-    [HttpGet("get/{id}")]
+    [Authorize(Roles = AppRoles.Herbalist)] // العشاب بس اللي يدخل يشوف بروفايل مريض بالـ ID
+    [HttpGet("{id}")]
     public async Task<IActionResult> GetPatientById(int id, CancellationToken cancellationToken)
     {
         var patient = await patientService.GetPatientByIdAsync(id, cancellationToken);
@@ -33,21 +53,12 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         return Ok(patient);
     }
 
-    [HttpPut("update/{id}")]
-    public async Task<IActionResult> UpdatePatient(int id, [FromBody] UpdatePatientDto request, CancellationToken cancellationToken)
+    // تقدر تزود Admin هنا قدام لو حبيت
+    [Authorize]
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllPatients(CancellationToken cancellationToken)
     {
-        var result = await patientService.UpdatePatientAsync(id, request, cancellationToken);
-        if (result == "Patient not found.") return NotFound(new { Message = result });
-
-        return Ok(new { Message = result });
-    }
-
-    [HttpDelete("delete/{id}")]
-    public async Task<IActionResult> DeletePatient(int id, CancellationToken cancellationToken)
-    {
-        var result = await patientService.DeletePatientAsync(id, cancellationToken);
-        if (result == "Patient not found.") return NotFound(new { Message = result });
-
-        return Ok(new { Message = result });
+        var patients = await patientService.GetAllPatientsAsync(cancellationToken);
+        return Ok(patients);
     }
 }
