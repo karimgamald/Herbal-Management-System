@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.DTOs.AuthDTOs;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Services;
 
 
 namespace PhytoIntellect.Api.Controllers;
@@ -14,22 +15,65 @@ public class AccountsController(IAuthService authService) : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterUserAuthDto model, CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        // Register user using AuthService (which will hash password internally)
         var result = await authService.RegisterAsync(model, cancellationToken);
-        if (!result.Success) return BadRequest(new { result.Message });
+
+        if (!result.Success)
+            return BadRequest(new { result.Message });
+
         return Ok(new { result.Message });
     }
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginDto model, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login([FromBody] LoginRequestDto model, CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
         var result = await authService.LoginAsync(model, cancellationToken);
-        if (!result.Success) return Unauthorized(new { result.Message });
-        return Ok(result.Data);
+
+        if (!result.Success)
+            return Unauthorized(new { result.Message });
+
+        return Ok(result.Data); // Contains accessToken + refreshToken
     }
 
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+    {
+        // Reset password via UserService (it will hash the new password)
+        var result = await authService.ResetPasswordAsync(model);
+
+        if (!result.Success)
+            return BadRequest(result.Message);
+
+        return Ok(result.Message);
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model,
+    CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await authService
+            .ForgotPasswordAsync(model, cancellationToken);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] TokenRequestDto model, CancellationToken cancellationToken)
+    public async Task<IActionResult> Refresh([FromBody] TokenRequestDto model, 
+        CancellationToken cancellationToken)
     {
         var result = await authService.RefreshTokenAsync(model.RefreshToken, cancellationToken);
         if (!result.Success) return Unauthorized(new { result.Message });
@@ -38,7 +82,8 @@ public class AccountsController(IAuthService authService) : ControllerBase
 
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] TokenRequestDto model, CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout([FromBody] TokenRequestDto model, 
+        CancellationToken cancellationToken)
     {
         var result = await authService.LogoutAsync(model.RefreshToken, cancellationToken);
         if (!result.Success) return BadRequest(new { result.Message });

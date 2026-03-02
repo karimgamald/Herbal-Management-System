@@ -13,7 +13,8 @@ public class AuthService(
     IMapper mapper,
     IConfiguration _config) : IAuthService // ضفنا الـ Configuration هنا
 {
-    public async Task<AuthResultDto> RegisterAsync(RegisterUserAuthDto model, CancellationToken cancellationToken = default)
+    public async Task<AuthResultDto> RegisterAsync(RegisterUserAuthDto model, 
+        CancellationToken cancellationToken = default)
     {
         // 1. التحقق من الـ Role
         if (!AppRoles.IsValidRole(model.Role))
@@ -24,7 +25,8 @@ public class AuthService(
             };
 
         // 2. التحقق من تكرار اليوزر
-        var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.UserName == model.UserName, tracked: false, cancellationToken);
+        var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email,
+            tracked: false, cancellationToken);
         if (existingUser != null)
             return new AuthResultDto { Success = false, Message = "Username already exists." };
 
@@ -67,9 +69,10 @@ public class AuthService(
 
         return new AuthResultDto { Success = true, Message = "User registered successfully with profile." };
     }
-    public async Task<AuthResultDto> LoginAsync(LoginDto model, CancellationToken cancellationToken = default)
+    public async Task<AuthResultDto> LoginAsync(LoginRequestDto model, CancellationToken cancellationToken = default)
     {
-        var user = await unitOfWork.UserRepository.GetAsync(u => u.UserName == model.UserName, tracked: false, cancellationToken);
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email, tracked: false, 
+            cancellationToken);
         if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
             return new AuthResultDto { Success = false, Message = "Invalid username or password." };
 
@@ -90,10 +93,83 @@ public class AuthService(
         await unitOfWork.RefreshTokenRepository.CreateAsync(tokenEntity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResultDto { Success = true, Data = new { AccessToken = accessToken, RefreshToken = refreshToken } };
+        return new AuthResultDto { Success = true, Data = new { AccessToken = accessToken, 
+            RefreshToken = refreshToken } };
     }
 
-    public async Task<AuthResultDto> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+    public async Task<AuthResultDto> ResetPasswordAsync(ResetPasswordDto model,
+    CancellationToken cancellationToken = default)
+    {
+        // 1️⃣ التأكد إن اليوزر موجود
+        var user = await unitOfWork.UserRepository.GetAsync(
+            u => u.Email == model.Email,
+            tracked: true,
+            cancellationToken);
+
+        if (user == null)
+            return new AuthResultDto
+            {
+                Success = false,
+                Message = "User not found."
+            };
+
+        // 2️⃣ (اختياري لكن مهم جدًا) التحقق من الباسورد القديمة
+        if (!string.IsNullOrWhiteSpace(model.OldPassword))
+        {
+            var isValidOldPassword = BCrypt.Net.BCrypt.Verify(model.OldPassword, user.PasswordHash);
+            if (!isValidOldPassword)
+                return new AuthResultDto
+                {
+                    Success = false,
+                    Message = "Old password is incorrect."
+                };
+        }
+
+        // 3️⃣ تشفير الباسورد الجديدة
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+
+        // 4️⃣ تحديث اليوزر
+        unitOfWork.UserRepository.Update(user);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new AuthResultDto
+        {
+            Success = true,
+            Message = "Password reset successfully."
+        };
+    }
+
+    public async Task<AuthResultDto> ForgotPasswordAsync(ForgotPasswordDto model,
+    CancellationToken cancellationToken = default)
+    {
+        var user = await unitOfWork.UserRepository.GetAsync(
+            u => u.Email == model.Email,
+            tracked: true,
+            cancellationToken);
+
+        if (user == null)
+            return new AuthResultDto
+            {
+                Success = false,
+                Message = "User not found."
+            };
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+
+        unitOfWork.UserRepository.Update(user);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new AuthResultDto
+        {
+            Success = true,
+            Message = "Password reset successfully."
+        };
+    }
+
+    public async Task<AuthResultDto> RefreshTokenAsync(string refreshToken, 
+        CancellationToken cancellationToken = default)
     {
         var tokenHash = TokenHasher.HashToken(refreshToken);
         var storedToken = await unitOfWork.RefreshTokenRepository.GetAsync(
@@ -103,7 +179,8 @@ public class AuthService(
         if (storedToken == null)
             return new AuthResultDto { Success = false, Message = "Invalid or expired refresh token." };
 
-        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == storedToken.UserId, tracked: false, cancellationToken);
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == storedToken.UserId, 
+            tracked: false, cancellationToken);
 
         // إلغاء التوكن القديم (Rotation)
         storedToken.IsRevoked = true;
@@ -125,10 +202,12 @@ public class AuthService(
         await unitOfWork.RefreshTokenRepository.CreateAsync(newTokenEntity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResultDto { Success = true, Data = new { AccessToken = newAccessToken, RefreshToken = newRefreshToken } };
+        return new AuthResultDto { Success = true, Data = new { AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken } };
     }
 
-    public async Task<AuthResultDto> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
+    public async Task<AuthResultDto> LogoutAsync(string refreshToken, 
+        CancellationToken cancellationToken = default)
     {
         var tokenHash = TokenHasher.HashToken(refreshToken);
         var storedToken = await unitOfWork.RefreshTokenRepository.GetAsync(t => t.TokenHash == tokenHash && !t.IsRevoked, tracked: true, cancellationToken);

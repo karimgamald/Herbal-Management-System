@@ -32,7 +32,8 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
             return $"Invalid Role. Must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'.";
 
         // 2. Validation لليوزرنيم
-        var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.UserName == request.UserName, tracked: false, cancellationToken);
+        var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.Email == request.Email, 
+            tracked: false, cancellationToken);
         if (existingUser != null) return "Username is already taken.";
 
         var user = mapper.Map<User>(request);
@@ -44,7 +45,8 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         return "User created successfully.";
     }
 
-    public async Task<string> UpdateUserAsync(int id, UpdateUserDto request, CancellationToken cancellationToken = default)
+    public async Task<string> UpdateUserAsync(int id, UpdateUserDto request, 
+        CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken);
         if (user == null) return "User not found.";
