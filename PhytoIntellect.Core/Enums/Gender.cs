@@ -6,7 +6,7 @@ namespace PhytoIntellect.Core.Enums;
 
 public enum Gender
 {
-    Male = 1,
+    Unknown = 1,
+    Male,
     Female,
-    Unknown
 }

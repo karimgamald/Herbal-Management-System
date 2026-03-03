@@ -5,7 +5,7 @@ using PhytoIntellect.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllerServices();
 builder.Services.AddSwaggerServices();
 builder.Services.AddEndpointsApiExplorer();
 

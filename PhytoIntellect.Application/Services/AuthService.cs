@@ -34,6 +34,7 @@ public class AuthService(
         var user = mapper.Map<User>(model);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
+
         // 4. الربط الذكي (Navigation Property)
         // هنا إحنا مش بنحط UserId يدوي، إحنا بنرمي الـ object كامل للـ EF وهو بيتصرف
         if (user.Role == AppRoles.Patient)

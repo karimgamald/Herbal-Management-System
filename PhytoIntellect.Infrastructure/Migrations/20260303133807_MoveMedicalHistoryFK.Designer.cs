@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260303133807_MoveMedicalHistoryFK")]
+    partial class MoveMedicalHistoryFK
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -55,7 +58,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Herbalist", (string)null);
+                    b.ToTable("Herbalist");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.MedicalHistory", b =>
@@ -101,7 +104,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("PatientId")
                         .IsUnique();
 
-                    b.ToTable("MedicalHistory", (string)null);
+                    b.ToTable("MedicalHistory");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.Patient", b =>
@@ -127,7 +130,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Patients", (string)null);
+                    b.ToTable("Patients");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.RefreshToken", b =>
@@ -155,7 +158,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.User", b =>
@@ -206,7 +209,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.Herbalist", b =>

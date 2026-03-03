@@ -43,7 +43,7 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
     }
 
     // 3. ✨ دي الإضافة الجديدة: للعشاب بس!
-    [Authorize(Roles = AppRoles.Herbalist)]
+    [Authorize(Roles = AppRoles.Herbalist)] // عندي ايرور هنا وهو ان العطار يقدر يجيب اي مريض مش شرط اللي معاه التوكين بس
     [HttpGet("patient/{patientId}")]
     public async Task<IActionResult> GetPatientMedicalHistory(int patientId, CancellationToken cancellationToken)
     {

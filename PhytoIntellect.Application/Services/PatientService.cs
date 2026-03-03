@@ -26,7 +26,7 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
         if (patient == null) return "Patient profile not found.";
 
         patient.BirthDate = request.BirthDate;
-        patient.Gender = (PhytoIntellect.Core.Enums.Gender)request.Gender; // Casting
+        patient.Gender = request.Gender; // Casting
 
         unitOfWork.PatientRepository.Update(patient); // دي ميثود void عندك
         await unitOfWork.SaveChangesAsync(cancellationToken);

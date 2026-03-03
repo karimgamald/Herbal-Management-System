@@ -30,6 +30,8 @@ public static class SwaggerConfiguration
                         Array.Empty<string>()
                     }
             });
+
+            c.UseInlineDefinitionsForEnums(); // السطر ده بيخلي السواجر يعرض الـ Enums كأسماء مش أرقام
         });
 
         return services;
