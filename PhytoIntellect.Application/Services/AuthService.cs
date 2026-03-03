@@ -1,9 +1,10 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Configuration; // ضيف دي عشان الـ Configuration
 using PhytoIntellect.Application.DTOs.AuthDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
-using Microsoft.Extensions.Configuration; // ضيف دي عشان الـ Configuration
+using PhytoIntellect.Core.Enums;
 
 namespace PhytoIntellect.Application.Services;
 
@@ -24,43 +25,52 @@ public class AuthService(
                 Message = $"Invalid Role. Role must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'."
             };
 
+        // 2. Validate Confirm Password
+        if (model.Password != model.ConfirmPassword)
+        {
+            return new AuthResultDto
+            {
+                Success = false,
+                Message = "Password and Confirm Password do not match."
+            };
+        }
+
         // 2. التحقق من تكرار اليوزر
         var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email,
             tracked: false, cancellationToken);
+
         if (existingUser != null)
-            return new AuthResultDto { Success = false, Message = "Username already exists." };
+            return new AuthResultDto { Success = false, Message = "Email already exists." };
 
         // 3. تحويل الداتا وتشفير الباسورد
         var user = mapper.Map<User>(model);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
+        // أضف اليوزر أولاً
+        await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
+
         // 4. الربط الذكي (Navigation Property)
-        // هنا إحنا مش بنحط UserId يدوي، إحنا بنرمي الـ object كامل للـ EF وهو بيتصرف
+        // بعد كده أنشئ البروفايل حسب الدور
         if (user.Role == AppRoles.Patient)
         {
             var newPatient = new Patient
             {
-                User = user, // كدا الـ EF هيفهم إن ده الـ Parent بتاعه
-                BirthDate =  null, // قيمة افتراضية أو سيبها لو هي Nullable
-                Gender = PhytoIntellect.Core.Enums.Gender.Unknown // قيمة افتراضية
+                User = user,
+                BirthDate = null,
+                Gender = Gender.Unknown
             };
+
             await unitOfWork.PatientRepository.CreateAsync(newPatient, cancellationToken);
         }
+
         else if (user.Role == AppRoles.Herbalist)
         {
-            // لو عندك جدول Herbalist فك الكومنت ده
-            /*
-            var newHerbalist = new Herbalist { User = user };
-            await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);
-            */
+            var newHerbalist = new Herbalist
+            {
+                User = user
+            };
 
-            // لو لسه مجهزتش الـ HerbalistRepository، سجل اليوزر بس حالياً عشان ميضربش
-            await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
-        }
-        else
-        {
-            // لأي Role تانية (زي Admin)
-            await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
+            await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);
         }
 
         // 5. حفظ الكل (Atomic Transaction)
@@ -69,7 +79,8 @@ public class AuthService(
 
         return new AuthResultDto { Success = true, Message = "User registered successfully with profile." };
     }
-    public async Task<AuthResultDto> LoginAsync(LoginRequestDto model, CancellationToken cancellationToken = default)
+    public async Task<AuthResultDto> LoginAsync(LoginRequestDto model, 
+        CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email, tracked: false, 
             cancellationToken);

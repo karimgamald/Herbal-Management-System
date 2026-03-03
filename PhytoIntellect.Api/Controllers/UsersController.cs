@@ -30,29 +30,25 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(user);
     }
 
-    [HttpPost("create")]
-    public async Task<IActionResult> CreateUser([FromBody] CreateUserDto request, CancellationToken cancellationToken)
-    {
-        var result = await userService.CreateUserAsync(request, cancellationToken);
-        if (result != "User created successfully.") return BadRequest(new { Message = result });
-        return Ok(new { Message = result });
-    }
-
     [HttpPut("update/{id}")]
-    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto request,
+        CancellationToken cancellationToken)
     {
         var result = await userService.UpdateUserAsync(id, request, cancellationToken);
-        if (result.Contains("Invalid") || result.Contains("not found")) return BadRequest(new { Message = result });
+        if (result.Contains("Invalid") || result.Contains("not found")) 
+            return BadRequest(new { Message = result });
         return Ok(new { Message = result });
     }
 
     [Authorize]
     [HttpPatch("update-my-address")]
-    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model,
+        CancellationToken cancellationToken)
     {
-        // سحب الـ Id من التوكن (Claims)
+        // get the userid from claims
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+        if (string.IsNullOrEmpty(userIdClaim)) 
+            return Unauthorized();
 
         var userId = int.Parse(userIdClaim);
 

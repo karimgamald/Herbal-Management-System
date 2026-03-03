@@ -31,12 +31,14 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
     // 2. للمريض بس
     [Authorize(Roles = AppRoles.Patient)]
     [HttpPost("me")]
-    public async Task<IActionResult> ManageMyMedicalHistory([FromBody] ManageMedicalHistoryDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ManageMyMedicalHistory([FromBody] ManageMedicalHistoryDto request,
+        CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
 
-        var result = await medicalHistoryService.AddOrUpdateMyMedicalHistoryAsync(userId, request, cancellationToken);
+        var result = await medicalHistoryService.AddOrUpdateMyMedicalHistoryAsync(userId, request,
+            cancellationToken);
         if (result.Contains("not found") || result.Contains("Error")) return BadRequest(new { Message = result });
 
         return Ok(new { Message = result });
@@ -47,7 +49,8 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
     [HttpGet("patient/{patientId}")]
     public async Task<IActionResult> GetPatientMedicalHistory(int patientId, CancellationToken cancellationToken)
     {
-        var history = await medicalHistoryService.GetPatientMedicalHistoryByPatientIdAsync(patientId, cancellationToken);
+        var history = await medicalHistoryService.GetPatientMedicalHistoryByPatientIdAsync(patientId,
+            cancellationToken);
 
         // لو المريض معندوش تاريخ مرضي، بنبلغ العشاب عشان ياخد باله
         if (history == null) return NotFound(new { Message = "This patient has not provided a medical history yet." });

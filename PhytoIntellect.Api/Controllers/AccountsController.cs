@@ -8,12 +8,13 @@ using PhytoIntellect.Application.Services;
 namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
-[ApiController]
+[ApiController] //kari
 public class AccountsController(IAuthService authService) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterUserAuthDto model, CancellationToken cancellationToken)
+    public async Task<IActionResult> Register([FromBody] RegisterUserAuthDto model, 
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
