@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PhytoIntellect.Core.Entities;
+using System.Reflection.Emit;
 
 namespace PhytoIntellect.Infrastructure.Configurations.EntitiesConfigurations;
 
@@ -14,12 +15,14 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
         builder.HasOne(p => p.User)
                .WithOne(u => u.Patient)
                .HasForeignKey<Patient>(p => p.UserId)
-               .OnDelete(DeleteBehavior.Cascade); 
+               .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(p => p.MedicalHistory)
-               .WithOne() // 1-to-1
-               .HasForeignKey<Patient>(p => p.MedicalHistoryId) // الـ FK في جدول الـ Patient
-               .IsRequired(false) // عشان يسمح بـ Null (تخطي)
-               .OnDelete(DeleteBehavior.SetNull); // لو مسحنا التاريخ المرضي، المريض ميتمسحش
+           .WithOne(m => m.Patient)
+           .HasForeignKey<MedicalHistory>(m => m.PatientId) // هنا السحر: الـ FK بقى في جدول التاريخ المرضي
+           .OnDelete(DeleteBehavior.Cascade); 
+
+        builder.Property(p => p.Gender)
+               .HasConversion<string>();
     }
 }

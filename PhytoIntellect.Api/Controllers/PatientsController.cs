@@ -43,12 +43,21 @@ public class PatientsController(IPatientService patientService) : ControllerBase
 
     // Endpoints خاصة بالعشاب / الإدارة
 
-    [Authorize(Roles = AppRoles.Herbalist)] // العشاب بس اللي يدخل يشوف بروفايل مريض بالـ ID
+    //[Authorize(Roles = AppRoles.Herbalist)] // العشاب بس اللي يدخل يشوف بروفايل مريض بالـ ID
+    //[Authorize(Roles = AppRoles.Patient)]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPatientById(int id, CancellationToken cancellationToken)
     {
         var patient = await patientService.GetPatientByIdAsync(id, cancellationToken);
         if (patient == null) return NotFound(new { Message = "Patient not found." });
+
+
+        var loggedInUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (patient.UserId != loggedInUserId)
+        {
+            //return Forbid("You are not authorized to view this patient's data.");
+             return BadRequest(new { Message = "Invalid Patient ID requested." });
+        }
 
         return Ok(patient);
     }

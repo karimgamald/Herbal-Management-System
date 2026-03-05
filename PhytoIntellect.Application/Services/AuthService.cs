@@ -46,9 +46,6 @@ public class AuthService(
         var user = mapper.Map<User>(model);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
-        // أضف اليوزر أولاً
-        await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
-
         // 4. الربط الذكي (Navigation Property)
         // بعد كده أنشئ البروفايل حسب الدور
         if (user.Role == AppRoles.Patient)

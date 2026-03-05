@@ -12,6 +12,7 @@ public static class AddApplicationServicesDI
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<IMedicalHistoryService, MedicalHistoryService>();
+        services.AddScoped<IHerbalistService, HerbalistService>();
 
         // 2. تسجيل الـ AutoMapper (السطر السحري ده بيقرا كل الـ Profiles لوحده)
         services.AddAutoMapper(Assembly.GetExecutingAssembly());

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260303112923_UpdatePatientGenderToString")]
+    partial class UpdatePatientGenderToString
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,15 +48,12 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.Property<string>("LicenseNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("HerbalistId");
-
-                    b.HasIndex("LicenseNumber")
-                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -90,9 +90,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<string>("OtherNotes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PatientId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("Pregnancy")
                         .HasColumnType("bit");
 
@@ -100,9 +97,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .HasColumnType("bit");
 
                     b.HasKey("MedicalHistoryId");
-
-                    b.HasIndex("PatientId")
-                        .IsUnique();
 
                     b.ToTable("MedicalHistory");
                 });
@@ -122,10 +116,17 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("MedicalHistoryId")
+                        .HasColumnType("int");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("PatientId");
+
+                    b.HasIndex("MedicalHistoryId")
+                        .IsUnique()
+                        .HasFilter("[MedicalHistoryId] IS NOT NULL");
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -223,24 +224,20 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PhytoIntellect.Core.Entities.MedicalHistory", b =>
-                {
-                    b.HasOne("PhytoIntellect.Core.Entities.Patient", "Patient")
-                        .WithOne("MedicalHistory")
-                        .HasForeignKey("PhytoIntellect.Core.Entities.MedicalHistory", "PatientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Patient");
-                });
-
             modelBuilder.Entity("PhytoIntellect.Core.Entities.Patient", b =>
                 {
+                    b.HasOne("PhytoIntellect.Core.Entities.MedicalHistory", "MedicalHistory")
+                        .WithOne()
+                        .HasForeignKey("PhytoIntellect.Core.Entities.Patient", "MedicalHistoryId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("PhytoIntellect.Core.Entities.User", "User")
                         .WithOne("Patient")
                         .HasForeignKey("PhytoIntellect.Core.Entities.Patient", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("MedicalHistory");
 
                     b.Navigation("User");
                 });
@@ -254,11 +251,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("PhytoIntellect.Core.Entities.Patient", b =>
-                {
-                    b.Navigation("MedicalHistory");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.User", b =>

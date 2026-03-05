@@ -12,49 +12,43 @@ public class MedicalHistoryService(IUnitOfWork unitOfWork, IMapper mapper) : IMe
 {
     public async Task<MedicalHistoryDto?> GetMyMedicalHistoryAsync(int userId, CancellationToken cancellationToken = default)
     {
-        // 1. نجيب المريض الأول بالـ UserId
+        // 1. نجيب الـ PatientId بتاع اليوزر ده
         var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken);
+        if (patient == null) return null;
 
-        // لو مفيش مريض أو لسه معملش تاريخ مرضي، نرجع null
-        if (patient == null || patient.MedicalHistoryId == null) return null;
-
-        // 2. نجيب التاريخ المرضي بتاعه
-        var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.MedicalHistoryId == patient.MedicalHistoryId, tracked: false, cancellationToken);
+        // 2. ندور في جدول التاريخ المرضي مباشرة بالـ PatientId
+        var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.PatientId == patient.PatientId, tracked: false, cancellationToken);
 
         return mapper.Map<MedicalHistoryDto>(history);
     }
 
     public async Task<string> AddOrUpdateMyMedicalHistoryAsync(int userId, ManageMedicalHistoryDto request, CancellationToken cancellationToken = default)
     {
-        // لازم tracked: true عشان لو عدلنا الـ Patient يسمع في الداتابيز
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: true, cancellationToken);
+        // 1. نجيب المريض عشان محتاجين الـ PatientId بتاعه
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken);
         if (patient == null) return "Patient profile not found.";
 
-        // الحالة الأولى: المريض لسه معملش تاريخ مرضي خالص (Create)
-        if (patient.MedicalHistoryId == null)
+        // 2. ندور هل المريض ده ليه تاريخ مرضي متسجل قبل كده ولا لأ؟
+        var existingHistory = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.PatientId == patient.PatientId, tracked: true, cancellationToken);
+
+        // الحالة الأولى: ملوش تاريخ مرضي (Create)
+        if (existingHistory == null)
         {
             var newHistory = mapper.Map<MedicalHistory>(request);
 
-            // بنحفظ التاريخ المرضي الأول عشان ياخد ID من الداتابيز
-            await unitOfWork.MedicalHistoryRepository.CreateAsync(newHistory, cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+            // السحر هنا: بنربط التاريخ المرضي الجديد بالمريض عن طريق الـ FK
+            newHistory.PatientId = patient.PatientId;
 
-            // نربط الـ ID الجديد بالمريض
-            patient.MedicalHistoryId = newHistory.MedicalHistoryId;
-            unitOfWork.PatientRepository.Update(patient);
+            await unitOfWork.MedicalHistoryRepository.CreateAsync(newHistory, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
             return "Medical history created successfully.";
         }
 
-        // الحالة التانية: المريض عنده تاريخ مرضي وجاي يعدله (Update)
+        // الحالة التانية: ليه تاريخ مرضي وبيعدله (Update)
         else
         {
-            var existingHistory = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.MedicalHistoryId == patient.MedicalHistoryId, tracked: true, cancellationToken);
-            if (existingHistory == null) return "Error finding medical history.";
-
-            // المابر هنا بياخد القيم من الريكويست يحطها في الريكورد القديم
-            mapper.Map(request, existingHistory);
+            mapper.Map(request, existingHistory); // بنحدث الداتا القديمة بالجديدة
 
             unitOfWork.MedicalHistoryRepository.Update(existingHistory);
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -62,15 +56,13 @@ public class MedicalHistoryService(IUnitOfWork unitOfWork, IMapper mapper) : IMe
             return "Medical history updated successfully.";
         }
     }
-    // ضيف الميثود دي جوه الكلاس
+
     public async Task<MedicalHistoryDto?> GetPatientMedicalHistoryByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == patientId, tracked: false, cancellationToken);
+        // بما إننا معانا الـ PatientId جاهز، هندور بيه في جدول التاريخ المرضي على طول (أسرع بكتير)
+        var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.PatientId == patientId, tracked: false, cancellationToken);
 
-        // لو المريض مش موجود أو لسه مكسل يكتب تاريخه المرضي
-        if (patient == null || patient.MedicalHistoryId == null) return null;
-
-        var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.MedicalHistoryId == patient.MedicalHistoryId, tracked: false, cancellationToken);
+        if (history == null) return null;
 
         return mapper.Map<MedicalHistoryDto>(history);
     }

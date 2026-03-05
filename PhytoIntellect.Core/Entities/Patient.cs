@@ -8,10 +8,7 @@ namespace PhytoIntellect.Core.Entities;
 public class Patient
 {
     public int PatientId { get; set; }
-
-    public int? MedicalHistoryId { get; set; }
     public int UserId { get; set; }
-
     public DateOnly? BirthDate { get; set; } 
     public Gender Gender { get; set; }
 
