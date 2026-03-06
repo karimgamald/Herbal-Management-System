@@ -51,14 +51,17 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken);
         if (user == null) return "User not found.";
 
-        if (!AppRoles.IsValidRole(request.Role))
-            return $"Invalid Role. Must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'.";
+        if (!string.IsNullOrWhiteSpace(request.FullName) && request.FullName != "string")
+            user.FullName = request.FullName;
 
-        // تحديث الداتا
-        user.FullName = request.FullName;
-        user.Email = request.Email;
-        user.Phone = request.Phone;
-        user.Role = request.Role;
+        if (!string.IsNullOrWhiteSpace(request.UserName) && request.UserName != "string")
+            user.UserName = request.UserName;
+
+        if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != "string")
+            user.Email = request.Email;
+
+        if (!string.IsNullOrWhiteSpace(request.Phone) && request.Phone != "string")
+            user.Phone = request.Phone;
 
         unitOfWork.UserRepository.Update(user); // مفيش await عشان دي Void
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -86,9 +89,14 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
             return new AuthResultDto { Success = false, Message = "User not found." };
 
         // تحديث البيانات (حتى لو مبعوتة بـ null هتتحدث عادي)
-        user.Governorate = model.Governorate;
-        user.City = model.City;
-        user.Street = model.Street;
+        if (!string.IsNullOrWhiteSpace(model.Governorate) && model.Governorate != "string")
+            user.Governorate = model.Governorate;
+
+        if (!string.IsNullOrWhiteSpace(model.City) && model.City != "string")
+            user.City = model.City;
+
+        if (!string.IsNullOrWhiteSpace(model.Street) && model.Street != "string")
+            user.Street = model.Street;
 
         unitOfWork.UserRepository.Update(user);
         await unitOfWork.SaveChangesAsync(cancellationToken);

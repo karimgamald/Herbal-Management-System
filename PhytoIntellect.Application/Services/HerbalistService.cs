@@ -3,6 +3,7 @@ using PhytoIntellect.Application.DTOs.HerbalistDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Interfaces;
+using System.Reflection;
 
 namespace PhytoIntellect.Application.Services;
 
@@ -45,7 +46,12 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
         if (herbalist == null)
             return "Herbalist profile not found.";
 
-        herbalist.Bio = request.Bio;
+        if (!string.IsNullOrWhiteSpace(request.LicenseNumber) && request.LicenseNumber != "string")
+            herbalist.LicenseNumber = request.LicenseNumber;
+
+        if (!string.IsNullOrWhiteSpace(request.Bio) && request.Bio != "string")
+            herbalist.Bio = request.Bio;
+
         herbalist.AvailableFrom = request.AvailableFrom;
         herbalist.AvailableTo = request.AvailableTo;
 
