@@ -67,10 +67,11 @@ public class AuthService(
                 User = user,
                 UserId = user.Id, // EF هيملأه تلقائياً بعد الحفظ لو مستخدم Navigation
                 AverageRating = 0,
-                Bio = "",
+                Bio = null!,
                 AvailableFrom = TimeSpan.Zero,
                 AvailableTo = TimeSpan.Zero,
-                LicenseNumber = ""
+                //LicenseNumber = ""
+                LicenseNumber = "HL-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper()
             };
 
             await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);

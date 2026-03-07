@@ -46,8 +46,8 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
         if (herbalist == null)
             return "Herbalist profile not found.";
 
-        if (!string.IsNullOrWhiteSpace(request.LicenseNumber) && request.LicenseNumber != "string")
-            herbalist.LicenseNumber = request.LicenseNumber;
+        //if (!string.IsNullOrWhiteSpace(request.LicenseNumber) && request.LicenseNumber != "string")
+        //    herbalist.LicenseNumber = request.LicenseNumber;
 
         if (!string.IsNullOrWhiteSpace(request.Bio) && request.Bio != "string")
             herbalist.Bio = request.Bio;

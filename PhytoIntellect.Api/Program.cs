@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllerServices();
 builder.Services.AddSwaggerServices();
+builder.Services.AddCorsServices();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddDbContextServices(builder.Configuration);
@@ -17,15 +18,16 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
 
 
-
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseHttpsRedirection();
 app.UseAuthentication();
+app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
 

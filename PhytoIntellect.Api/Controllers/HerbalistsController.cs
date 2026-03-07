@@ -32,7 +32,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
     }
 
     [Authorize(Roles = AppRoles.Herbalist)]
-    [HttpPut("update-profile/")]
+    [HttpPut("update-profile/me")]
     public async Task<IActionResult> UpdateMyProfile([FromBody] CreateOrUpdateHerbalistDto request,
         CancellationToken cancellationToken)
     {

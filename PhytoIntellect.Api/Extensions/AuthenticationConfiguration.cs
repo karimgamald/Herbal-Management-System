@@ -5,7 +5,7 @@ using System.Text;
 
 namespace PhytoIntellect.Api.Extensions
 {
-    public static class AuthenticationCinfiguration
+    public static class AuthenticationConfiguration
     {
         public static IServiceCollection AddAuthenticationServices
         (this IServiceCollection services, IConfiguration configuration)
