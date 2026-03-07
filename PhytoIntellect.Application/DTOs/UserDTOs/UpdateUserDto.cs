@@ -12,4 +12,7 @@ public class UpdateUserDto
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     //public string Role { get; set; } = string.Empty;
+    public string? Governorate { get; set; }
+    public string? City { get; set; }
+    public string? Street { get; set; }
 }

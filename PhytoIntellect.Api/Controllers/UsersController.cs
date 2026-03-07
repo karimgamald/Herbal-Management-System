@@ -26,7 +26,8 @@ public class UsersController(IUserService userService) : ControllerBase
     public async Task<IActionResult> GetUserById(int id, CancellationToken cancellationToken)
     {
         var user = await userService.GetUserByIdAsync(id, cancellationToken);
-        if (user == null) return NotFound(new { Message = "User not found." });
+        if (user == null) 
+            return NotFound(new { Message = "User not found." });
         return Ok(user);
     }
 
@@ -40,31 +41,32 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(new { Message = result });
     }
 
-    [Authorize]
-    [HttpPatch("update-my-address")]
-    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model,
-        CancellationToken cancellationToken)
-    {
-        // get the userid from claims
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim)) 
-            return Unauthorized();
+    //[Authorize]
+    //[HttpPatch("update-my-address")]
+    //public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model,
+    //    CancellationToken cancellationToken)
+    //{
+    //    // get the userid from claims
+    //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    //    if (string.IsNullOrEmpty(userIdClaim)) 
+    //        return Unauthorized();
 
-        var userId = int.Parse(userIdClaim);
+    //    var userId = int.Parse(userIdClaim);
 
-        var result = await userService.UpdateAddressAsync(userId, model, cancellationToken);
+    //    var result = await userService.UpdateAddressAsync(userId, model, cancellationToken);
 
-        if (!result.Success)
-            return BadRequest(result);
+    //    if (!result.Success)
+    //        return BadRequest(result);
 
-        return Ok(result);
-    }
+    //    return Ok(result);
+    //}
 
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> DeleteUser(int id, CancellationToken cancellationToken)
     {
         var result = await userService.DeleteUserAsync(id, cancellationToken);
-        if (result == "User not found.") return NotFound(new { Message = result });
+        if (result == "User not found.") 
+            return NotFound(new { Message = result });
         return Ok(new { Message = result });
     }
 }

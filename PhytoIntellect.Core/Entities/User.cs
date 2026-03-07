@@ -15,7 +15,7 @@
         public string? Street { get; set; }
 
         // Navigation Properties
-        public Patient Patient { get; set; }
-        public Herbalist Herbalist { get; set; }
+        public Patient? Patient { get; set; }
+        public Herbalist? Herbalist { get; set; }
     }
 }

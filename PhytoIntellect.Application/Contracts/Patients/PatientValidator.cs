@@ -3,9 +3,9 @@
 
 namespace PhytoIntellect.Application.Contracts.Patients;
 
-public class ManagePatientValidator: AbstractValidator<ManagePatientRequest>
+public class PatientValidator: AbstractValidator<PatientRequest>
 {
-    public ManagePatientValidator()
+    public PatientValidator()
     {
         //RuleFor(x => x.)
         //    .NotEmpty()

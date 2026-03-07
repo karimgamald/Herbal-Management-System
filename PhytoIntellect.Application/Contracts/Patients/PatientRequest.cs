@@ -4,5 +4,5 @@ using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Patients;
 
-public record ManagePatientResponse(
+public record PatientRequest(
     );

@@ -34,7 +34,8 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         // 2. Validation لليوزرنيم
         var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.Email == request.Email, 
             tracked: false, cancellationToken);
-        if (existingUser != null) return "Username is already taken.";
+        if (existingUser != null) 
+            return "Username is already taken.";
 
         var user = mapper.Map<User>(request);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -45,30 +46,40 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         return "User created successfully.";
     }
 
-    public async Task<string> UpdateUserAsync(int id, UpdateUserDto request, 
-        CancellationToken cancellationToken = default)
+    public async Task<string> UpdateUserAsync(int id, UpdateUserDto request, CancellationToken cancellationToken = default)
     {
-        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken);
-        if (user == null) return "User not found.";
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id,tracked: true, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(request.FullName) && request.FullName != "string")
+        if (user == null)
+            return "User not found.";
+
+        if (!string.IsNullOrWhiteSpace(request.FullName))
             user.FullName = request.FullName;
 
-        if (!string.IsNullOrWhiteSpace(request.UserName) && request.UserName != "string")
+        if (!string.IsNullOrWhiteSpace(request.UserName))
             user.UserName = request.UserName;
 
-        if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != "string")
+        if (!string.IsNullOrWhiteSpace(request.Email))
             user.Email = request.Email;
 
-        if (!string.IsNullOrWhiteSpace(request.Phone) && request.Phone != "string")
+        if (!string.IsNullOrWhiteSpace(request.Phone))
             user.Phone = request.Phone;
 
-        unitOfWork.UserRepository.Update(user); // مفيش await عشان دي Void
+        if (!string.IsNullOrWhiteSpace(request.Governorate))
+            user.Governorate = request.Governorate;
+
+        if (!string.IsNullOrWhiteSpace(request.City))
+            user.City = request.City;
+
+        if (!string.IsNullOrWhiteSpace(request.Street))
+            user.Street = request.Street;
+
+        unitOfWork.UserRepository.Update(user);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return "User updated successfully.";
     }
-
     public async Task<string> DeleteUserAsync(int id, CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken);

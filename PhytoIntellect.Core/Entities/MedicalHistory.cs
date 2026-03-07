@@ -19,5 +19,5 @@ public class MedicalHistory
     public bool Pregnancy { get; set; }
     public string? OtherNotes { get; set; }
 
-    public Patient Patient { get; set; }
+    public Patient? Patient { get; set; }
 }

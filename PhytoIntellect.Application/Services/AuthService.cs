@@ -64,7 +64,13 @@ public class AuthService(
         {
             var newHerbalist = new Herbalist
             {
-                User = user
+                User = user,
+                UserId = user.Id, // EF هيملأه تلقائياً بعد الحفظ لو مستخدم Navigation
+                AverageRating = 0,
+                Bio = "",
+                AvailableFrom = TimeSpan.Zero,
+                AvailableTo = TimeSpan.Zero,
+                LicenseNumber = ""
             };
 
             await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);

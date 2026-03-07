@@ -15,8 +15,9 @@ namespace PhytoIntellect.Infrastructure.Configurations.EntitiesConfigurations
                    .HasForeignKey<Herbalist>(h => h.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasIndex(h => h.LicenseNumber)
-                .IsUnique();
+            //is made in ManageHerbalistValidator
+            //builder.HasIndex(h => h.LicenseNumber)
+            //    .IsUnique();
         }
     }
 }

@@ -13,6 +13,6 @@ public class Patient
     public Gender Gender { get; set; }
 
     // Navigation Properties
-    public User User { get; set; }
+    public User? User { get; set; }
     public MedicalHistory? MedicalHistory { get; set; }
 }
