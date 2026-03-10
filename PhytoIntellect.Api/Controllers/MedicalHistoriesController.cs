@@ -11,10 +11,8 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-// شيلنا الـ Authorize من هنا عشان نوزع الصلاحيات جوه
 public class MedicalHistoriesController(IMedicalHistoryService medicalHistoryService) : ControllerBase
 {
-    // 1. للمريض بس
     [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("me")]
     public async Task<IActionResult> GetMyMedicalHistory(CancellationToken cancellationToken)
@@ -28,7 +26,6 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
         return Ok(history);
     }
 
-    // 2. للمريض بس
     [Authorize(Roles = AppRoles.Patient)]
     [HttpPost("me")]
     public async Task<IActionResult> ManageMyMedicalHistory([FromBody] ManageMedicalHistoryDto request,
@@ -44,15 +41,12 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
         return Ok(new { Message = result });
     }
 
-    // 3. ✨ دي الإضافة الجديدة: للعشاب بس!
-    [Authorize(Roles = AppRoles.Herbalist)] // عندي ايرور هنا وهو ان العطار يقدر يجيب اي مريض مش شرط اللي معاه التوكين بس
+    [Authorize(Roles = AppRoles.Herbalist)] 
     [HttpGet("patient/{patientId}")]
     public async Task<IActionResult> GetPatientMedicalHistory(int patientId, CancellationToken cancellationToken)
     {
-        var history = await medicalHistoryService.GetPatientMedicalHistoryByPatientIdAsync(patientId,
-            cancellationToken);
+        var history = await medicalHistoryService.GetPatientMedicalHistoryByPatientIdAsync(patientId, cancellationToken);
 
-        // لو المريض معندوش تاريخ مرضي، بنبلغ العشاب عشان ياخد باله
         if (history == null) return NotFound(new { Message = "This patient has not provided a medical history yet." });
 
         return Ok(history);
