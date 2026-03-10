@@ -25,7 +25,6 @@ public static class AddApplicationServicesDI
 
         services.AddFluentValidationServices();
 
-
         return services;
     }
 

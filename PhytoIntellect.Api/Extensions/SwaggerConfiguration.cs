@@ -1,4 +1,6 @@
 ﻿using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Reflection;
 
 namespace PhytoIntellect.Api.Extensions;
 
@@ -8,8 +10,15 @@ public static class SwaggerConfiguration
     {
         services.AddSwaggerGen(c =>
         {
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Order Management System API", Version = "v1" });
+            // معلومات API
+            c.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = "PhytoIntellect API",
+                Version = "v1",
+                Description = "API for managing herbalists, users, and authentication"
+            });
 
+            // JWT Authentication
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Name = "Authorization",
@@ -21,17 +30,38 @@ public static class SwaggerConfiguration
             });
 
             c.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
                 {
+                    new OpenApiSecurityScheme
                     {
-                        new OpenApiSecurityScheme
+                        Reference = new OpenApiReference
                         {
-                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-                        },
-                        Array.Empty<string>()
-                    }
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
+                }
             });
 
-            c.UseInlineDefinitionsForEnums(); // السطر ده بيخلي السواجر يعرض الـ Enums كأسماء مش أرقام
+            // عرض Enums كأسماء بدل الأرقام
+            c.UseInlineDefinitionsForEnums();
+
+            // لجعل TimeSpan يظهر بصيغة HH:mm
+            c.MapType<TimeSpan>(() => new OpenApiSchema
+            {
+                Type = "string",
+                Format = "time",
+                Example = OpenApiAnyFactory.CreateFromJson("\"00:00\"")
+            });
+
+            // إذا حابب، تضيف تعليقات XML
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            if (File.Exists(xmlPath))
+            {
+                c.IncludeXmlComments(xmlPath);
+            }
         });
 
         return services;

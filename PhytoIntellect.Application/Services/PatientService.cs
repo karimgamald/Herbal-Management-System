@@ -21,10 +21,12 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
     }
 
     // 2. المريض بيستكمل/يعدل بياناته
-    public async Task<string> UpdateMyProfileAsync(int userId, UpdatePatientDto request, CancellationToken cancellationToken = default)
+    public async Task<string> UpdateMyProfileAsync(int userId, UpdatePatientDto request, 
+        CancellationToken cancellationToken = default)
     {
         var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: true, cancellationToken);
-        if (patient == null) return "Patient profile not found.";
+        if (patient == null)
+            return "Patient profile not found.";
 
         patient.BirthDate = request.BirthDate;
         patient.Gender = request.Gender; // Casting
@@ -38,7 +40,8 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
     // 3. العشاب بيجيب بروفايل مريض معين
     public async Task<PatientDto?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == patientId, tracked: false, cancellationToken);
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == patientId, tracked: false, 
+            cancellationToken);
         return patient == null ? null : mapper.Map<PatientDto>(patient);
     }
 

@@ -65,7 +65,7 @@ public class AuthService(
             var newHerbalist = new Herbalist
             {
                 User = user,
-                UserId = user.Id, // EF هيملأه تلقائياً بعد الحفظ لو مستخدم Navigation
+                //UserId = user.Id, // EF هيملأه تلقائياً بعد الحفظ لو مستخدم Navigation
                 AverageRating = 0,
                 Bio = null!,
                 AvailableFrom = TimeSpan.Zero,
@@ -73,7 +73,7 @@ public class AuthService(
                 //LicenseNumber = ""
                 LicenseNumber = "HL-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper()
             };
-
+            
             await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);
         }
 
@@ -89,7 +89,7 @@ public class AuthService(
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email, tracked: false, 
             cancellationToken);
         if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
-            return new AuthResultDto { Success = false, Message = "Invalid username or password." };
+            return new AuthResultDto { Success = false, Message = "Invalid Email or password." };
 
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();

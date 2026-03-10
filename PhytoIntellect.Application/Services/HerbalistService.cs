@@ -38,7 +38,10 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
     }
 
     // 3️⃣ تعديل البروفايل
-    public async Task<string> UpdateMyProfileAsync(int userId, CreateOrUpdateHerbalistDto request, CancellationToken cancellationToken = default)
+    public async Task<string> UpdateMyProfileAsync(
+     int userId,
+     CreateOrUpdateHerbalistDto request,
+     CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
             .GetAsync(h => h.UserId == userId, tracked: true, cancellationToken);
@@ -46,16 +49,12 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
         if (herbalist == null)
             return "Herbalist profile not found.";
 
-        //if (!string.IsNullOrWhiteSpace(request.LicenseNumber) && request.LicenseNumber != "string")
-        //    herbalist.LicenseNumber = request.LicenseNumber;
-
-        if (!string.IsNullOrWhiteSpace(request.Bio) && request.Bio != "string")
-            herbalist.Bio = request.Bio;
-
+        herbalist.Bio = request.Bio;
         herbalist.AvailableFrom = request.AvailableFrom;
         herbalist.AvailableTo = request.AvailableTo;
 
         unitOfWork.HerbalistRepository.Update(herbalist);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return "Profile updated successfully.";
