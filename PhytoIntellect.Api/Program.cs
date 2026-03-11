@@ -14,7 +14,7 @@ builder.Services.AddDbContextServices(builder.Configuration);
 builder.Services.AddAuthenticationServices(builder.Configuration);
 
 
-builder.Services.AddApplicationServices();
+builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices();
 
 

@@ -12,7 +12,8 @@ public class AuthService(
     IUnitOfWork unitOfWork,
     ITokenService tokenService,
     IMapper mapper,
-    IConfiguration _config) : IAuthService // ضفنا الـ Configuration هنا
+    IConfiguration _config,
+    IEmailService emailService) : IAuthService // ضفنا الـ Configuration هنا
 {
     public async Task<AuthResultDto> RegisterAsync(RegisterUserAuthDto model, 
         CancellationToken cancellationToken = default)
@@ -81,6 +82,30 @@ public class AuthService(
         // السطر ده هيبعت لـ SQL: الـ User أولاً، ياخد الـ ID، يحطه في الـ Patient، يبعت الـ Patient
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        //EmailMessage
+        var message =
+            $"""
+             Welcome to Herbal System 🌿
+             
+             Hello {user.FullName},
+             
+             Your account has been successfully created.
+             
+             You can now login and start using the Herbal System platform.
+             
+             Account Email: {user.Email}
+             
+             If you did not create this account, please contact our support team.
+             
+             Best regards,
+             Herbal System Team
+             """;
+
+        await emailService.SendEmailAsync(
+            user.Email,
+            "Welcome to Herbal System",
+            message);
+
         return new AuthResultDto { Success = true, Message = "User registered successfully with profile." };
     }
     public async Task<AuthResultDto> LoginAsync(LoginRequestDto model, 
@@ -147,6 +172,26 @@ public class AuthService(
         unitOfWork.UserRepository.Update(user);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        var message =
+            $"""
+            Password Changed Successfully
+            
+            Hello {user.FullName},
+            
+            Your password has been updated successfully.
+            
+            If you made this change, you can safely ignore this email.
+            
+            If you did NOT change your password, please contact support immediately.
+            
+            Best regards,
+            Herbal System Security Team
+            """;
+
+        await emailService.SendEmailAsync(
+            user.Email,
+            "Password Changed - Herbal System",
+            message);
 
         return new AuthResultDto
         {
@@ -175,6 +220,27 @@ public class AuthService(
         unitOfWork.UserRepository.Update(user);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var message =
+           $"""
+            Password Reset Notification
+            
+            Hello {user.FullName},
+            
+            Your password has been reset successfully.
+            
+            You can now login using your new password.
+            
+            If you did not request this change, please contact support immediately.
+            
+            Best regards,
+            Herbal System Security Team
+            """;
+
+        await emailService.SendEmailAsync(
+            user.Email,
+            "Password Reset - Herbal System",
+            message);
 
         return new AuthResultDto
         {

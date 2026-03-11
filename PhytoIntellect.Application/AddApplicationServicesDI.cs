@@ -1,10 +1,12 @@
 ﻿using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Contracts.Patients;
 using PhytoIntellect.Application.Contracts.Users;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Services;
+using PhytoIntellect.Application.Settings;
 using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 using System.Reflection;
 using YourProject.Contracts.Users;
@@ -12,13 +14,17 @@ namespace PhytoIntellect.Application;
 
 public static class AddApplicationServicesDI
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services,IConfiguration configuration)
     {
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<IMedicalHistoryService, MedicalHistoryService>();
         services.AddScoped<IHerbalistService, HerbalistService>();
+
+        //for Email
+        services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+        services.AddScoped<IEmailService, EmailService>();
 
         // 2. تسجيل الـ AutoMapper (السطر السحري ده بيقرا كل الـ Profiles لوحده)
         services.AddAutoMapper(Assembly.GetExecutingAssembly());
