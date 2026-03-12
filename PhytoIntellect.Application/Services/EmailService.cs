@@ -4,14 +4,9 @@ using MimeKit;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Settings;
 
-public class EmailService : IEmailService
+public class EmailService(IOptions<EmailSettings> settings) : IEmailService
 {
-    private readonly EmailSettings _settings;
-
-    public EmailService(IOptions<EmailSettings> settings)
-    {
-        _settings = settings.Value;
-    }
+    private readonly EmailSettings _settings = settings.Value;
 
     public async Task SendEmailAsync(string to, string subject, string body)
     {

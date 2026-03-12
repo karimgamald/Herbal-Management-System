@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PhytoIntellect.Core.Entities;
 
-namespace PhytoIntellect.Infrastructure.Configurations.EntitiesConfigurations
+namespace PhytoIntellect.Infrastructure.Configurations
 {
     public class HerbalistConfiguration : IEntityTypeConfiguration<Herbalist>
     {

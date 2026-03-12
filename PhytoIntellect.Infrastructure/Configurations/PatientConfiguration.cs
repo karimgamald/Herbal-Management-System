@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PhytoIntellect.Core.Entities;
 using System.Reflection.Emit;
 
-namespace PhytoIntellect.Infrastructure.Configurations.EntitiesConfigurations;
+namespace PhytoIntellect.Infrastructure.Configurations;
 
 public class PatientConfiguration : IEntityTypeConfiguration<Patient>
 {

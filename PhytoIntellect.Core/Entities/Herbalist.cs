@@ -18,4 +18,13 @@ public class Herbalist
 
     // Navigation Property
     public User? User { get; set; }
+
+    // 2. فاترينة العطار (الأعشاب اللي بيبيعها ومأكتفها عنده)
+    public ICollection<HerbalistHerb> HerbalistHerbs { get; set; } = [];
+
+    // 3. الوصفات اللي العطار ده ألفها أو عملها
+    public ICollection<Recipe> Recipes { get; set; } = [];
+
+    // 4. (مستقبلاً) الطلبات الفرعية اللي مطلوبة من العطار ده عشان يجهزها
+    // public ICollection<SubOrder> SubOrders { get; set; } = new List<SubOrder>();
 }
