@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 
 public interface IRepository<T> where T : class
 {
-    // ضفنا الـ CancellationToken وخليناه default
-    Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, CancellationToken cancellationToken = default);
-    Task<T?> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, CancellationToken cancellationToken = default);
+    // خلينا الـ includeProperties بعد الـ tracked عشان نحافظ على القديم
+    Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, string? includeProperties = null, CancellationToken cancellationToken = default);
+    Task<T?> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, string? includeProperties = null, CancellationToken cancellationToken = default);
     Task CreateAsync(T entity, CancellationToken cancellationToken = default);
-
-    // دول بقوا void لأنهم بيعدلوا في الميموري بس
     void Update(T entity);
     void Remove(T entity);
 }

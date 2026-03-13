@@ -21,7 +21,7 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
 
     public async Task<UserDto?> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: false, cancellationToken);
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: false, cancellationToken: cancellationToken);
         return user == null ? null : mapper.Map<UserDto>(user);
     }
 
@@ -33,7 +33,7 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
 
         // 2. Validation لليوزرنيم
         var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.Email == request.Email, 
-            tracked: false, cancellationToken);
+            tracked: false, cancellationToken: cancellationToken);
         if (existingUser != null) 
             return "Username is already taken.";
 
@@ -48,7 +48,7 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
 
     public async Task<string> UpdateUserAsync(int id, UpdateUserDto request, CancellationToken cancellationToken = default)
     {
-        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id,tracked: true, cancellationToken);
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id,tracked: true, cancellationToken: cancellationToken);
 
         if (user == null)
             return "User not found.";
@@ -82,7 +82,7 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
     }
     public async Task<string> DeleteUserAsync(int id, CancellationToken cancellationToken = default)
     {
-        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken);
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken: cancellationToken);
         if (user == null) return "User not found.";
 
         unitOfWork.UserRepository.Remove(user); // مفيش await
@@ -94,7 +94,7 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
     public async Task<AuthResultDto> UpdateAddressAsync(int userId, UpdateUserAddressDto model, CancellationToken cancellationToken = default)
     {
         // بنجيب اليوزر من Repository اليوزر نفسه
-        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == userId, tracked: true, cancellationToken);
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == userId, tracked: true, cancellationToken: cancellationToken);
 
         if (user == null)
             return new AuthResultDto { Success = false, Message = "User not found." };

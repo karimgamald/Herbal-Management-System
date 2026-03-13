@@ -13,7 +13,7 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
     public async Task<HerbalistDto?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
-            .GetAsync(h => h.UserId == userId, tracked: false, cancellationToken);
+            .GetAsync(h => h.UserId == userId, tracked: false, cancellationToken: cancellationToken);
 
         return herbalist == null ? null : mapper.Map<HerbalistDto>(herbalist);
     }
@@ -22,7 +22,7 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
     public async Task<string> CreateProfileAsync(int userId, CreateOrUpdateHerbalistDto request, CancellationToken cancellationToken = default)
     {
         var exists = await unitOfWork.HerbalistRepository
-            .GetAsync(h => h.UserId == userId, tracked: false, cancellationToken);
+            .GetAsync(h => h.UserId == userId, tracked: false, cancellationToken: cancellationToken);
 
         if (exists != null)
             return "Profile already exists.";
@@ -44,7 +44,7 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
      CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
-            .GetAsync(h => h.UserId == userId, tracked: true, cancellationToken);
+            .GetAsync(h => h.UserId == userId, tracked: true, cancellationToken: cancellationToken);
 
         if (herbalist == null)
             return "Herbalist profile not found.";
@@ -64,7 +64,7 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
     public async Task<HerbalistDto?> GetHerbalistByIdAsync(int herbalistId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
-            .GetAsync(h => h.HerbalistId == herbalistId, tracked: false, cancellationToken);
+            .GetAsync(h => h.HerbalistId == herbalistId, tracked: false, cancellationToken: cancellationToken);
 
         return herbalist == null ? null : mapper.Map<HerbalistDto>(herbalist);
     }

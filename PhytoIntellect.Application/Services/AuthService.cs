@@ -38,7 +38,7 @@ public class AuthService(
 
         // 2. التحقق من تكرار اليوزر
         var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email,
-            tracked: false, cancellationToken);
+            tracked: false, cancellationToken: cancellationToken);
 
         if (existingUser != null)
             return new AuthResultDto { Success = false, Message = "Email already exists." };
@@ -111,8 +111,8 @@ public class AuthService(
     public async Task<AuthResultDto> LoginAsync(LoginRequestDto model, 
         CancellationToken cancellationToken = default)
     {
-        var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email, tracked: false, 
-            cancellationToken);
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email, tracked: false,
+            cancellationToken: cancellationToken);
         if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
             return new AuthResultDto { Success = false, Message = "Invalid Email or password." };
 
@@ -144,7 +144,7 @@ public class AuthService(
         var user = await unitOfWork.UserRepository.GetAsync(
             u => u.Email == model.Email,
             tracked: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (user == null)
             return new AuthResultDto
@@ -206,7 +206,7 @@ public class AuthService(
         var user = await unitOfWork.UserRepository.GetAsync(
             u => u.Email == model.Email,
             tracked: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (user == null)
             return new AuthResultDto
@@ -255,13 +255,13 @@ public class AuthService(
         var tokenHash = TokenHasher.HashToken(refreshToken);
         var storedToken = await unitOfWork.RefreshTokenRepository.GetAsync(
             t => t.TokenHash == tokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow,
-            tracked: true, cancellationToken);
+            tracked: true, cancellationToken: cancellationToken);
 
         if (storedToken == null)
             return new AuthResultDto { Success = false, Message = "Invalid or expired refresh token." };
 
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == storedToken.UserId, 
-            tracked: false, cancellationToken);
+            tracked: false, cancellationToken: cancellationToken);
 
         // إلغاء التوكن القديم (Rotation)
         storedToken.IsRevoked = true;
@@ -291,7 +291,7 @@ public class AuthService(
         CancellationToken cancellationToken = default)
     {
         var tokenHash = TokenHasher.HashToken(refreshToken);
-        var storedToken = await unitOfWork.RefreshTokenRepository.GetAsync(t => t.TokenHash == tokenHash && !t.IsRevoked, tracked: true, cancellationToken);
+        var storedToken = await unitOfWork.RefreshTokenRepository.GetAsync(t => t.TokenHash == tokenHash && !t.IsRevoked, tracked: true, cancellationToken: cancellationToken);
 
         if (storedToken == null)
             return new AuthResultDto { Success = false, Message = "Token not found or already revoked." };
