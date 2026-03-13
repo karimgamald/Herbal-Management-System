@@ -12,7 +12,8 @@ namespace PhytoIntellect.Application.Services;
 public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeService
 {
     // 1. إنشاء وصفة جديدة
-    public async Task<RecipeResponse?> AddRecipeAsync(int userId, CreateRecipeRequest request, CancellationToken cancellationToken = default)
+    public async Task<RecipeResponse?> AddRecipeAsync(int userId, CreateRecipeRequest request, 
+        CancellationToken cancellationToken = default)
     {
         // استخدام Named Arguments عشان نتفادى أي لغبطة في ترتيب الباراميترز
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(

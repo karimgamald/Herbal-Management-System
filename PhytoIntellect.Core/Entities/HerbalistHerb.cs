@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PhytoIntellect.Core.Entities;
 
-public class HerbalistHerb // inventory
+public class HerbalistHerb // => inventory
 {
     // Composite Key (مفيش Id برايمري لوحده، الاتنين دول مع بعض هما البرايمري)
     public int HerbalistId { get; set; }

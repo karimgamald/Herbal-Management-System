@@ -25,6 +25,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+// for wwwroot
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

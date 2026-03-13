@@ -21,4 +21,8 @@
     <ProjectReference Include="..\PhytoIntellect.Infrastructure\PhytoIntellect.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\images\herbs\" />
+  </ItemGroup>
+
 </Project>
