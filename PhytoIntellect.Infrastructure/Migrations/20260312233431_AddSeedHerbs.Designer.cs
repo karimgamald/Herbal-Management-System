@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260312233431_AddSeedHerbs")]
+    partial class AddSeedHerbs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -67,7 +70,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("AddedByHerbalistId");
 
-                    b.ToTable("Herbs");
+                    b.ToTable("Herb");
 
                     b.HasData(
                         new
@@ -214,7 +217,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Herbalists");
+                    b.ToTable("Herbalist");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.HerbalistHerb", b =>
@@ -237,7 +240,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("HerbId");
 
-                    b.ToTable("HerbalistHerbs");
+                    b.ToTable("HerbalistHerb");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.MedicalHistory", b =>
@@ -283,7 +286,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("PatientId")
                         .IsUnique();
 
-                    b.ToTable("MedicalHistories");
+                    b.ToTable("MedicalHistory");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.Patient", b =>
@@ -351,7 +354,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("HerbalistId");
 
-                    b.ToTable("Recipes");
+                    b.ToTable("Recipe");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.RecipeHerb", b =>
@@ -365,9 +368,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<int>("HerbId")
                         .HasColumnType("int");
 
-                    b.Property<float>("Quantity")
-                        .HasColumnType("real");
-
                     b.Property<int>("RecipeId")
                         .HasColumnType("int");
 
@@ -377,7 +377,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("RecipeId");
 
-                    b.ToTable("RecipeHerbs");
+                    b.ToTable("RecipeHerb");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.RefreshToken", b =>

@@ -13,7 +13,7 @@ public class Repository<T>(ApplicationDbContext context) : IRepository<T> where 
 {
     protected readonly DbSet<T> _dbSet = context.Set<T>();
 
-    public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, CancellationToken cancellationToken = default)
+    public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, string? includeProperties = null, CancellationToken cancellationToken = default)
     {
         IQueryable<T> query = _dbSet;
 
@@ -23,23 +23,39 @@ public class Repository<T>(ApplicationDbContext context) : IRepository<T> where 
         if (filter != null)
             query = query.Where(filter);
 
-        // بصينا الـ token هنا
+        // الإضافة الجديدة اللي مش هتأثر على القديم خالص
+        if (!string.IsNullOrEmpty(includeProperties))
+        {
+            foreach (var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                query = query.Include(includeProp.Trim());
+            }
+        }
+
         return await query.ToListAsync(cancellationToken);
     }
 
-    public async Task<T?> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, CancellationToken cancellationToken = default)
+    public async Task<T?> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, string? includeProperties = null, CancellationToken cancellationToken = default)
     {
         IQueryable<T> query = _dbSet;
 
         if (!tracked)
             query = query.AsNoTracking();
 
-        // بصينا الـ token هنا
-        return filter == null
-            ? await query.FirstOrDefaultAsync(cancellationToken)
-            : await query.FirstOrDefaultAsync(filter, cancellationToken);
-    }
+        if (filter != null)
+            query = query.Where(filter);
 
+        // الإضافة الجديدة
+        if (!string.IsNullOrEmpty(includeProperties))
+        {
+            foreach (var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                query = query.Include(includeProp.Trim());
+            }
+        }
+
+        return await query.FirstOrDefaultAsync(cancellationToken);
+    }
     public async Task CreateAsync(T entity, CancellationToken cancellationToken = default)
     {
         // بصينا الـ token هنا

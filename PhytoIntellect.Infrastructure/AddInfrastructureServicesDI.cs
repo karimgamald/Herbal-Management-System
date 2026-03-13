@@ -18,6 +18,7 @@ public static class AddInfrastructureServicesDI
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPatientRepository, PatientRepository>();
+        services.AddScoped<IRecipeService, RecipeService>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 

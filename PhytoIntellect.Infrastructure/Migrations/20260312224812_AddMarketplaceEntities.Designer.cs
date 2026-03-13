@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260312224812_AddMarketplaceEntities")]
+    partial class AddMarketplaceEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -67,119 +70,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("AddedByHerbalistId");
 
-                    b.ToTable("Herbs");
-
-                    b.HasData(
-                        new
-                        {
-                            HerbId = 1,
-                            Benefits = "Relieves nausea, reduces inflammation, and aids digestion.",
-                            Description = "A widely used root known for its spicy flavor and medicinal properties.",
-                            Dosage = "1-3 grams daily",
-                            HerbName = "Ginger",
-                            IsApproved = true,
-                            ScientificName = "Zingiber officinale",
-                            Warnings = "High doses may cause heartburn or interact with blood thinners."
-                        },
-                        new
-                        {
-                            HerbId = 2,
-                            Benefits = "Promotes sleep, reduces anxiety, and soothes stomach aches.",
-                            Description = "A daisy-like plant commonly used to make herb infusions.",
-                            Dosage = "1-2 cups of tea daily",
-                            HerbName = "Chamomile",
-                            IsApproved = true,
-                            ScientificName = "Matricaria chamomilla",
-                            Warnings = "May cause allergic reactions in people sensitive to ragweed."
-                        },
-                        new
-                        {
-                            HerbId = 3,
-                            Benefits = "Powerful anti-inflammatory and antioxidant effects.",
-                            Description = "A bright yellow spice widely used in Indian cuisine and Ayurvedic medicine.",
-                            Dosage = "500-2000 mg daily (with black pepper)",
-                            HerbName = "Turmeric",
-                            IsApproved = true,
-                            ScientificName = "Curcuma longa",
-                            Warnings = "Can cause stomach upset in large amounts."
-                        },
-                        new
-                        {
-                            HerbId = 4,
-                            Benefits = "Relieves irritable bowel syndrome (IBS), eases headaches, and clears congestion.",
-                            Description = "A hybrid mint cross between watermint and spearmint.",
-                            Dosage = "1-2 cups of tea or 0.2ml essential oil capsule",
-                            HerbName = "Peppermint",
-                            IsApproved = true,
-                            ScientificName = "Mentha piperita",
-                            Warnings = "May worsen acid reflux (GERD)."
-                        },
-                        new
-                        {
-                            HerbId = 5,
-                            Benefits = "Boosts immune system, reduces blood pressure, and improves cholesterol levels.",
-                            Description = "A pungent bulb used extensively in cooking and traditional medicine.",
-                            Dosage = "1-2 cloves raw daily",
-                            HerbName = "Garlic",
-                            IsApproved = true,
-                            ScientificName = "Allium sativum",
-                            Warnings = "Bad breath, heartburn, and may increase bleeding risk."
-                        },
-                        new
-                        {
-                            HerbId = 6,
-                            Benefits = "Reduces stress and cortisol levels, boosts brain function.",
-                            Description = "An ancient medicinal herb classified as an adaptogen.",
-                            Dosage = "300-500 mg root extract daily",
-                            HerbName = "Ashwagandha",
-                            IsApproved = true,
-                            ScientificName = "Withania somnifera",
-                            Warnings = "Not recommended for pregnant women or those with autoimmune diseases."
-                        },
-                        new
-                        {
-                            HerbId = 7,
-                            Benefits = "Prevents and treats the common cold, boosts immunity.",
-                            Description = "A flowering plant in the daisy family, popular for fighting flu.",
-                            Dosage = "300-500 mg daily during illness",
-                            HerbName = "Echinacea",
-                            IsApproved = true,
-                            ScientificName = "Echinacea purpurea",
-                            Warnings = "May cause mild stomach upset or allergic reactions."
-                        },
-                        new
-                        {
-                            HerbId = 8,
-                            Benefits = "Reduces anxiety, promotes restful sleep, and heals minor burns (topical).",
-                            Description = "A fragrant purple flower known for its calming scent.",
-                            Dosage = "1 cup of tea or aromatherapy",
-                            HerbName = "Lavender",
-                            IsApproved = true,
-                            ScientificName = "Lavandula angustifolia",
-                            Warnings = "Not recommended for young boys (hormonal effects) if used topically in large amounts."
-                        },
-                        new
-                        {
-                            HerbId = 9,
-                            Benefits = "Increases energy, lowers blood sugar, and improves cognitive function.",
-                            Description = "A slow-growing plant with fleshy roots, popular in Chinese medicine.",
-                            Dosage = "200-400 mg daily",
-                            HerbName = "Ginseng",
-                            IsApproved = true,
-                            ScientificName = "Panax ginseng",
-                            Warnings = "Can cause insomnia or interact with diabetes medications."
-                        },
-                        new
-                        {
-                            HerbId = 10,
-                            Benefits = "Improves memory and focus, promotes hair growth (topical).",
-                            Description = "A fragrant evergreen herb native to the Mediterranean.",
-                            Dosage = "1-2 cups of tea or used as a spice",
-                            HerbName = "Rosemary",
-                            IsApproved = true,
-                            ScientificName = "Salvia rosmarinus",
-                            Warnings = "Extremely high doses can trigger seizures."
-                        });
+                    b.ToTable("Herb");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.Herbalist", b =>
@@ -214,7 +105,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Herbalists");
+                    b.ToTable("Herbalist");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.HerbalistHerb", b =>
@@ -237,7 +128,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("HerbId");
 
-                    b.ToTable("HerbalistHerbs");
+                    b.ToTable("HerbalistHerb");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.MedicalHistory", b =>
@@ -283,7 +174,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("PatientId")
                         .IsUnique();
 
-                    b.ToTable("MedicalHistories");
+                    b.ToTable("MedicalHistory");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.Patient", b =>
@@ -351,7 +242,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("HerbalistId");
 
-                    b.ToTable("Recipes");
+                    b.ToTable("Recipe");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.RecipeHerb", b =>
@@ -365,9 +256,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<int>("HerbId")
                         .HasColumnType("int");
 
-                    b.Property<float>("Quantity")
-                        .HasColumnType("real");
-
                     b.Property<int>("RecipeId")
                         .HasColumnType("int");
 
@@ -377,7 +265,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("RecipeId");
 
-                    b.ToTable("RecipeHerbs");
+                    b.ToTable("RecipeHerb");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.RefreshToken", b =>

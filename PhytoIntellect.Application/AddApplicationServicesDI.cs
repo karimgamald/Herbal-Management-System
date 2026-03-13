@@ -21,6 +21,7 @@ public static class AddApplicationServicesDI
         services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<IMedicalHistoryService, MedicalHistoryService>();
         services.AddScoped<IHerbalistService, HerbalistService>();
+        services.AddScoped<IRecipeService, RecipeService>();
 
         //for Email
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));

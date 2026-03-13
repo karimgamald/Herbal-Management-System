@@ -15,14 +15,14 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
 {
     public async Task<PatientDto?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken);
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken: cancellationToken);
         return patient == null ? null : mapper.Map<PatientDto>(patient);
     }
 
     public async Task<string> UpdateMyProfileAsync(int userId, UpdatePatientDto request, 
         CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: true, cancellationToken);
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: true, cancellationToken: cancellationToken);
         if (patient == null)
             return "Patient profile not found.";
 
@@ -40,8 +40,8 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
    
     public async Task<PatientDto?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == patientId, tracked: false, 
-            cancellationToken);
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == patientId, tracked: false,
+            cancellationToken: cancellationToken);
         return patient == null ? null : mapper.Map<PatientDto>(patient);
     }
 

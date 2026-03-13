@@ -10,10 +10,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<User> Users { get; set; }
     public DbSet<Patient> Patients { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
-
+    public DbSet<Herbalist> Herbalists { get; set; }
+    public DbSet<MedicalHistory> MedicalHistories { get; set; }
+    public DbSet<Herb> Herbs { get; set; }
+    public DbSet<HerbalistHerb> HerbalistHerbs { get; set; }
+    public DbSet<Recipe> Recipes { get; set; }
+    public DbSet<RecipeHerb> RecipeHerbs { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly()); // all (Fluent API) from configruation folder
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 }
