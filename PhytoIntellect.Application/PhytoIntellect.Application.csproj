@@ -21,4 +21,8 @@
     <ProjectReference Include="..\PhytoIntellect.Core\PhytoIntellect.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Contracts\Recipes\" />
+  </ItemGroup>
+
 </Project>

@@ -20,7 +20,7 @@ public class Recipe
     public bool IsActive { get; set; } = true;
 
     // Navigation Properties
-    [ForeignKey(nameof(HerbalistId))]
+    //[ForeignKey(nameof(HerbalistId))]
     public Herbalist? Herbalist { get; set; }
     public ICollection<RecipeHerb> RecipeHerbs { get; set; } = [];
 }
