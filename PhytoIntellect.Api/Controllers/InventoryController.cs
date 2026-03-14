@@ -1,16 +1,25 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Inventory;
+using PhytoIntellect.Core.Constants;
+using System.Security.Claims;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = AppRoles.Herbalist)]
 public class InventoryController(IInventoryService inventoryService) : ControllerBase
 {
     [HttpGet("me")]
     public async Task<IActionResult> GetMyInventory(CancellationToken cancellationToken)
     {
-        int userId = 1; // لاحقاً من JWT
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
-        var result = await inventoryService.GetMyInventoryAsync(userId, cancellationToken);
+        if (userIdClaim == null)
+            return Unauthorized();
+
+        var herbalistId = int.Parse(userIdClaim.Value);
+
+        var result = await inventoryService.GetMyInventoryAsync(herbalistId, cancellationToken);
 
         return Ok(result);
     }
@@ -18,9 +27,14 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
     [HttpPost]
     public async Task<IActionResult> Add(AddHerbToInventoryRequest request,CancellationToken cancellationToken)
     {
-        int userId = 1;
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
-        var result = await inventoryService.AddHerbAsync(userId, request, cancellationToken);
+        if (userIdClaim == null)
+            return Unauthorized();
+
+        var herbalistId = int.Parse(userIdClaim.Value);
+
+        var result = await inventoryService.AddHerbAsync(herbalistId, request, cancellationToken);
 
         return Ok(result);
     }
@@ -28,9 +42,14 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
     [HttpPut("{herbId}")]
     public async Task<IActionResult> Update(int herbId,UpdateInventoryRequest request,CancellationToken cancellationToken)
     {
-        int userId = 1;
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
-        var result = await inventoryService.UpdateInventoryAsync(userId, herbId, request, cancellationToken);
+        if (userIdClaim == null)
+            return Unauthorized();
+
+        var herbalistId = int.Parse(userIdClaim.Value);
+
+        var result = await inventoryService.UpdateInventoryAsync(herbalistId, herbId, request, cancellationToken);
 
         return Ok(result);
     }
@@ -38,9 +57,14 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
     [HttpDelete("{herbId}")]
     public async Task<IActionResult> Delete(int herbId, CancellationToken cancellationToken)
     {
-        int userId = 1;
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
-        var result = await inventoryService.RemoveHerbAsync(userId, herbId, cancellationToken);
+        if (userIdClaim == null)
+            return Unauthorized();
+
+        var herbalistId = int.Parse(userIdClaim.Value);
+
+        var result = await inventoryService.RemoveHerbAsync(herbalistId, herbId, cancellationToken);
 
         return Ok(result);
     }
