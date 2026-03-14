@@ -30,7 +30,11 @@ public static class AddApplicationServicesDI
         services.AddScoped<IEmailService, EmailService>();
 
         // 2. تسجيل الـ AutoMapper (السطر السحري ده بيقرا كل الـ Profiles لوحده)
-        services.AddAutoMapper(Assembly.GetExecutingAssembly());
+        // AutoMapper ✅
+        services.AddAutoMapper(cfg =>
+        {
+            cfg.AddMaps(Assembly.GetExecutingAssembly());
+        });
 
         services.AddFluentValidationServices();
 
