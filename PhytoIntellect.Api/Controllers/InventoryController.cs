@@ -1,47 +1,64 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Inventory;
+using System.Security.Claims;
+
+namespace PhytoIntellect.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Herbalist")] // 👈 المخزن ده للعطارين بس!
 public class InventoryController(IInventoryService inventoryService) : ControllerBase
 {
     [HttpGet("me")]
     public async Task<IActionResult> GetMyInventory(CancellationToken cancellationToken)
     {
-        int userId = 1; // لاحقاً من JWT
+        // بنقرأ الـ ID من التوكن
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
 
         var result = await inventoryService.GetMyInventoryAsync(userId, cancellationToken);
-
         return Ok(result);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Add(AddHerbToInventoryRequest request,CancellationToken cancellationToken)
+    [HttpPost("add")]
+    public async Task<IActionResult> Add([FromBody] AddHerbToInventoryRequest request, CancellationToken cancellationToken)
     {
-        int userId = 1;
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
 
-        var result = await inventoryService.AddHerbAsync(userId, request, cancellationToken);
-
-        return Ok(result);
+        try
+        {
+            var result = await inventoryService.AddHerbAsync(userId, request, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
-    [HttpPut("{herbId}")]
-    public async Task<IActionResult> Update(int herbId,UpdateInventoryRequest request,CancellationToken cancellationToken)
+    [HttpPut("/api/herbs/{herbId}/Inventory/update")]
+    public async Task<IActionResult> Update(int herbId, [FromBody] UpdateInventoryRequest request, CancellationToken cancellationToken)
     {
-        int userId = 1;
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
 
-        var result = await inventoryService.UpdateInventoryAsync(userId, herbId, request, cancellationToken);
+        var success = await inventoryService.UpdateInventoryAsync(userId, herbId, request, cancellationToken);
+        if (!success) return NotFound(new { Message = "Item not found in your inventory." });
 
-        return Ok(result);
+        return Ok(new { Message = "Inventory updated successfully." });
     }
 
-    [HttpDelete("{herbId}")]
+    [HttpDelete("/api/herbs/{herbId}/Inventory/delete")]
     public async Task<IActionResult> Delete(int herbId, CancellationToken cancellationToken)
     {
-        int userId = 1;
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
 
-        var result = await inventoryService.RemoveHerbAsync(userId, herbId, cancellationToken);
+        var success = await inventoryService.RemoveHerbAsync(userId, herbId, cancellationToken);
+        if (!success) return NotFound(new { Message = "Item not found in your inventory." });
 
-        return Ok(result);
+        return Ok(new { Message = "Item removed from inventory successfully." });
     }
 }

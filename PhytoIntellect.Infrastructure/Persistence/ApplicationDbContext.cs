@@ -16,6 +16,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<HerbalistHerb> HerbalistHerbs { get; set; }
     public DbSet<Recipe> Recipes { get; set; }
     public DbSet<RecipeHerb> RecipeHerbs { get; set; }
+    public DbSet<Disease> Diseases { get; set; }
+    public DbSet<RecipeDisease> RecipeDiseases { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

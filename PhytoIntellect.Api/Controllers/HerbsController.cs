@@ -1,21 +1,22 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Herbs;
-using PhytoIntellect.Core.Entities;
+using System.Security.Claims; 
+namespace PhytoIntellect.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class HerbsController(IHerbService herbService) : ControllerBase
 {
-    [HttpGet]
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var herbs = await herbService.GetApprovedHerbsAsync(cancellationToken);
-
         return Ok(herbs);
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id,CancellationToken cancellationToken)
+    [HttpGet("{id}/get-id")]
+    public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
     {
         var herb = await herbService.GetHerbByIdAsync(id, cancellationToken);
 
@@ -25,45 +26,54 @@ public class HerbsController(IHerbService herbService) : ControllerBase
         return Ok(herb);
     }
 
-    [HttpPost]
-    [HttpPost]
+    [HttpPost("add")]
+    // ضيف هنا الـ Authorize لو عاوز العطارين بس اللي يضيفوا
     public async Task<IActionResult> Create([FromForm] HerbRequest request, CancellationToken cancellationToken)
     {
-        // 🔹 Get herbalistId from claims
-        var herbalistIdClaim = User.FindFirst("herbalistId")?.Value;
-        if (herbalistIdClaim == null)
-            return Unauthorized("Herbalist not found in token.");
+        // 👈 وحدنا الطريقة عشان تجيب الـ UserId من التوكن
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId))
+            return Unauthorized(new { Message = "Invalid user token." });
 
-        int herbalistId = int.Parse(herbalistIdClaim);
-
-        var result = await herbService.CreateHerbAsync(herbalistId, request, cancellationToken);
-
-        return Ok(result);
+        try
+        {
+            var result = await herbService.CreateHerbAsync(userId, request, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] HerbRequest request, CancellationToken cancellationToken)
+    [HttpPut("{id}/update")]
+    public async Task<IActionResult> Update(int id, [FromForm] HerbRequest request, CancellationToken cancellationToken)
     {
-        // 🔹 Get herbalistId from claims
-        var herbalistIdClaim = User.FindFirst("herbalistId")?.Value;
-        if (herbalistIdClaim == null)
-            return Unauthorized("Herbalist not found in token.");
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId))
+            return Unauthorized(new { Message = "Invalid user token." });
 
-        int herbalistId = int.Parse(herbalistIdClaim);
+        try
+        {
+            var result = await herbService.UpdateHerbAsync(userId, id, request, cancellationToken);
 
-        var result = await herbService.UpdateHerbAsync(herbalistId, id, request, cancellationToken);
+            if (result == null)
+                return NotFound(new { Message = "Herb not found or you don't have permission to update it." });
 
-        if (result == null)
-            return NotFound("Herb not found.");
-
-        return Ok(result);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id,CancellationToken cancellationToken)
+    [HttpDelete("{id}/delete")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var result = await herbService.DeleteHerbAsync(id,cancellationToken);
+        var result = await herbService.DeleteHerbAsync(id, cancellationToken);
+        if (!result) return NotFound(new { Message = "Herb not found." });
 
-        return Ok(result);
+        return Ok(new { Message = "Herb deleted successfully." });
     }
 }

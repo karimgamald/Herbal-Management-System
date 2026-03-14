@@ -1,30 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
 using AutoMapper;
 using PhytoIntellect.Application.Contracts.Inventory;
-using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
+
+namespace PhytoIntellect.Application.Services;
 
 public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInventoryService
 {
-    public async Task<IEnumerable<InventoryResponse>> GetMyInventoryAsync(int userId,CancellationToken cancellationToken)
+    public async Task<IEnumerable<InventoryResponse>> GetMyInventoryAsync(int userId, CancellationToken cancellationToken)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
-            h => h.UserId == userId,
+            filter: h => h.UserId == userId,
             tracked: false,
             cancellationToken: cancellationToken);
 
         if (herbalist == null)
-            throw new Exception("Herbalist not found");
+            throw new Exception("Herbalist not found.");
 
         var herbs = await unitOfWork.HerbalistHerbRepository.GetAllAsync(
-            h => h.HerbalistId == herbalist.HerbalistId,
+            filter: h => h.HerbalistId == herbalist.HerbalistId,
             tracked: false,
             includeProperties: "Herb",
             cancellationToken: cancellationToken);
 
+        // هنا الـ Select العادية ممتازة جداً ومش محتاجين AutoMapper
         return herbs.Select(x => new InventoryResponse
         {
             HerbId = x.HerbId,
@@ -34,18 +33,31 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
         });
     }
 
-    public async Task<InventoryResponse?> AddHerbAsync(
-        int userId,
-        AddHerbToInventoryRequest request,
-        CancellationToken cancellationToken)
+    public async Task<InventoryResponse?> AddHerbAsync(int userId, AddHerbToInventoryRequest request, CancellationToken cancellationToken)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
-            h => h.UserId == userId,
+            filter: h => h.UserId == userId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null)
-            throw new Exception("Herbalist not found");
+        if (herbalist == null) throw new Exception("Herbalist not found.");
+
+        // 🚨 حماية 1: هل العشبة دي موجودة أصلاً في قاموس الأعشاب؟
+        var herb = await unitOfWork.HerbRepository.GetAsync(
+            filter: h => h.HerbId == request.HerbId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (herb == null) throw new Exception("This herb does not exist in the system.");
+
+        // 🚨 حماية 2: هل العطار ضاف العشبة دي قبل كده في مخزنه؟
+        var existingInventoryItem = await unitOfWork.HerbalistHerbRepository.GetAsync(
+            filter: h => h.HerbId == request.HerbId && h.HerbalistId == herbalist.HerbalistId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (existingInventoryItem != null)
+            throw new Exception("This herb is already in your inventory. You can update its price instead.");
 
         var entity = new HerbalistHerb
         {
@@ -56,14 +68,9 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
         };
 
         await unitOfWork.HerbalistHerbRepository.CreateAsync(entity, cancellationToken);
-
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var herb = await unitOfWork.HerbRepository.GetAsync(
-            h => h.HerbId == request.HerbId,
-            tracked: false,
-            cancellationToken: cancellationToken);
-
+        // بما إننا جبنا العشبة فوق في حماية 1، مش محتاجين نعمل استعلام تاني للداتابيز!
         return new InventoryResponse
         {
             HerbId = herb.HerbId,
@@ -73,61 +80,47 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
         };
     }
 
-    public async Task<bool> UpdateInventoryAsync(
-        int userId,
-        int herbId,
-        UpdateInventoryRequest request,
-        CancellationToken cancellationToken)
+    public async Task<bool> UpdateInventoryAsync(int userId, int herbId, UpdateInventoryRequest request, CancellationToken cancellationToken)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
-            h => h.UserId == userId,
+            filter: h => h.UserId == userId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null)
-            return false;
+        if (herbalist == null) return false;
 
         var item = await unitOfWork.HerbalistHerbRepository.GetAsync(
-            h => h.HerbId == herbId && h.HerbalistId == herbalist.HerbalistId,
+            filter: h => h.HerbId == herbId && h.HerbalistId == herbalist.HerbalistId,
             tracked: true,
             cancellationToken: cancellationToken);
 
-        if (item == null)
-            return false;
+        if (item == null) return false;
 
         item.Price = request.Price;
         item.IsActive = request.IsActive;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
         return true;
     }
 
-    public async Task<bool> RemoveHerbAsync(
-        int userId,
-        int herbId,
-        CancellationToken cancellationToken)
+    public async Task<bool> RemoveHerbAsync(int userId, int herbId, CancellationToken cancellationToken)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
-            h => h.UserId == userId,
+            filter: h => h.UserId == userId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null)
-            return false;
+        if (herbalist == null) return false;
 
         var item = await unitOfWork.HerbalistHerbRepository.GetAsync(
-            h => h.HerbId == herbId && h.HerbalistId == herbalist.HerbalistId,
+            filter: h => h.HerbId == herbId && h.HerbalistId == herbalist.HerbalistId,
             tracked: true,
             cancellationToken: cancellationToken);
 
-        if (item == null)
-            return false;
+        if (item == null) return false;
 
         unitOfWork.HerbalistHerbRepository.Remove(item);
-
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
         return true;
     }
 }
