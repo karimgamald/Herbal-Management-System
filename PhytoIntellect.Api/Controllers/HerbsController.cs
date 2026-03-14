@@ -1,22 +1,21 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Herbs;
 using PhytoIntellect.Core.Entities;
-using System.Security.Claims;
 
 [ApiController]
 [Route("api/[controller]")]
 public class HerbsController(IHerbService herbService) : ControllerBase
 {
-    [HttpGet]
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var herbs = await herbService.GetApprovedHerbsAsync(cancellationToken);
-
         return Ok(herbs);
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id,CancellationToken cancellationToken)
+    [HttpGet("{id}/get-id")]
+    public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
     {
         var herb = await herbService.GetHerbByIdAsync(id, cancellationToken);
 
@@ -27,50 +26,50 @@ public class HerbsController(IHerbService herbService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromForm] HerbRequest request,CancellationToken cancellationToken)
+    [HttpPost]
+    public async Task<IActionResult> Create([FromForm] HerbRequest request, CancellationToken cancellationToken)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+        // 🔹 Get herbalistId from claims
+        var herbalistIdClaim = User.FindFirst("herbalistId")?.Value;
+        if (herbalistIdClaim == null)
+            return Unauthorized("Herbalist not found in token.");
 
-        if (userIdClaim == null)
-            return Unauthorized();
+        int herbalistId = int.Parse(herbalistIdClaim);
 
-        var herbalistId = int.Parse(userIdClaim.Value);
-
-        var result = await herbService.CreateHerbAsync(
-            herbalistId,
-            request,
-            cancellationToken);
+        var result = await herbService.CreateHerbAsync(herbalistId, request, cancellationToken);
 
         return Ok(result);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id,[FromForm] HerbRequest request,CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(int id, [FromBody] HerbRequest request, CancellationToken cancellationToken)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+        // 🔹 Get herbalistId from claims
+        var herbalistIdClaim = User.FindFirst("herbalistId")?.Value;
+        if (herbalistIdClaim == null)
+            return Unauthorized("Herbalist not found in token.");
 
-        if (userIdClaim == null)
-            return Unauthorized();
+        int herbalistId = int.Parse(herbalistIdClaim);
 
-        var herbalistId = int.Parse(userIdClaim.Value);
-
-        var result = await herbService.UpdateHerbAsync(
-            herbalistId,
-            id,
-            request,
-            cancellationToken);
+        var result = await herbService.UpdateHerbAsync(herbalistId, id, request, cancellationToken);
 
         if (result == null)
-            return NotFound("Herb not found");
+            return NotFound("Herb not found.");
 
-        return Ok(result);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id,CancellationToken cancellationToken)
+    [HttpDelete("{id}/delete")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var result = await herbService.DeleteHerbAsync(id,cancellationToken);
+        var result = await herbService.DeleteHerbAsync(id, cancellationToken);
+        if (!result) return NotFound(new { Message = "Herb not found." });
 
-        return Ok(result);
+        return Ok(new { Message = "Herb deleted successfully." });
     }
 }

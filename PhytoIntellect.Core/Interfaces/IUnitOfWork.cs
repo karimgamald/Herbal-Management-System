@@ -11,6 +11,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<RefreshToken> RefreshTokenRepository { get; }
     IRepository<MedicalHistory> MedicalHistoryRepository { get; }
     IRepository<Recipe> RecipeRepository { get; }
+    IRepository<Disease> DiseaseRepository { get; }
     IRepository<Herb> HerbRepository { get; }
     IRepository<HerbalistHerb> HerbalistHerbRepository { get; }
     IRepository<RecipeHerb> RecipeHerbRepository { get; }

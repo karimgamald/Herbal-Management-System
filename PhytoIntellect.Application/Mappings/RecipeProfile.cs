@@ -11,20 +11,23 @@ public class RecipeProfile : Profile
 {
     public RecipeProfile()
     {
-        // Request -> Entity (عشان نسيف في الداتابيز)
         CreateMap<CreateRecipeRequest, Recipe>()
-            .ForMember(dest => dest.CreatedByAI, opt => opt.MapFrom(src => false)) // بما إن العطار اللي بيكريت
+            .ForMember(dest => dest.CreatedByAI, opt => opt.MapFrom(src => false))
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
-            .ForMember(dest => dest.RecipeHerbs, opt => opt.MapFrom(src => src.Herbs));
+            .ForMember(dest => dest.RecipeHerbs, opt => opt.MapFrom(src => src.Herbs)) // ربط الأعشاب
+            .ForMember(dest => dest.RecipeDiseases, opt => opt.MapFrom(src =>          // ربط الأمراض
+                src.DiseaseIds != null ? src.DiseaseIds.Select(id => new RecipeDisease { DiseaseId = id }) : null));
 
         CreateMap<RecipeHerbRequest, RecipeHerb>();
 
-        // Entity -> Response (عشان نرجعها للـ User)
         CreateMap<Recipe, RecipeResponse>()
-            .ForMember(dest => dest.Herbs, opt => opt.MapFrom(src => src.RecipeHerbs));
+            .ForMember(dest => dest.Herbs, opt => opt.MapFrom(src => src.RecipeHerbs))
+            .ForMember(dest => dest.TargetedDiseases, opt => opt.MapFrom(src => src.RecipeDiseases));
 
-        // دي التريكة اللي بتجيب اسم العشبة من جدول الـ Herb
         CreateMap<RecipeHerb, RecipeHerbResponse>()
             .ForMember(dest => dest.HerbName, opt => opt.MapFrom(src => src.Herb.HerbName));
+
+        CreateMap<RecipeDisease, RecipeDiseaseResponse>()
+            .ForMember(dest => dest.DiseaseName, opt => opt.MapFrom(src => src.Disease.DiseaseName));
     }
 }

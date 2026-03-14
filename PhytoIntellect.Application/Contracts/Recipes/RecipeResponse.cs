@@ -12,4 +12,5 @@ public record RecipeResponse
     public bool CreatedByAI { get; init; }
     public DateTime CreatedDate { get; init; }
     public List<RecipeHerbResponse> Herbs { get; init; } = new();
+    public List<RecipeDiseaseResponse> TargetedDiseases { get; init; } = new();
 }

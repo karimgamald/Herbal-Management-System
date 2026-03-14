@@ -23,4 +23,6 @@ public class Recipe
     //[ForeignKey(nameof(HerbalistId))]
     public Herbalist? Herbalist { get; set; }
     public ICollection<RecipeHerb> RecipeHerbs { get; set; } = [];
+    // ضيف العلاقة دي عشان الوصفة تعرف هي بتعالج إيه
+    public ICollection<RecipeDisease> RecipeDiseases { get; set; } = [];
 }

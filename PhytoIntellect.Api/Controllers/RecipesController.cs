@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Recipes;
 using PhytoIntellect.Application.Interfaces;
@@ -11,8 +10,7 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class RecipesController(IRecipeService recipeService) : ControllerBase
 {
-    // 1. العطار بيكريت وصفة
-    [Authorize(Roles = "Herbalist")] // استبدلها بـ AppRoles.Herbalist لو عاملها Constant
+    [Authorize(Roles = "Herbalist")]
     [HttpPost("add")]
     public async Task<IActionResult> AddRecipe([FromBody] CreateRecipeRequest request, CancellationToken cancellationToken)
     {
@@ -31,13 +29,13 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         }
     }
 
-    // 2. المريض (أو أي حد) بيتصفح الوصفات
     [HttpGet("all")]
     public async Task<IActionResult> GetAllRecipes(CancellationToken cancellationToken)
     {
         var recipes = await recipeService.GetAllActiveRecipesAsync(cancellationToken);
         return Ok(recipes);
     }
+
     [HttpGet("{id}/get-id")]
     public async Task<IActionResult> GetRecipeById(int id, CancellationToken cancellationToken)
     {
@@ -47,12 +45,11 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         return Ok(recipe);
     }
 
-    // 4. تعديل الوصفة
     [Authorize(Roles = "Herbalist")]
     [HttpPut("{id}/update")]
     public async Task<IActionResult> UpdateRecipe(int id, [FromBody] UpdateRecipeRequest request, CancellationToken cancellationToken)
     {
-        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
 
         try
@@ -62,7 +59,7 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Forbid(ex.Message); // بيرجع 403 لو بيعدل وصفة مش بتاعته
+            return StatusCode(403, new { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -70,12 +67,11 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         }
     }
 
-    // 5. حذف الوصفة
     [Authorize(Roles = "Herbalist")]
     [HttpDelete("{id}/delete")]
     public async Task<IActionResult> DeleteRecipe(int id, CancellationToken cancellationToken)
     {
-        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
 
         var success = await recipeService.DeleteRecipeAsync(userId, id, cancellationToken);
