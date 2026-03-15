@@ -15,4 +15,5 @@ public class Patient
     // Navigation Properties
     public User? User { get; set; }
     public MedicalHistory? MedicalHistory { get; set; }
+    public ICollection<Feedback> Feedbacks { get; set; } = [];
 }

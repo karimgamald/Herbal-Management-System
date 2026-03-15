@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
+using System;
 using System.Collections.Generic;
 using System.Text;
 

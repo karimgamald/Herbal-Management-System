@@ -13,7 +13,6 @@ public class MedicalHistoryProfile : Profile
     {
         CreateMap<MedicalHistory, MedicalHistoryDto>();
 
-        // التحويل في حالة التعديل أو الإنشاء
         CreateMap<ManageMedicalHistoryDto, MedicalHistory>();
     }
 }

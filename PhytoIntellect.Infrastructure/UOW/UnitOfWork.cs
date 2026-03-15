@@ -1,7 +1,8 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
+﻿using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Infrastructure.Presistence;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PhytoIntellect.Infrastructure.UOW;
 
@@ -17,10 +18,10 @@ public class UnitOfWork(
     IRepository<RecipeHerb> recipeHerbRepository,
     IRepository<Herb> herbRepository,
     IRepository<HerbalistHerb> herbalistHerbRepository,
-    IRepository<Disease> diseaseRepository
+    IRepository<Disease> diseaseRepository,
+    IRepository<Feedback> feedbackRepository 
     ) : IUnitOfWork
 {
-    // ربطنا الخصائص بالـ Parameters اللي جيالنا من فوق
     public IRepository<User> UserRepository { get; } = userRepository;
     public IRepository<Patient> PatientRepository { get; } = patientRepository;
     public IRepository<Herbalist> HerbalistRepository { get; } = herbalistRepository;
@@ -31,9 +32,11 @@ public class UnitOfWork(
     public IRepository<Herb> HerbRepository { get; } = herbRepository;
     public IRepository<HerbalistHerb> HerbalistHerbRepository { get; } = herbalistHerbRepository; // => Inventory
     public IRepository<RecipeHerb> RecipeHerbRepository { get; } = recipeHerbRepository;
+    public IRepository<Feedback> FeedbackRepository { get; } = feedbackRepository;
+
+
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // هنا الداتابيز بتضرب لو اليوزر لغى الريكويست
         return await context.SaveChangesAsync(cancellationToken);
     }
 

@@ -15,14 +15,14 @@ public class Recipe
     public bool CreatedByAI { get; set; } = true;
     public string? Description { get; set; }
     public string? Instructions { get; set; }
-    public float AverageRating { get; set; }
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
+    public float AverageRating { get; set; }
+    public int TotalRatings { get; set; } = 0;
 
     // Navigation Properties
-    //[ForeignKey(nameof(HerbalistId))]
     public Herbalist? Herbalist { get; set; }
     public ICollection<RecipeHerb> RecipeHerbs { get; set; } = [];
-    // ضيف العلاقة دي عشان الوصفة تعرف هي بتعالج إيه
     public ICollection<RecipeDisease> RecipeDiseases { get; set; } = [];
+    public ICollection<Feedback> Feedbacks { get; set; } = [];
 }
