@@ -6,14 +6,14 @@ using System.Security.Claims;
 [Route("api/[controller]")]
 public class HerbsController(IHerbService herbService) : ControllerBase
 {
-    [HttpGet]
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var herbs = await herbService.GetApprovedHerbsAsync(cancellationToken);
         return Ok(herbs);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id}/get-id")]
     public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
     {
         var herb = await herbService.GetHerbByIdAsync(id, cancellationToken);
@@ -24,7 +24,7 @@ public class HerbsController(IHerbService herbService) : ControllerBase
         return Ok(herb);
     }
 
-    [HttpPost]
+    [HttpPost("add")]
     public async Task<IActionResult> Create([FromForm] HerbRequest request, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -38,7 +38,7 @@ public class HerbsController(IHerbService herbService) : ControllerBase
         return Ok(result);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{id}/update")]
     public async Task<IActionResult> Update(int id, [FromForm] HerbRequest request, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -55,7 +55,7 @@ public class HerbsController(IHerbService herbService) : ControllerBase
         return Ok(result);
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{id}/delete")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var result = await herbService.DeleteHerbAsync(id, cancellationToken);

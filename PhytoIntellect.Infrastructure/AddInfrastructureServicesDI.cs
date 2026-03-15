@@ -21,8 +21,6 @@ public static class AddInfrastructureServicesDI
         services.AddScoped<IRecipeService, RecipeService>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
-
-
         return services;
     }
 
@@ -30,7 +28,15 @@ public static class AddInfrastructureServicesDI
         (this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
-        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(
+                    connectionString,
+                    sqlServerOptionsAction: sqlOptions =>
+                    {
+                        sqlOptions.EnableRetryOnFailure();
+                    }));
+
         return services;
     }
 }

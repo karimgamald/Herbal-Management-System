@@ -41,25 +41,25 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(new { Message = result });
     }
 
-    //[Authorize]
-    //[HttpPatch("update-my-address")]
-    //public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model,
-    //    CancellationToken cancellationToken)
-    //{
-    //    // get the userid from claims
-    //    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    //    if (string.IsNullOrEmpty(userIdClaim)) 
-    //        return Unauthorized();
+    [Authorize]
+    [HttpPatch("update-my-address")]
+    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model,
+        CancellationToken cancellationToken)
+    {
+        // get the userid from claims
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim))
+            return Unauthorized();
 
-    //    var userId = int.Parse(userIdClaim);
+        var userId = int.Parse(userIdClaim);
 
-    //    var result = await userService.UpdateAddressAsync(userId, model, cancellationToken);
+        var result = await userService.UpdateAddressAsync(userId, model, cancellationToken);
 
-    //    if (!result.Success)
-    //        return BadRequest(result);
+        if (!result.Success)
+            return BadRequest(result);
 
-    //    return Ok(result);
-    //}
+        return Ok(result);
+    }
 
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> DeleteUser(int id, CancellationToken cancellationToken)

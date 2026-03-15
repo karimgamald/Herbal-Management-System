@@ -23,8 +23,8 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
         return Ok(result);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Add( AddHerbToInventoryRequest request,CancellationToken cancellationToken)
+    [HttpPost("add")]
+    public async Task<IActionResult> Add(AddHerbToInventoryRequest request,CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
@@ -37,7 +37,7 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
         return Ok(result);
     }
 
-    [HttpPut("{herbId}")]
+    [HttpPut("/api/herbs/{herbId}/Inventory/update")]
     public async Task<IActionResult> Update(int herbId,UpdateInventoryRequest request, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -51,7 +51,7 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
         return Ok(result);
     }
 
-    [HttpDelete("{herbId}")]
+    [HttpDelete("/api/herbs/{herbId}/Inventory/delete")]
     public async Task<IActionResult> Delete(int herbId, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
