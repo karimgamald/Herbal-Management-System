@@ -1,4 +1,5 @@
 ﻿using PhytoIntellect.Application.Contracts.Herbs;
+using PhytoIntellect.Application.DTOs.HerbDTOs;
 
 public interface IHerbService
 {
@@ -7,16 +8,18 @@ public interface IHerbService
 
     // 2️⃣ عرض تفاصيل عشبة
     Task<HerbResponse?> GetHerbByIdAsync(int herbId,CancellationToken cancellationToken = default);
+    // 3 Get the herb with herbalist
+    Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(int herbId,CancellationToken cancellationToken = default);
 
-    // 3️⃣ اقتراح عشبة جديدة
+    // 4 اقتراح عشبة جديدة
     Task<HerbResponse?> CreateHerbAsync(int userId,HerbRequest request,CancellationToken cancellationToken = default);
 
-    // 4️⃣ تعديل عشبة
+    // 5 تعديل عشبة
     Task<HerbResponse?> UpdateHerbAsync(int herbalistId, int herbId, HerbRequest request, CancellationToken cancellationToken);
 
-    // 5️⃣ الموافقة على العشبة (Admin)
+    // 6 الموافقة على العشبة (Admin)
     Task<bool> ApproveHerbAsync(int herbId,CancellationToken cancellationToken = default);
 
-    // 6️⃣ حذف العشبة
+    // 7 حذف العشبة
     Task<bool> DeleteHerbAsync(int herbId,CancellationToken cancellationToken = default);
 }

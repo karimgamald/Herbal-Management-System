@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Recipes;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 
 namespace PhytoIntellect.Api.Controllers;
@@ -10,7 +11,7 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class RecipesController(IRecipeService recipeService) : ControllerBase
 {
-    [Authorize(Roles = "Herbalist")]
+    [Authorize(Roles =AppRoles.Herbalist)]
     [HttpPost("add")]
     public async Task<IActionResult> AddRecipe([FromBody] CreateRecipeRequest request, CancellationToken cancellationToken)
     {

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using PhytoIntellect.Application.Contracts.Herbs;
+using PhytoIntellect.Application.DTOs.HerbDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 
@@ -33,6 +34,22 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
             return null;
 
         return mapper.Map<HerbResponse>(herb);
+    }
+
+    public async Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(
+     int herbId,
+     CancellationToken cancellationToken = default)
+    {
+        var herb = await unitOfWork.HerbRepository.GetAsync(
+            filter: h => h.HerbId == herbId && h.IsApproved,
+            includeProperties: "AddedByHerbalist", // لازم يكون الاسم مظبوط
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (herb == null)
+            return null;
+
+        return mapper.Map<HerbWithHerbalistDto>(herb);
     }
 
     public async Task<HerbResponse?> CreateHerbAsync(int userId, HerbRequest request, CancellationToken cancellationToken)

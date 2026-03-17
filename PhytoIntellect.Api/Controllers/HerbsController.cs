@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Herbs;
+using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 
 [ApiController]
@@ -23,7 +25,17 @@ public class HerbsController(IHerbService herbService) : ControllerBase
 
         return Ok(herb);
     }
+    [HttpGet("{id}/with-herbalist")]
+    public async Task<IActionResult> GetByIdWithHerbalist(int id, CancellationToken cancellationToken)
+    {
+        var herb = await herbService.GetHerbWithHerbalistAsync(id, cancellationToken);
 
+        if (herb == null)
+            return NotFound("Herb not found.");
+
+        return Ok(herb);
+    }
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpPost("add")]
     public async Task<IActionResult> Create([FromForm] HerbRequest request, CancellationToken cancellationToken)
     {
@@ -38,6 +50,7 @@ public class HerbsController(IHerbService herbService) : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpPut("{id}/update")]
     public async Task<IActionResult> Update(int id, [FromForm] HerbRequest request, CancellationToken cancellationToken)
     {
@@ -55,6 +68,7 @@ public class HerbsController(IHerbService herbService) : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpDelete("{id}/delete")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
