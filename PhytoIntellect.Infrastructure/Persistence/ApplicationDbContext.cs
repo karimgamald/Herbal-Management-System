@@ -18,6 +18,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RecipeHerb> RecipeHerbs { get; set; }
     public DbSet<Disease> Diseases { get; set; }
     public DbSet<RecipeDisease> RecipeDiseases { get; set; }
+    public DbSet<Feedback> Feedbacks { get; set; }
+    public DbSet<ReviewRecipe> ReviewRecipes { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

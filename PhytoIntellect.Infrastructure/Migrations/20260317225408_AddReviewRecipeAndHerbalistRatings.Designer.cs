@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260317225408_AddReviewRecipeAndHerbalistRatings")]
+    partial class AddReviewRecipeAndHerbalistRatings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -123,7 +126,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("RecipeId", "PatientId")
                         .IsUnique();
 
-                    b.ToTable("Feedbacks", null, t =>
+                    b.ToTable("Feedback", t =>
                         {
                             t.HasCheckConstraint("CK_Feedback_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5");
                         });
@@ -578,7 +581,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("RecipeId", "HerbalistId")
                         .IsUnique();
 
-                    b.ToTable("ReviewRecipes", null, t =>
+                    b.ToTable("ReviewRecipe", t =>
                         {
                             t.HasCheckConstraint("CK_ReviewRecipe_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5");
                         });

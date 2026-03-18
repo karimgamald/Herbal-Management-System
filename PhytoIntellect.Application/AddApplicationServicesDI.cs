@@ -22,9 +22,11 @@ public static class AddApplicationServicesDI
         services.AddScoped<IMedicalHistoryService, MedicalHistoryService>();
         services.AddScoped<IHerbalistService, HerbalistService>();
         services.AddScoped<IRecipeService, RecipeService>();
+        services.AddScoped<IDiseaseService, DiseaseService>();
         services.AddScoped<IHerbService, HerbService>();
         services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
+        services.AddScoped<IReviewRecipeService, ReviewRecipeService>();
 
         //for Email
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));

@@ -20,7 +20,7 @@ public class FeedbackConfiguration : IEntityTypeConfiguration<Feedback>
         builder.HasIndex(f => new { f.RecipeId, f.PatientId }).IsUnique();
 
         // 3. 🚨 تقييد الأرقام (Check Constraint): التقييم لازم يكون بين 1 و 5 بس
-        builder.ToTable(t => t.HasCheckConstraint("CK_Feedback_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5"));
+        builder.ToTable("Feedbacks", t => t.HasCheckConstraint("CK_Feedback_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5"));
 
         // 4. تظبيط العلاقات
         builder.HasOne(f => f.Recipe)

@@ -19,7 +19,8 @@ public class UnitOfWork(
     IRepository<Herb> herbRepository,
     IRepository<HerbalistHerb> herbalistHerbRepository,
     IRepository<Disease> diseaseRepository,
-    IRepository<Feedback> feedbackRepository 
+    IRepository<Feedback> feedbackRepository,
+    IRepository<ReviewRecipe> reviewRecipeRepository
     ) : IUnitOfWork
 {
     public IRepository<User> UserRepository { get; } = userRepository;
@@ -30,9 +31,10 @@ public class UnitOfWork(
     public IRepository<Recipe> RecipeRepository { get; } = recipeRepository;
     public IRepository<Disease> DiseaseRepository { get; } = diseaseRepository;
     public IRepository<Herb> HerbRepository { get; } = herbRepository;
-    public IRepository<HerbalistHerb> HerbalistHerbRepository { get; } = herbalistHerbRepository; // => Inventory
+    public IRepository<HerbalistHerb> HerbalistHerbRepository { get; } = herbalistHerbRepository; 
     public IRepository<RecipeHerb> RecipeHerbRepository { get; } = recipeHerbRepository;
     public IRepository<Feedback> FeedbackRepository { get; } = feedbackRepository;
+    public IRepository<ReviewRecipe> ReviewRecipeRepository { get; } = reviewRecipeRepository;
 
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
