@@ -14,7 +14,6 @@ public class HerbProfile : Profile
         // ✅ هنا ضيف الخريطة الجديدة
         CreateMap<Herb, HerbWithHerbalistDto>()
             .ForMember(dest => dest.HerbalistId, opt => opt.MapFrom(src => src.AddedByHerbalist.HerbalistId))
-            .ForMember(dest => dest.HerbalistName, opt => opt.MapFrom(src => src.AddedByHerbalist.User.FullName))
-            .ForMember(dest => dest.ImageURL, opt => opt.Ignore()); // لأن IFormFile مش هيتحول من DB
+            .ForMember(dest => dest.HerbalistName, opt => opt.MapFrom(src => src.AddedByHerbalist.User.FullName)); // لأن IFormFile مش هيتحول من DB
     }
 }

@@ -9,8 +9,7 @@ namespace PhytoIntellect.Application.Services;
 public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
 {
     // 1️⃣ Get All Approved Herbs
-    public async Task<IEnumerable<HerbResponse>> GetApprovedHerbsAsync(
-        CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<HerbResponse>> GetApprovedHerbsAsync( CancellationToken cancellationToken = default)
     {
         var herbs = await unitOfWork.HerbRepository.GetAllAsync(
             filter: h => h.IsApproved,
@@ -21,9 +20,7 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
     }
 
     // 2️⃣ Get Herb By Id
-    public async Task<HerbResponse?> GetHerbByIdAsync(
-        int herbId,
-        CancellationToken cancellationToken = default)
+    public async Task<HerbResponse?> GetHerbByIdAsync(int herbId,CancellationToken cancellationToken = default)
     {
         var herb = await unitOfWork.HerbRepository.GetAsync(
             filter: h => h.HerbId == herbId && h.IsApproved,
@@ -36,13 +33,12 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
         return mapper.Map<HerbResponse>(herb);
     }
 
-    public async Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(
-     int herbId,
+    public async Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(int herbId,
      CancellationToken cancellationToken = default)
     {
         var herb = await unitOfWork.HerbRepository.GetAsync(
             filter: h => h.HerbId == herbId && h.IsApproved,
-            includeProperties: "AddedByHerbalist", // لازم يكون الاسم مظبوط
+            includeProperties: "AddedByHerbalist.User", // لازم يكون الاسم مظبوط
             tracked: false,
             cancellationToken: cancellationToken);
 
@@ -64,7 +60,7 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
             throw new Exception("Herbalist not found.");
 
         var herb = mapper.Map<Herb>(request);
-        herb.IsApproved = false;
+        herb.IsApproved = true;
         herb.AddedByHerbalistId = herbalist.HerbalistId; // بنربط العشبة بـ ID العطار 
 
         // 📷 رفع الصورة

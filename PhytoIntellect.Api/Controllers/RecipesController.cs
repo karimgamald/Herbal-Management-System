@@ -41,7 +41,8 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
     public async Task<IActionResult> GetRecipeById(int id, CancellationToken cancellationToken)
     {
         var recipe = await recipeService.GetRecipeByIdAsync(id, cancellationToken);
-        if (recipe == null) return NotFound(new { Message = "Recipe not found." });
+        if (recipe == null) 
+            return NotFound(new { Message = "Recipe not found." });
 
         return Ok(recipe);
     }
@@ -51,7 +52,8 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
     public async Task<IActionResult> UpdateRecipe(int id, [FromBody] UpdateRecipeRequest request, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+        if (!int.TryParse(userIdStr, out int userId)) 
+            return Unauthorized();
 
         try
         {
@@ -73,11 +75,13 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
     public async Task<IActionResult> DeleteRecipe(int id, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+        if (!int.TryParse(userIdStr, out int userId)) 
+            return Unauthorized();
 
         var success = await recipeService.DeleteRecipeAsync(userId, id, cancellationToken);
 
-        if (!success) return BadRequest(new { Message = "Failed to delete recipe. It may not exist or you don't have permission." });
+        if (!success) 
+            return BadRequest(new { Message = "Failed to delete recipe. It may not exist or you don't have permission." });
 
         return Ok(new { Message = "Recipe deleted successfully." });
     }

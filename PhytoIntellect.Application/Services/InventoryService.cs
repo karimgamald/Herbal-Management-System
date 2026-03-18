@@ -40,7 +40,8 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null) throw new Exception("Herbalist not found.");
+        if (herbalist == null) 
+            throw new Exception("Herbalist not found.");
 
         // 🚨 حماية 1: هل العشبة دي موجودة أصلاً في قاموس الأعشاب؟
         var herb = await unitOfWork.HerbRepository.GetAsync(
@@ -48,7 +49,8 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herb == null) throw new Exception("This herb does not exist in the system.");
+        if (herb == null) 
+            throw new Exception("This herb does not exist in the system.");
 
         // 🚨 حماية 2: هل العطار ضاف العشبة دي قبل كده في مخزنه؟
         var existingInventoryItem = await unitOfWork.HerbalistHerbRepository.GetAsync(
