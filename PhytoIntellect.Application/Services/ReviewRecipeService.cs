@@ -20,6 +20,13 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         var recipe = await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == recipeId, tracked: true, cancellationToken: cancellationToken);
         if (recipe == null) throw new Exception("Recipe not found.");
 
+        // 🛡️ السد المنيع: لو العطار هو صاحب الوصفة، ارفض التقييم فوراً
+        if (recipe.HerbalistId == herbalist.HerbalistId)
+            throw new Exception("You cannot review your own recipe.");
+
+        if (!recipe.IsActive && recipe.HerbalistId != null)
+            throw new Exception("You cannot review another herbalist's recipe before it is approved and active.");
+
         var existingReview = await unitOfWork.ReviewRecipeRepository.GetAsync(
             r => r.RecipeId == recipeId && r.HerbalistId == herbalist.HerbalistId, tracked: true, cancellationToken: cancellationToken);
 
@@ -68,8 +75,30 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
 
     public async Task<IEnumerable<ReviewResponse>> GetAllRecipeReviewsAsync(int recipeId, bool isHerbalist, CancellationToken cancellationToken = default)
     {
+        // 1. فحص سريع لحالة الوصفة (Fail-Fast Pattern)
+        var recipe = await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == recipeId, tracked: false, cancellationToken: cancellationToken);
+
+        // لو الوصفة مش موجودة أصلاً نرجع لستة فاضية
+        if (recipe == null) return new List<ReviewResponse>();
+
+        // 2. 🛡️ تطبيق قواعد البيزنس الذكية اللي اتفقنا عليها
+        if (!recipe.IsActive) // لو الوصفة لسه مخفية
+        {
+            // هنمنع إرجاع التقييمات في حالتين:
+            // أ. لو اللي بيسأل مريض (ممنوع يشوف أي حاجة مخفية).
+            // ب. لو الوصفة دي بتاعت بشر (لأنها طالما مخفية ومحدش شافها، يبقى مستحيل يكون عليها تقييمات).
+            if (!isHerbalist || recipe.HerbalistId != null)
+            {
+                return new List<ReviewResponse>();
+            }
+        }
+
+        // 3. لو الكود وصل هنا، معناه حاجة من الاتنين:
+        // - الوصفة متأكتفة ومتاحة للجميع.
+        // - أو الوصفة مخفية (بتاعت AI) واللي بيسأل عطار جاي يقيمها.
+        // في الحالتين دول، نقدر نجيب التقييمات بأمان وبفلتر بسيط جداً!
         var reviews = await unitOfWork.ReviewRecipeRepository.GetAllAsync(
-            filter: r => r.RecipeId == recipeId && (isHerbalist || r.Recipe!.IsActive),
+            filter: r => r.RecipeId == recipeId,
             tracked: false,
             includeProperties: "Herbalist.User",
             cancellationToken: cancellationToken);
@@ -78,7 +107,6 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         var mappedReviews = mapper.Map<IEnumerable<ReviewResponse>>(reviews);
         return mappedReviews.OrderByDescending(r => r.RatingDate).ToList();
     }
-
     public async Task<ReviewResponse?> GetMyReviewAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == userId, tracked: false, cancellationToken: cancellationToken);

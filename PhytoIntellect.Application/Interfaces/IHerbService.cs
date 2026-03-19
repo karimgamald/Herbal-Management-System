@@ -1,5 +1,8 @@
-﻿using PhytoIntellect.Application.Contracts.Herbs;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using PhytoIntellect.Application.Contracts.Herbs;
 using PhytoIntellect.Application.DTOs.HerbDTOs;
+using PhytoIntellect.Application.Services;
 
 public interface IHerbService
 {
@@ -8,8 +11,8 @@ public interface IHerbService
 
     // 2️⃣ عرض تفاصيل عشبة
     Task<HerbResponse?> GetHerbByIdAsync(int herbId,CancellationToken cancellationToken = default);
-    // 3 Get the herb with herbalist
-    Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(int herbId,CancellationToken cancellationToken = default);
+    
+    Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(int herbId, CancellationToken cancellationToken = default);
 
     // 4 اقتراح عشبة جديدة
     Task<HerbResponse?> CreateHerbAsync(int userId,HerbRequest request,CancellationToken cancellationToken = default);
@@ -23,3 +26,6 @@ public interface IHerbService
     // 7 حذف العشبة
     Task<bool> DeleteHerbAsync(int herbId,CancellationToken cancellationToken = default);
 }
+
+
+

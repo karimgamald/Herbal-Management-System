@@ -10,5 +10,11 @@ public class DiseaseProfile : Profile
     {
         // تحويل من الداتابيز للريسبونس
         CreateMap<Disease, DiseaseResponse>();
+
+        // بتاع الـ Dropdown
+        CreateMap<Disease, DiseaseNamesResponse>();
+
+        // بتاع الإضافة
+        CreateMap<CreateDiseaseRequest, Disease>();
     }
 }

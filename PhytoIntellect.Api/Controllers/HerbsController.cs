@@ -25,6 +25,7 @@ public class HerbsController(IHerbService herbService) : ControllerBase
 
         return Ok(herb);
     }
+
     [HttpGet("{id}/with-herbalist")]
     public async Task<IActionResult> GetByIdWithHerbalist(int id, CancellationToken cancellationToken)
     {
@@ -35,6 +36,7 @@ public class HerbsController(IHerbService herbService) : ControllerBase
 
         return Ok(herb);
     }
+
     [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpPost("add")]
     public async Task<IActionResult> Create([FromForm] HerbRequest request, CancellationToken cancellationToken)

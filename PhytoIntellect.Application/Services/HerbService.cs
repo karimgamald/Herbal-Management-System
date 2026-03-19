@@ -32,9 +32,9 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
 
         return mapper.Map<HerbResponse>(herb);
     }
-
+    // 3 Get the herb with herbalist
     public async Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(int herbId,
-     CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default)
     {
         var herb = await unitOfWork.HerbRepository.GetAsync(
             filter: h => h.HerbId == herbId && h.IsApproved,
@@ -47,7 +47,6 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
 
         return mapper.Map<HerbWithHerbalistDto>(herb);
     }
-
     public async Task<HerbResponse?> CreateHerbAsync(int userId, HerbRequest request, CancellationToken cancellationToken)
     {
         // 👈 بندور بالـ UserId اللي جاي من التوكن

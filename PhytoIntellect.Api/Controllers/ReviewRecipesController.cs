@@ -29,6 +29,7 @@ public class ReviewRecipesController(IReviewRecipeService reviewService) : Contr
         }
     }
 
+
     [HttpGet("/api/recipe/{recipeId}/reviews/all")]
     public async Task<IActionResult> GetRecipeReviews(int recipeId, CancellationToken cancellationToken)
     {
@@ -40,6 +41,7 @@ public class ReviewRecipesController(IReviewRecipeService reviewService) : Contr
 
         return Ok(reviews);
     }
+
 
     [HttpGet("/api/recipe/{recipeId}/reviews/get-me")]
     [Authorize(Roles = AppRoles.Herbalist)]

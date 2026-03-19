@@ -8,4 +8,6 @@ namespace PhytoIntellect.Application.Interfaces;
 public interface IDiseaseService
 {
     Task<IEnumerable<DiseaseResponse>> GetAllDiseasesAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<DiseaseNamesResponse>> GetDiseasesNameAsync(CancellationToken cancellationToken = default);
+    Task<DiseaseResponse> CreateDiseaseAsync(CreateDiseaseRequest request, CancellationToken cancellationToken = default);
 }
