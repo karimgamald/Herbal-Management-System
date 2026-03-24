@@ -11,6 +11,13 @@ public record RecipeResponse
     public string Instructions { get; init; } = string.Empty;
     public bool CreatedByAI { get; init; }
     public DateTime CreatedDate { get; init; }
+
+    public bool IsActive { get; init; }
+    public float AverageRating { get; init; }
+    public int TotalRatings { get; init; }
+    public float HerbalistAverageRating { get; init; }
+    public int HerbalistTotalRatings { get; init; }
+
     public List<RecipeHerbResponse> Herbs { get; init; } = new();
     public List<RecipeDiseaseResponse> TargetedDiseases { get; init; } = new();
 }

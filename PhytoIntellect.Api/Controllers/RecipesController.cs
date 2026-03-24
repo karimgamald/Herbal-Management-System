@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Recipes;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
+using PhytoIntellect.Core.Entities;
 using System.Security.Claims;
 
 namespace PhytoIntellect.Api.Controllers;
@@ -84,5 +85,13 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
             return BadRequest(new { Message = "Failed to delete recipe. It may not exist or you don't have permission." });
 
         return Ok(new { Message = "Recipe deleted successfully." });
+    }
+
+    [HttpGet("herbalist/{herbalistId}")]
+    public async Task<IActionResult> GetRecipesByHerbalist(int herbalistId, CancellationToken cancellationToken)
+    {
+        // الكنترولر بياخد الـ ID من الرابط ويبعته للـ Service
+        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(herbalistId, cancellationToken);
+        return Ok(recipes);
     }
 }

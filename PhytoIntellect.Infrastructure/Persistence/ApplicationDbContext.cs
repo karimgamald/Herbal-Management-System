@@ -20,6 +20,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RecipeDisease> RecipeDiseases { get; set; }
     public DbSet<Feedback> Feedbacks { get; set; }
     public DbSet<ReviewRecipe> ReviewRecipes { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<SubOrder> SubOrders { get; set; }
+    public DbSet<OrderRecipe> OrderRecipes { get; set; }
+    public DbSet<OrderHerb> OrderHerbs { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

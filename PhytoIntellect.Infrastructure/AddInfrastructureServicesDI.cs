@@ -20,6 +20,8 @@ public static class AddInfrastructureServicesDI
         services.AddScoped<IPatientRepository, PatientRepository>();
         services.AddScoped<IRecipeService, RecipeService>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<ISubOrderRepository, SubOrderRepository>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
         return services;

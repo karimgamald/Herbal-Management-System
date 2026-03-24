@@ -7,6 +7,6 @@ using System.Text;
 
 namespace PhytoIntellect.Infrastructure.Repository;
 
-public class HerbRepository(ApplicationDbContext context) : Repository<Herb>(context),IHerbRepository
+public class SubOrderRepository(ApplicationDbContext context) : Repository<SubOrder>(context), ISubOrderRepository
 {
 }

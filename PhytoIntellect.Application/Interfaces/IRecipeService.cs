@@ -12,4 +12,5 @@ public interface IRecipeService
     Task<RecipeResponse?> GetRecipeByIdAsync(int recipeId, CancellationToken cancellationToken = default);
     Task<RecipeResponse?> UpdateRecipeAsync(int userId, int recipeId, UpdateRecipeRequest request, CancellationToken cancellationToken = default);
     Task<bool> DeleteRecipeAsync(int userId, int recipeId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<RecipeResponse>> GetRecipesByHerbalistIdAsync(int herbalistId, CancellationToken cancellationToken = default);
 }

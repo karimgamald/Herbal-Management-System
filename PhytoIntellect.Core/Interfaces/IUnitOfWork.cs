@@ -1,5 +1,6 @@
 ﻿using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Core.Interfaces;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,8 @@ public interface IUnitOfWork : IDisposable
     IRepository<RecipeHerb> RecipeHerbRepository { get; }
     IRepository<Feedback> FeedbackRepository { get; }
     IRepository<ReviewRecipe> ReviewRecipeRepository { get; }
+    IRepository<Order> OrderRepository { get; }
+    IRepository<SubOrder> SubOrderRepository { get; }
     // ضفنا الـ CancellationToken هنا
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

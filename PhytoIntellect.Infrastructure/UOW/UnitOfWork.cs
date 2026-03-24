@@ -1,5 +1,6 @@
 ﻿using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.Presistence;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +21,9 @@ public class UnitOfWork(
     IRepository<HerbalistHerb> herbalistHerbRepository,
     IRepository<Disease> diseaseRepository,
     IRepository<Feedback> feedbackRepository,
-    IRepository<ReviewRecipe> reviewRecipeRepository
+    IRepository<ReviewRecipe> reviewRecipeRepository,
+    IRepository<Order> orderRepository,
+    IRepository<SubOrder> subOrderRepository
     ) : IUnitOfWork
 {
     public IRepository<User> UserRepository { get; } = userRepository;
@@ -35,6 +38,8 @@ public class UnitOfWork(
     public IRepository<RecipeHerb> RecipeHerbRepository { get; } = recipeHerbRepository;
     public IRepository<Feedback> FeedbackRepository { get; } = feedbackRepository;
     public IRepository<ReviewRecipe> ReviewRecipeRepository { get; } = reviewRecipeRepository;
+    public IRepository<Order> OrderRepository { get; } = orderRepository;
+    public IRepository<SubOrder> SubOrderRepository { get; } = subOrderRepository;
 
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

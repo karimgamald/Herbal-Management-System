@@ -141,4 +141,16 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
 
         return true;
     }
+
+    public async Task<IEnumerable<RecipeResponse>> GetRecipesByHerbalistIdAsync(int herbalistId, CancellationToken cancellationToken = default)
+    {
+        var recipes = await unitOfWork.RecipeRepository.GetAllAsync(
+            filter: r => r.HerbalistId == herbalistId, // && r.IsActive المتوافق عليها بس
+            includeProperties: "RecipeHerbs.Herb,RecipeDiseases.Disease",
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        return mapper.Map<IEnumerable<RecipeResponse>>(recipes);
+    }
+
 }

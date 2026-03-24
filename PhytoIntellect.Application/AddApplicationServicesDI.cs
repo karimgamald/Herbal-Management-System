@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Contracts.Patients;
-using PhytoIntellect.Application.Contracts.Users;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Services;
 using PhytoIntellect.Application.Settings;
@@ -27,6 +26,8 @@ public static class AddApplicationServicesDI
         services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<IReviewRecipeService, ReviewRecipeService>();
+        services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<ISubOrderService, SubOrderService>();
 
         //for Email
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
