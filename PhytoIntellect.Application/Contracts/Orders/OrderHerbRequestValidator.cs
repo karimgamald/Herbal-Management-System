@@ -1,26 +1,22 @@
+﻿
 ﻿using FluentValidation;
-using PhytoIntellect.Application.Contracts.Orders;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace PhytoIntellect.Application.Contracts.Orders;
 
 public class OrderHerbRequestValidator : AbstractValidator<OrderHerbRequest>
 {
     public OrderHerbRequestValidator()
     {
-        // HerbId
         RuleFor(x => x.HerbId)
-            .NotNull().WithMessage("Herb ID is required.")
-            .GreaterThan(0).WithMessage("Invalid herb ID. It must be greater than zero.")
-            .When(x => x.HerbId.HasValue);
+            .GreaterThan(0).WithMessage("Invalid herb ID. It must be greater than zero.");
 
-        // HerbalistId
         RuleFor(x => x.HerbalistId)
-            .NotNull().WithMessage("Herbalist ID is required.")
-            .GreaterThan(0).WithMessage("Herbalist ID must be greater than zero.")
-            .When(x => x.HerbalistId.HasValue);
+            .GreaterThan(0).WithMessage("Herbalist ID is required to purchase this herb.");
 
-        // Quantity
         RuleFor(x => x.Quantity)
-            .NotNull().WithMessage("Quantity is required.")
-            .GreaterThan(0).WithMessage("Quantity must be at least 1.")
-            .When(x => x.Quantity.HasValue);
+            .GreaterThan(0).WithMessage("Quantity must be at least 1.");
     }
 }

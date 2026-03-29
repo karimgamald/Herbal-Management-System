@@ -4,4 +4,4 @@ using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Orders;
 
-public record OrderHerbRequest(int? HerbId, int? HerbalistId, int? Quantity);
+public record OrderHerbRequest(int HerbId, int HerbalistId, int Quantity);
