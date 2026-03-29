@@ -7,7 +7,6 @@ using System.Security.Claims;
 
 namespace PhytoIntellect.Api.Controllers;
 
-[Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
 [Route("api/[controller]")]
 [ApiController]
 public class HerbalistsController(IHerbalistService herbalistService) : ControllerBase
@@ -15,7 +14,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
     // ===============================
     // Endpoints خاصة بالعشاب نفسه
     // ===============================
-
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpGet("get-profile/me")]
     public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
     {
@@ -31,6 +30,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
         return Ok(herbalist);
     }
 
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpPut("update-profile/me")]
     public async Task<IActionResult> UpdateMyProfile([FromBody] CreateOrUpdateHerbalistDto request,
         CancellationToken cancellationToken)
@@ -51,6 +51,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
     // Endpoints للإدارة / العرض العام
     // ===============================
 
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpGet("get-by-id/{id}")]
     public async Task<IActionResult> GetHerbalistById(int id, CancellationToken cancellationToken)
     {
@@ -62,6 +63,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
         return Ok(herbalist);
     }
 
+    [Authorize(Roles = $"{AppRoles.Patient}")]
     [HttpGet("get-all")]
     public async Task<IActionResult> GetAllHerbalists(CancellationToken cancellationToken)
     {

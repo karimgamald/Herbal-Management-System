@@ -14,40 +14,69 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
     // --- 1. إنشاء الطلب ---
     public async Task<string> CreateOrderAsync(string userId, CreateOrderRequest request, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) throw new Exception("Invalid User ID format.");
+        if (!int.TryParse(userId, out int parsedUserId))
+            throw new Exception("Invalid User ID format.");
 
         var patient = await _unitOfWork.PatientRepository.GetAsync(
-            filter: p => p.UserId == parsedUserId,
+            p => p.UserId == parsedUserId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (patient == null) throw new Exception("Patient not found.");
+        if (patient == null)
+            throw new Exception("Patient not found.");
+
         int patientId = patient.PatientId;
 
-        // سحب وتجميع العنوان لو المريض مبعتوش
+        // =============================
+        // ✅ Address Handling
+        // =============================
         string finalShippingAddress = request.ShippingAddress;
 
         if (string.IsNullOrWhiteSpace(finalShippingAddress) || finalShippingAddress.Trim().ToLower() == "string")
         {
             var userEntity = await _unitOfWork.UserRepository.GetAsync(
-                filter: u => u.Id == parsedUserId,
+                u => u.Id == parsedUserId,
                 tracked: false,
                 cancellationToken: cancellationToken);
 
             if (userEntity != null)
             {
-                var addressParts = new List<string>();
-                if (!string.IsNullOrWhiteSpace(userEntity.Governorate)) addressParts.Add(userEntity.Governorate);
-                if (!string.IsNullOrWhiteSpace(userEntity.City)) addressParts.Add(userEntity.City);
-                if (!string.IsNullOrWhiteSpace(userEntity.Street)) addressParts.Add(userEntity.Street);
+                var parts = new List<string>();
 
-                finalShippingAddress = string.Join(", ", addressParts);
+                if (!string.IsNullOrWhiteSpace(userEntity.Governorate))
+                    parts.Add(userEntity.Governorate);
+
+                if (!string.IsNullOrWhiteSpace(userEntity.City))
+                    parts.Add(userEntity.City);
+
+                if (!string.IsNullOrWhiteSpace(userEntity.Street))
+                    parts.Add(userEntity.Street);
+
+                finalShippingAddress = string.Join(", ", parts);
             }
 
             if (string.IsNullOrWhiteSpace(finalShippingAddress))
-            {
-                throw new InvalidOperationException("Shipping address is not provided in the request, and your profile does not have a saved address.");
-            }
+                throw new InvalidOperationException("Shipping address is missing.");
+        }
+
+        // =============================
+        // ✅ Filter invalid data (🔥 مهم)
+        // =============================
+        var validRecipes = request.Recipes?
+            .Where(r => r.RecipeId > 0 && r.Quantity > 0)
+            .ToList();
+
+        var validHerbs = request.Herbs?
+            .Where(h => h.HerbId > 0 && h.Quantity > 0)
+            .ToList();
+
+        // =============================
+        // ✅ Prevent empty order
+        // =============================
+        if ((validRecipes == null || !validRecipes.Any()) &&
+            (validHerbs == null || !validHerbs.Any()))
+        {
+            throw new InvalidOperationException("Order must contain at least one herb or recipe.");
         }
 
         var mainOrder = new Order
@@ -60,106 +89,120 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             SubOrders = new List<SubOrder>()
         };
 
-        // --- معالجة الوصفات ---
-        if (request.Recipes != null && request.Recipes.Any())
+        // =============================
+        // ✅ Recipes
+        // =============================
+        if (validRecipes != null && validRecipes.Any())
         {
-            var recipeIds = request.Recipes.Select(r => r.RecipeId).ToList();
-            var recipesFromDb = await _unitOfWork.RecipeRepository.GetAllAsync(r => recipeIds.Contains(r.RecipeId));
+            var recipeIds = validRecipes.Select(r => r.RecipeId).ToList();
+
+            var recipesFromDb = await _unitOfWork.RecipeRepository
+                .GetAllAsync(r => recipeIds.Contains(r.RecipeId));
+
+            if (recipesFromDb.Count() != recipeIds.Count)
+                throw new InvalidOperationException("Some recipes do not exist.");
 
             if (recipesFromDb.Any(r => r.HerbalistId == null))
+                throw new InvalidOperationException("Cannot order AI recipes.");
+
+            var grouped = recipesFromDb.GroupBy(r => r.HerbalistId);
+
+            foreach (var group in grouped)
             {
-                throw new InvalidOperationException("Cannot order AI recipes directly. Please order the herbs individually.");
-            }
-
-            var recipesGroupedByHerbalist = recipesFromDb.GroupBy(r => r.HerbalistId);
-
-            foreach (var group in recipesGroupedByHerbalist)
-            {
-                int currentHerbalistId = group.Key ?? 0;
-
                 var subOrder = new SubOrder
                 {
-                    HerbalistId = currentHerbalistId,
+                    HerbalistId = group.Key ?? 0,
                     Status = "Pending",
-                    TrackingNumber = null, // 👈 التعديل هنا: هينزل فاضي
                     OrderRecipes = new List<OrderRecipe>(),
                     OrderHerbs = new List<OrderHerb>()
                 };
 
                 foreach (var recipe in group)
                 {
-                    var quantity = request.Recipes.First(r => r.RecipeId == recipe.RecipeId).Quantity;
+                    var quantity = validRecipes
+                        .First(r => r.RecipeId == recipe.RecipeId).Quantity;
 
-                    decimal unitPrice = 100; // استخدم عمود السعر الحقيقي للوصفة لو متاح
-                    decimal itemTotal = unitPrice * quantity;
+                    decimal price = 100; // replace with actual
 
                     subOrder.OrderRecipes.Add(new OrderRecipe
                     {
                         RecipeId = recipe.RecipeId,
                         Quantity = quantity,
-                        UnitPrice = unitPrice,
-                        SubTotal = itemTotal
+                        UnitPrice = price,
+                        SubTotal = price * quantity
                     });
                 }
 
-                subOrder.SubTotal = subOrder.OrderRecipes.Sum(r => r.SubTotal);
                 mainOrder.SubOrders.Add(subOrder);
             }
         }
 
-        // --- معالجة الأعشاب ---
-        if (request.Herbs != null && request.Herbs.Any())
+        // =============================
+        // ✅ Herbs (🔥 FIXED بالكامل)
+        // =============================
+        if (validHerbs != null && validHerbs.Any())
         {
-            var herbsGroupedByHerbalist = request.Herbs.GroupBy(h => h.HerbalistId);
+            var herbIds = validHerbs.Select(h => h.HerbId).ToList();
 
-            foreach (var group in herbsGroupedByHerbalist)
+            var herbsFromDb = await _unitOfWork.HerbRepository
+                .GetAllAsync(h => herbIds.Contains(h.HerbId));
+
+            if (herbsFromDb.Count() != herbIds.Count)
+                throw new InvalidOperationException("Some herbs do not exist.");
+
+            var grouped = validHerbs.GroupBy(h => h.HerbalistId);
+
+            foreach (var group in grouped)
             {
-                int currentHerbalistId = group.Key;
+                int herbalistId = (int)group.Key;
 
-                var existingSubOrder = mainOrder.SubOrders.FirstOrDefault(s => s.HerbalistId == currentHerbalistId);
-                var subOrder = existingSubOrder ?? new SubOrder
-                {
-                    HerbalistId = currentHerbalistId,
-                    Status = "Pending",
-                    TrackingNumber = null, // 👈 التعديل هنا: هينزل فاضي
-                    OrderRecipes = new List<OrderRecipe>(),
-                    OrderHerbs = new List<OrderHerb>()
-                };
+                var subOrder = mainOrder.SubOrders
+                    .FirstOrDefault(s => s.HerbalistId == herbalistId);
 
-                foreach (var requestedHerb in group)
+                if (subOrder == null)
                 {
-                    var herbalistHerbFromDb = await _unitOfWork.HerbalistHerbRepository.GetAsync(
-                        filter: hh => hh.HerbId == requestedHerb.HerbId
-                                   && hh.HerbalistId == currentHerbalistId
-                                   && hh.IsActive == true,
+                    subOrder = new SubOrder
+                    {
+                        HerbalistId = herbalistId,
+                        Status = "Pending",
+                        OrderRecipes = new List<OrderRecipe>(),
+                        OrderHerbs = new List<OrderHerb>()
+                    };
+
+                    mainOrder.SubOrders.Add(subOrder);
+                }
+
+                foreach (var item in group)
+                {
+                    var dbHerb = await _unitOfWork.HerbalistHerbRepository.GetAsync(
+                        hh => hh.HerbId == item.HerbId &&
+                              hh.HerbalistId == herbalistId &&
+                              hh.IsActive,
                         tracked: false,
                         cancellationToken: cancellationToken);
 
-                    if (herbalistHerbFromDb == null)
-                        throw new InvalidOperationException($"Herb ID {requestedHerb.HerbId} is not active or not sold by Herbalist ID {currentHerbalistId}.");
-
-                    if (herbalistHerbFromDb.Price == null)
-                        throw new InvalidOperationException($"Price is not set for Herb ID {requestedHerb.HerbId} by Herbalist ID {currentHerbalistId}.");
-
-                    decimal unitPrice = herbalistHerbFromDb.Price.Value;
-                    decimal itemTotal = unitPrice * requestedHerb.Quantity;
+                    if (dbHerb == null || dbHerb.Price == null)
+                        throw new InvalidOperationException($"Herb {item.HerbId} not available for herbalist {herbalistId}.");
 
                     subOrder.OrderHerbs.Add(new OrderHerb
                     {
-                        HerbId = requestedHerb.HerbId,
-                        Quantity = requestedHerb.Quantity,
-                        UnitPrice = unitPrice,
-                        SubTotal = itemTotal
+                        HerbId = item.HerbId,
+                        Quantity = item.Quantity,
+                        UnitPrice = dbHerb.Price.Value,
+                        SubTotal = dbHerb.Price.Value * item.Quantity
                     });
                 }
-
-                subOrder.SubTotal = subOrder.OrderRecipes.Sum(r => r.SubTotal) + subOrder.OrderHerbs.Sum(h => h.SubTotal);
-
-                if (existingSubOrder == null)
-                {
-                    mainOrder.SubOrders.Add(subOrder);
-                }
             }
+        }
+
+        // =============================
+        // ✅ Final Calculation
+        // =============================
+        foreach (var sub in mainOrder.SubOrders)
+        {
+            sub.SubTotal =
+                (sub.OrderRecipes?.Sum(r => r.SubTotal) ?? 0) +
+                (sub.OrderHerbs?.Sum(h => h.SubTotal) ?? 0);
         }
 
         mainOrder.ItemsTotal = mainOrder.SubOrders.Sum(s => s.SubTotal);
@@ -178,7 +221,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         if (!int.TryParse(userId, out int parsedUserId)) return Enumerable.Empty<OrderSummaryResponse>();
 
         var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (patient == null) return Enumerable.Empty<OrderSummaryResponse>();
+        if (patient == null) 
+            return Enumerable.Empty<OrderSummaryResponse>();
 
         var orders = await _unitOfWork.OrderRepository.GetAllAsync(
             filter: o => o.PatientId == patient.PatientId,
@@ -194,7 +238,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         if (!int.TryParse(userId, out int parsedUserId)) return null;
 
         var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (patient == null) return null;
+        if (patient == null) 
+            return null;
 
         var order = await _unitOfWork.OrderRepository.GetAsync(
             filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
@@ -203,7 +248,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (order == null) return null;
+        if (order == null) 
+            return null;
 
         return _mapper.Map<OrderDetailsResponse>(order);
     }
@@ -214,7 +260,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         if (!int.TryParse(userId, out int parsedUserId)) throw new Exception("Invalid User ID.");
 
         var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (patient == null) throw new Exception("Patient not found.");
+        if (patient == null) 
+            throw new Exception("Patient not found.");
 
         var order = await _unitOfWork.OrderRepository.GetAsync(
             filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
@@ -222,7 +269,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             tracked: true,
             cancellationToken: cancellationToken);
 
-        if (order == null) throw new Exception("Order not found.");
+        if (order == null) 
+            throw new Exception("Order not found.");
 
         if (order.SubOrders.Any(s => s.Status != "Pending" && s.Status != "Accepted"))
             throw new Exception("Cannot cancel order because some items are already being prepared or shipped.");
