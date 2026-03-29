@@ -134,7 +134,7 @@ public class AuthService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new AuthResultDto { Success = true, Data = new { AccessToken = accessToken, 
-            RefreshToken = refreshToken } };
+            RefreshToken = refreshToken, Role = user.Role } };
     }
 
     public async Task<AuthResultDto> ResetPasswordAsync(ResetPasswordDto model,

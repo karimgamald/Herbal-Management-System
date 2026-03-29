@@ -3,24 +3,30 @@ using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Contracts.SubOrders;
 using PhytoIntellect.Application.Interfaces;
 
-namespace PhytoIntellect.Application.Services;
-
 public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrderService
 {
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IMapper _mapper = mapper;
 
-    // --- 1. يجيب لستة طلبات العطار ---
-    public async Task<IEnumerable<SubOrderSummaryResponse>> GetHerbalistSubOrdersAsync(string userId, CancellationToken cancellationToken = default)
+    // =============================
+    // ✅ 1. Get Herbalist SubOrders
+    // =============================
+    public async Task<IEnumerable<SubOrderSummaryResponse>> GetHerbalistSubOrdersAsync(
+        string userId, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) return Enumerable.Empty<SubOrderSummaryResponse>();
+        if (!int.TryParse(userId, out int parsedUserId))
+            return Enumerable.Empty<SubOrderSummaryResponse>();
 
-        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (herbalist == null) return Enumerable.Empty<SubOrderSummaryResponse>();
+        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(
+            h => h.UserId == parsedUserId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (herbalist == null)
+            return Enumerable.Empty<SubOrderSummaryResponse>();
 
         var subOrders = await _unitOfWork.SubOrderRepository.GetAllAsync(
-            filter: s => s.HerbalistId == herbalist.HerbalistId,
-            // 🎯 ضفنا الـ Include ده عشان الـ AutoMapper يعرف يجيب اسم العطار لو طلبناه في الـ DTO
+            s => s.HerbalistId == herbalist.HerbalistId,
             includeProperties: "Herbalist.User",
             tracked: false,
             cancellationToken: cancellationToken);
@@ -28,21 +34,31 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         return _mapper.Map<IEnumerable<SubOrderSummaryResponse>>(subOrders);
     }
 
-    // --- 2. يجيب تفاصيل طلب معين عشان يجهزه ---
-    public async Task<SubOrderDetailsResponse?> GetSubOrderDetailsAsync(int subOrderId, string userId, CancellationToken cancellationToken = default)
+    // =============================
+    // ✅ 2. Get SubOrder Details
+    // =============================
+    public async Task<SubOrderDetailsResponse?> GetSubOrderDetailsAsync(
+        int subOrderId, string userId, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) return null;
+        if (!int.TryParse(userId, out int parsedUserId))
+            return null;
 
-        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (herbalist == null) return null;
+        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(
+            h => h.UserId == parsedUserId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (herbalist == null)
+            return null;
 
         var subOrder = await _unitOfWork.SubOrderRepository.GetAsync(
-            filter: s => s.SubOrderId == subOrderId && s.HerbalistId == herbalist.HerbalistId,
+            s => s.SubOrderId == subOrderId && s.HerbalistId == herbalist.HerbalistId,
             includeProperties: "OrderRecipes.Recipe,OrderHerbs.Herb",
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (subOrder == null) return null;
+        if (subOrder == null)
+            return null;
 
         return new SubOrderDetailsResponse
         {
@@ -51,53 +67,76 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             Status = subOrder.Status,
             TrackingNumber = subOrder.TrackingNumber,
 
-            // تعديل الوصفات
-            Recipes = subOrder.OrderRecipes.Select(r => new OrderItemResponse
-            {
-                ItemId = r.RecipeId,
-                Name = r.Recipe!.Description ?? "Recipe",
-                Quantity = r.Quantity,
-                UnitPrice = r.UnitPrice,
-                SubTotal = r.SubTotal
-            }).ToList(),
+            Recipes = subOrder.OrderRecipes?
+                .Select(r => new OrderItemResponse
+                {
+                    ItemId = r.RecipeId,
+                    Name = r.Recipe?.Description ?? "Recipe",
+                    Quantity = r.Quantity,
+                    UnitPrice = r.UnitPrice,
+                    SubTotal = r.SubTotal
+                }).ToList() ?? new List<OrderItemResponse>(),
 
-            // تعديل الأعشاب
-            Herbs = subOrder.OrderHerbs.Select(h => new OrderItemResponse
-            {
-                ItemId = h.HerbId,
-                Name = h.Herb!.HerbName ?? "Herb", // تأكد إن اسم العشبة عندك HerbName ولا Name
-                Quantity = h.Quantity,
-                UnitPrice = h.UnitPrice,
-                SubTotal = h.SubTotal
-            }).ToList()
+            Herbs = subOrder.OrderHerbs?
+                .Select(h => new OrderItemResponse
+                {
+                    ItemId = h.HerbId,
+                    Name = h.Herb?.HerbName ?? "Herb",
+                    Quantity = h.Quantity,
+                    UnitPrice = h.UnitPrice,
+                    SubTotal = h.SubTotal
+                }).ToList() ?? new List<OrderItemResponse>()
         };
     }
 
-    // --- 3. يغير حالة الطلب (أهم دالة) ---
-    public async Task UpdateSubOrderStatusAsync(int subOrderId, string userId, UpdateSubOrderStatusRequest request, CancellationToken cancellationToken = default)
+    // =============================
+    // ✅ 3. Update Status
+    // =============================
+    public async Task UpdateSubOrderStatusAsync(
+        int subOrderId,
+        string userId,
+        UpdateSubOrderStatusRequest request,
+        CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) throw new Exception("Invalid User ID.");
+        if (!int.TryParse(userId, out int parsedUserId))
+            throw new Exception("Invalid User ID.");
 
-        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (herbalist == null) throw new Exception("Herbalist not found.");
+        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(
+            h => h.UserId == parsedUserId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (herbalist == null)
+            throw new Exception("Herbalist not found.");
 
         var subOrder = await _unitOfWork.SubOrderRepository.GetAsync(
-            filter: s => s.SubOrderId == subOrderId && s.HerbalistId == herbalist.HerbalistId,
+            s => s.SubOrderId == subOrderId && s.HerbalistId == herbalist.HerbalistId,
             tracked: true,
             cancellationToken: cancellationToken);
 
-        if (subOrder == null) throw new Exception("SubOrder not found or access denied.");
+        if (subOrder == null)
+            throw new Exception("SubOrder not found or access denied.");
 
-        // تحديث الحالة
+        // =============================
+        // ✅ Validate Status
+        // =============================
+        var allowedStatuses = new[] { "Pending", "Accepted", "Shipped", "Delivered", "Cancelled" };
+
+        if (!allowedStatuses.Contains(request.Status))
+            throw new InvalidOperationException("Invalid status value.");
+
+        // =============================
+        // ✅ Update Status
+        // =============================
         subOrder.Status = request.Status;
 
-        // 🎯 اللوجيك الجديد: معالجة رقم التتبع
-        // لو العطار بعت رقم تتبع بإيده، احفظه
+        // =============================
+        // ✅ Tracking Number Logic
+        // =============================
         if (!string.IsNullOrWhiteSpace(request.TrackingNumber))
         {
             subOrder.TrackingNumber = request.TrackingNumber;
         }
-        // لو العطار مبعتش رقم، والحالة اتغيرت لـ Shipped، السيستم هيولد رقم من عنده
         else if (request.Status == "Shipped" && string.IsNullOrWhiteSpace(subOrder.TrackingNumber))
         {
             subOrder.TrackingNumber = GenerateTrackingNumber(herbalist.HerbalistId);
@@ -105,11 +144,13 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
 
         _unitOfWork.SubOrderRepository.Update(subOrder);
 
-        // فحص هل الأوردر الرئيسي اكتمل ولا لأ
+        // =============================
+        // ✅ Update Main Order Status
+        // =============================
         if (request.Status == "Delivered")
         {
             var mainOrder = await _unitOfWork.OrderRepository.GetAsync(
-                filter: o => o.OrderId == subOrder.OrderId,
+                o => o.OrderId == subOrder.OrderId,
                 includeProperties: "SubOrders",
                 tracked: true,
                 cancellationToken: cancellationToken);
@@ -124,10 +165,11 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    // --- الدالة المساعدة (لازم تنقلها للـ SubOrderService) ---
+    // =============================
+    // ✅ Tracking Generator
+    // =============================
     private string GenerateTrackingNumber(int herbalistId)
     {
-        string randomString = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
-        return $"PHYTO-H{herbalistId}-{randomString}";
+        return $"PHYTO-H{herbalistId}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
     }
 }
