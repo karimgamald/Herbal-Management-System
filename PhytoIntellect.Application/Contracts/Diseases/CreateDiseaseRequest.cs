@@ -8,5 +8,6 @@ public record CreateDiseaseRequest(
     string DiseaseName,
     string? DiseaseType = null,
     string? Description = null,
-    string? Symptoms = null
+    string? Symptoms = null,
+    bool IsSupportedByAi = false
 );

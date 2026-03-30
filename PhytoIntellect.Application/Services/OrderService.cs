@@ -2,11 +2,7 @@
 using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using PhytoIntellect.Core.Enums;
 
 namespace PhytoIntellect.Application.Services;
 
@@ -28,9 +24,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         if (patient == null) throw new Exception("Patient not found.");
         int patientId = patient.PatientId;
 
-        // سحب وتجميع العنوان لو المريض مبعتوش
+        // --- سحب العنوان ---
         string finalShippingAddress = request.ShippingAddress;
-
         if (string.IsNullOrWhiteSpace(finalShippingAddress) || finalShippingAddress.Trim().ToLower() == "string")
         {
             var userEntity = await _unitOfWork.UserRepository.GetAsync(
@@ -54,13 +49,28 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             }
         }
 
+        // 🎯 معالجة الدفع باستخدام الـ Enums
+        if (!Enum.TryParse<PaymentMethod>(request.PaymentMethod, true, out var selectedPayment))
+            throw new InvalidOperationException("Invalid Payment Method.");
+
+        var paymentStatus = PaymentStatus.Pending;
+        var orderStatus = OrderStatus.Pending; // الأوردر دايماً بيبدأ Pending
+
+        // 🎯 المحاكاة: لو فيزا أو محفظة، هنستنى ثانيتين والفلوس تعتبر اتدفعت
+        if (selectedPayment == PaymentMethod.CreditCard || selectedPayment == PaymentMethod.Wallet)
+        {
+            await Task.Delay(10000, cancellationToken);
+            paymentStatus = PaymentStatus.Paid;
+        }
+
         var mainOrder = new Order
         {
             PatientId = patientId,
             ShippingAddress = finalShippingAddress,
-            PaymentMethod = request.PaymentMethod,
+            PaymentMethod = selectedPayment.ToString(),
+            OrderStatus = orderStatus.ToString(),
+            PaymentStatus = paymentStatus.ToString(), // 🚨 شيل الكومنت لو ضفت العمود في الداتابيز
             OrderDate = DateTime.UtcNow,
-            OrderStatus = "Pending",
             SubOrders = new List<SubOrder>()
         };
 
@@ -84,8 +94,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
                 var subOrder = new SubOrder
                 {
                     HerbalistId = currentHerbalistId,
-                    Status = "Pending",
-                    TrackingNumber = null, // 👈 التعديل هنا: هينزل فاضي
+                    Status = SubOrderStatus.Pending.ToString(), // 👈 استخدام الـ Enum
+                    ExternalDeliveryID = null,
                     OrderRecipes = new List<OrderRecipe>(),
                     OrderHerbs = new List<OrderHerb>()
                 };
@@ -94,7 +104,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
                 {
                     var quantity = request.Recipes.First(r => r.RecipeId == recipe.RecipeId).Quantity;
 
-                    decimal unitPrice = 100; // استخدم عمود السعر الحقيقي للوصفة لو متاح
+                    decimal unitPrice = recipe.Price > 0 ? recipe.Price : 100; // ToDo ai لسه على ما ندخل ال 
+
                     decimal itemTotal = unitPrice * quantity;
 
                     subOrder.OrderRecipes.Add(new OrderRecipe
@@ -124,8 +135,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
                 var subOrder = existingSubOrder ?? new SubOrder
                 {
                     HerbalistId = currentHerbalistId,
-                    Status = "Pending",
-                    TrackingNumber = null, // 👈 التعديل هنا: هينزل فاضي
+                    Status = SubOrderStatus.Pending.ToString(), // 👈 استخدام الـ Enum
+                    ExternalDeliveryID = null,
                     OrderRecipes = new List<OrderRecipe>(),
                     OrderHerbs = new List<OrderHerb>()
                 };
@@ -139,7 +150,7 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
                         tracked: false,
                         cancellationToken: cancellationToken);
 
-                    if (herbalistHerbFromDb == null)
+                    if (herbalistHerbFromDb == null) // ToDo
                         throw new InvalidOperationException($"Herb ID {requestedHerb.HerbId} is not active or not sold by Herbalist ID {currentHerbalistId}.");
 
                     if (herbalistHerbFromDb.Price == null)
@@ -166,11 +177,13 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             }
         }
 
+        var random = new Random();
+
         mainOrder.ItemsTotal = mainOrder.SubOrders.Sum(s => s.SubTotal);
-        mainOrder.DeliveryFee = 50;
+        mainOrder.DeliveryFee = random.Next(40, 101);
         mainOrder.TotalPrice = mainOrder.ItemsTotal + mainOrder.DeliveryFee;
 
-        await _unitOfWork.OrderRepository.CreateAsync(mainOrder);
+        await _unitOfWork.OrderRepository.CreateAsync(mainOrder, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return "Order created successfully!";
@@ -228,17 +241,19 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
 
         if (order == null) throw new Exception("Order not found.");
 
-        if (order.SubOrders.Any(s => s.Status != "Pending" && s.Status != "Accepted"))
+        // 👈 استخدام الـ Enums لمنع الإلغاء لو بدأ في التجهيز
+        if (order.SubOrders.Any(s => s.Status != SubOrderStatus.Pending.ToString()))
             throw new Exception("Cannot cancel order because some items are already being prepared or shipped.");
 
-        // نرجع الكميات للمخزن تاني لو الأوردر اتلغى (دي ممكن تعملها خطوة إضافية بعدين للبيزنس)
-
-        order.OrderStatus = "Cancelled";
+        order.OrderStatus = OrderStatus.Cancelled.ToString();
         foreach (var subOrder in order.SubOrders)
         {
-            subOrder.Status = "Cancelled";
+            subOrder.Status = SubOrderStatus.Cancelled.ToString();
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
+
 }
+
+

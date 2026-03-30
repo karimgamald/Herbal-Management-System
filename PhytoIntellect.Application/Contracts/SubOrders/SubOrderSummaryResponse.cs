@@ -9,10 +9,10 @@ namespace PhytoIntellect.Application.Contracts.SubOrders;
 public record SubOrderSummaryResponse
 {
     public int SubOrderId { get; init; }
-    public int HerbalistId { get; init; }
-    public string HerbalistName { get; init; } = string.Empty;
+    //public int HerbalistId { get; init; }
+    //public string HerbalistName { get; init; } = string.Empty;
     public decimal SubTotal { get; init; }
     public string Status { get; init; } = string.Empty;
-    public string? TrackingNumber { get; init; }
-    public List<OrderItemResponse> Items { get; init; } = new();
+    //public string? TrackingNumber { get; init; }
+    //public List<OrderItemResponse> Items { get; init; } = new();
 }

@@ -1,6 +1,7 @@
 ﻿
 using FluentValidation;
 using PhytoIntellect.Application.Contracts.SubOrders;
+using PhytoIntellect.Core.Enums;
 
 public class UpdateSubOrderStatusRequestValidator : AbstractValidator<UpdateSubOrderStatusRequest>
 {
@@ -8,13 +9,23 @@ public class UpdateSubOrderStatusRequestValidator : AbstractValidator<UpdateSubO
     {
         RuleFor(x => x.Status)
             .NotEmpty().WithMessage("Status is required.")
-            .Must(BeAValidStatus).WithMessage("Invalid status. Allowed values: Accepted, Rejected, Preparing, Shipped, Delivered");
-
+            .Must(BeAValidStatus).WithMessage("Invalid status. Allowed values: Preparing, Shipped, Delivered, Cancelled");
     }
 
     private bool BeAValidStatus(string status)
     {
-        var allowedStatuses = new[] { "Accepted", "Rejected", "Preparing", "Shipped", "Delivered" };
-        return allowedStatuses.Contains(status);
+        if (string.IsNullOrWhiteSpace(status)) return false;
+
+        // 🎯 استخدمنا الـ Enum مباشرة عشان لو غيرنا اسمه بعدين الكود ميضربش
+        var allowedStatuses = new[]
+        {
+            SubOrderStatus.Preparing.ToString(),
+            SubOrderStatus.Shipped.ToString(),
+            SubOrderStatus.Delivered.ToString(),
+            SubOrderStatus.Cancelled.ToString()
+        };
+
+        // StringComparer.OrdinalIgnoreCase عشان لو بعتها حروف سمول تعدي عادي
+        return allowedStatuses.Contains(status.Trim(), StringComparer.OrdinalIgnoreCase);
     }
 }

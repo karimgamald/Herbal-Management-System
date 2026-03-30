@@ -4,4 +4,4 @@ using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.SubOrders;
 
-public record UpdateSubOrderStatusRequest(string Status, string? TrackingNumber);
+public record UpdateSubOrderStatusRequest(string Status);

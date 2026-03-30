@@ -9,7 +9,6 @@ public class Recipe
 {
     public int RecipeId { get; set; }
 
-    // Nullable عشان لو الوصفة معمولة بالذكاء الاصطناعي مش هيكون ليها عطار محدد
     public int? HerbalistId { get; set; }
 
     public bool CreatedByAI { get; set; } = true;
@@ -17,7 +16,7 @@ public class Recipe
     public string? Instructions { get; set; }
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
-
+    public decimal Price { get; set; }
     public float AverageRating { get; set; }
     public int TotalRatings { get; set; } = 0;
     

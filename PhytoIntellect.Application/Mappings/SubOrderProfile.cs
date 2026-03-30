@@ -9,8 +9,8 @@ public class SubOrderProfile : Profile
         CreateMap<SubOrder, SubOrderSummaryResponse>();
         // لو حبيت تضيف Maps تانية تخص العطار بس حطها هنا
 
-        CreateMap<SubOrder, SubOrderSummaryResponse>()
-        .ForMember(dest => dest.HerbalistName, opt => opt.MapFrom(src => src.Herbalist!.User!.FullName));
+        CreateMap<SubOrder, SubOrderSummaryResponse>();
+        //.ForMember(dest => dest.HerbalistName, opt => opt.MapFrom(src => src.Herbalist!.User!.FullName));
         // 👆 عدل .User.FullName حسب طريقة تخزينك لاسم العطار في الداتابيز
     }
 }

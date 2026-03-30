@@ -12,8 +12,8 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260324203334_AllowNull")]
-    partial class AllowNull
+    [Migration("20260330132650_UpdatedExternalIdAndAddRecipePriceAndDiseaseAiSupport")]
+    partial class UpdatedExternalIdAndAddRecipePriceAndDiseaseAiSupport
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -45,6 +45,9 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("IsSupportedByAi")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Symptoms")
                         .HasColumnType("nvarchar(max)");
 
@@ -59,6 +62,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             Description = "Habitual sleeplessness or inability to sleep.",
                             DiseaseName = "Insomnia",
                             DiseaseType = "Neurological",
+                            IsSupportedByAi = false,
                             Symptoms = "Difficulty falling asleep, waking up often."
                         },
                         new
@@ -67,6 +71,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             Description = "A common disorder that affects the large intestine.",
                             DiseaseName = "Irritable Bowel Syndrome (IBS)",
                             DiseaseType = "Gastrointestinal",
+                            IsSupportedByAi = false,
                             Symptoms = "Cramping, abdominal pain, bloating, gas."
                         },
                         new
@@ -75,6 +80,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             Description = "A viral infection of your nose and throat.",
                             DiseaseName = "Common Cold",
                             DiseaseType = "Respiratory",
+                            IsSupportedByAi = false,
                             Symptoms = "Runny nose, sore throat, cough, congestion."
                         },
                         new
@@ -83,6 +89,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             Description = "A feeling of worry, nervousness, or unease.",
                             DiseaseName = "Anxiety",
                             DiseaseType = "Psychological",
+                            IsSupportedByAi = false,
                             Symptoms = "Restlessness, rapid breathing, increased heart rate."
                         },
                         new
@@ -91,6 +98,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             Description = "Discomfort in your upper abdomen.",
                             DiseaseName = "Indigestion",
                             DiseaseType = "Gastrointestinal",
+                            IsSupportedByAi = false,
                             Symptoms = "Bloating, nausea, belching."
                         });
                 });
@@ -178,118 +186,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("AddedByHerbalistId");
 
                     b.ToTable("Herbs");
-
-                    b.HasData(
-                        new
-                        {
-                            HerbId = 1,
-                            Benefits = "Relieves nausea, reduces inflammation, and aids digestion.",
-                            Description = "A widely used root known for its spicy flavor and medicinal properties.",
-                            Dosage = "1-3 grams daily",
-                            HerbName = "Ginger",
-                            IsApproved = true,
-                            ScientificName = "Zingiber officinale",
-                            Warnings = "High doses may cause heartburn or interact with blood thinners."
-                        },
-                        new
-                        {
-                            HerbId = 2,
-                            Benefits = "Promotes sleep, reduces anxiety, and soothes stomach aches.",
-                            Description = "A daisy-like plant commonly used to make herb infusions.",
-                            Dosage = "1-2 cups of tea daily",
-                            HerbName = "Chamomile",
-                            IsApproved = true,
-                            ScientificName = "Matricaria chamomilla",
-                            Warnings = "May cause allergic reactions in people sensitive to ragweed."
-                        },
-                        new
-                        {
-                            HerbId = 3,
-                            Benefits = "Powerful anti-inflammatory and antioxidant effects.",
-                            Description = "A bright yellow spice widely used in Indian cuisine and Ayurvedic medicine.",
-                            Dosage = "500-2000 mg daily (with black pepper)",
-                            HerbName = "Turmeric",
-                            IsApproved = true,
-                            ScientificName = "Curcuma longa",
-                            Warnings = "Can cause stomach upset in large amounts."
-                        },
-                        new
-                        {
-                            HerbId = 4,
-                            Benefits = "Relieves irritable bowel syndrome (IBS), eases headaches, and clears congestion.",
-                            Description = "A hybrid mint cross between watermint and spearmint.",
-                            Dosage = "1-2 cups of tea or 0.2ml essential oil capsule",
-                            HerbName = "Peppermint",
-                            IsApproved = true,
-                            ScientificName = "Mentha piperita",
-                            Warnings = "May worsen acid reflux (GERD)."
-                        },
-                        new
-                        {
-                            HerbId = 5,
-                            Benefits = "Boosts immune system, reduces blood pressure, and improves cholesterol levels.",
-                            Description = "A pungent bulb used extensively in cooking and traditional medicine.",
-                            Dosage = "1-2 cloves raw daily",
-                            HerbName = "Garlic",
-                            IsApproved = true,
-                            ScientificName = "Allium sativum",
-                            Warnings = "Bad breath, heartburn, and may increase bleeding risk."
-                        },
-                        new
-                        {
-                            HerbId = 6,
-                            Benefits = "Reduces stress and cortisol levels, boosts brain function.",
-                            Description = "An ancient medicinal herb classified as an adaptogen.",
-                            Dosage = "300-500 mg root extract daily",
-                            HerbName = "Ashwagandha",
-                            IsApproved = true,
-                            ScientificName = "Withania somnifera",
-                            Warnings = "Not recommended for pregnant women or those with autoimmune diseases."
-                        },
-                        new
-                        {
-                            HerbId = 7,
-                            Benefits = "Prevents and treats the common cold, boosts immunity.",
-                            Description = "A flowering plant in the daisy family, popular for fighting flu.",
-                            Dosage = "300-500 mg daily during illness",
-                            HerbName = "Echinacea",
-                            IsApproved = true,
-                            ScientificName = "Echinacea purpurea",
-                            Warnings = "May cause mild stomach upset or allergic reactions."
-                        },
-                        new
-                        {
-                            HerbId = 8,
-                            Benefits = "Reduces anxiety, promotes restful sleep, and heals minor burns (topical).",
-                            Description = "A fragrant purple flower known for its calming scent.",
-                            Dosage = "1 cup of tea or aromatherapy",
-                            HerbName = "Lavender",
-                            IsApproved = true,
-                            ScientificName = "Lavandula angustifolia",
-                            Warnings = "Not recommended for young boys (hormonal effects) if used topically in large amounts."
-                        },
-                        new
-                        {
-                            HerbId = 9,
-                            Benefits = "Increases energy, lowers blood sugar, and improves cognitive function.",
-                            Description = "A slow-growing plant with fleshy roots, popular in Chinese medicine.",
-                            Dosage = "200-400 mg daily",
-                            HerbName = "Ginseng",
-                            IsApproved = true,
-                            ScientificName = "Panax ginseng",
-                            Warnings = "Can cause insomnia or interact with diabetes medications."
-                        },
-                        new
-                        {
-                            HerbId = 10,
-                            Benefits = "Improves memory and focus, promotes hair growth (topical).",
-                            Description = "A fragrant evergreen herb native to the Mediterranean.",
-                            Dosage = "1-2 cups of tea or used as a spice",
-                            HerbName = "Rosemary",
-                            IsApproved = true,
-                            ScientificName = "Salvia rosmarinus",
-                            Warnings = "Extremely high doses can trigger seizures."
-                        });
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.Herbalist", b =>
@@ -407,10 +303,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<decimal>("DeliveryFee")
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<string>("ExternalDeliveryID")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<string>("ExternalPaymentID")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -461,16 +353,16 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderHerbId"));
 
-                    b.Property<int?>("HerbId")
+                    b.Property<int>("HerbId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("Quantity")
+                    b.Property<int>("Quantity")
                         .HasColumnType("int");
 
                     b.Property<int>("SubOrderId")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("SubTotal")
+                    b.Property<decimal>("SubTotal")
                         .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("UnitPrice")
@@ -493,16 +385,16 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderRecipeId"));
 
-                    b.Property<int?>("Quantity")
+                    b.Property<int>("Quantity")
                         .HasColumnType("int");
 
-                    b.Property<int?>("RecipeId")
+                    b.Property<int>("RecipeId")
                         .HasColumnType("int");
 
                     b.Property<int>("SubOrderId")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("SubTotal")
+                    b.Property<decimal>("SubTotal")
                         .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("UnitPrice")
@@ -583,6 +475,9 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("TotalRatings")
                         .HasColumnType("int");
@@ -716,6 +611,10 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SubOrderId"));
 
+                    b.Property<string>("ExternalDeliveryID")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<int>("HerbalistId")
                         .HasColumnType("int");
 
@@ -729,10 +628,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.Property<decimal>("SubTotal")
                         .HasColumnType("decimal(10,2)");
-
-                    b.Property<string>("TrackingNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("SubOrderId");
 
@@ -880,7 +775,8 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasOne("PhytoIntellect.Core.Entities.Herb", "Herb")
                         .WithMany()
                         .HasForeignKey("HerbId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("PhytoIntellect.Core.Entities.SubOrder", "SubOrder")
                         .WithMany("OrderHerbs")
@@ -898,7 +794,8 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasOne("PhytoIntellect.Core.Entities.Recipe", "Recipe")
                         .WithMany()
                         .HasForeignKey("RecipeId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("PhytoIntellect.Core.Entities.SubOrder", "SubOrder")
                         .WithMany("OrderRecipes")

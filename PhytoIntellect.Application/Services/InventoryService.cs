@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using AutoMapper;
 using PhytoIntellect.Application.Contracts.Inventory;
 using PhytoIntellect.Core.Entities;
@@ -15,7 +19,7 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
             cancellationToken: cancellationToken);
 
         if (herbalist == null)
-            throw new Exception("Herbalist not found.");
+            throw new KeyNotFoundException("Herbalist not found."); // 👈 تعديل
 
         var herbs = await unitOfWork.HerbalistHerbRepository.GetAllAsync(
             filter: h => h.HerbalistId == herbalist.HerbalistId,
@@ -23,7 +27,31 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
             includeProperties: "Herb",
             cancellationToken: cancellationToken);
 
-        // هنا الـ Select العادية ممتازة جداً ومش محتاجين AutoMapper
+        return herbs.Select(x => new InventoryResponse
+        {
+            HerbId = x.HerbId,
+            HerbName = x.Herb.HerbName,
+            Price = x.Price,
+            IsActive = x.IsActive
+        });
+    }
+
+    public async Task<IEnumerable<InventoryResponse>> GetAllByHerbalistIdAsync(int herbalistId, CancellationToken cancellationToken)
+    {
+        var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
+            filter: h => h.HerbalistId == herbalistId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (herbalist == null)
+            throw new KeyNotFoundException("Herbalist not found."); // 👈 تعديل
+
+        var herbs = await unitOfWork.HerbalistHerbRepository.GetAllAsync(
+            filter: h => h.HerbalistId == herbalist.HerbalistId,
+            tracked: false,
+            includeProperties: "Herb",
+            cancellationToken: cancellationToken);
+
         return herbs.Select(x => new InventoryResponse
         {
             HerbId = x.HerbId,
@@ -40,26 +68,24 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null) 
-            throw new Exception("Herbalist not found.");
+        if (herbalist == null)
+            throw new KeyNotFoundException("Herbalist not found.");
 
-        // 🚨 حماية 1: هل العشبة دي موجودة أصلاً في قاموس الأعشاب؟
         var herb = await unitOfWork.HerbRepository.GetAsync(
             filter: h => h.HerbId == request.HerbId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herb == null) 
-            throw new Exception("This herb does not exist in the system.");
+        if (herb == null)
+            throw new KeyNotFoundException("This herb does not exist in the system."); // 👈 404
 
-        // 🚨 حماية 2: هل العطار ضاف العشبة دي قبل كده في مخزنه؟
         var existingInventoryItem = await unitOfWork.HerbalistHerbRepository.GetAsync(
             filter: h => h.HerbId == request.HerbId && h.HerbalistId == herbalist.HerbalistId,
             tracked: false,
             cancellationToken: cancellationToken);
 
         if (existingInventoryItem != null)
-            throw new Exception("This herb is already in your inventory. You can update its price instead.");
+            throw new InvalidOperationException("This herb is already in your inventory. You can update its price instead."); // 👈 400
 
         var entity = new HerbalistHerb
         {
@@ -72,7 +98,6 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
         await unitOfWork.HerbalistHerbRepository.CreateAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // بما إننا جبنا العشبة فوق في حماية 1، مش محتاجين نعمل استعلام تاني للداتابيز!
         return new InventoryResponse
         {
             HerbId = herb.HerbId,
@@ -82,6 +107,7 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
         };
     }
 
+    // 🎯 شيلنا الـ return false وخليناها ترمي Exception عشان الـ Controller يفهم المشكلة فين
     public async Task<bool> UpdateInventoryAsync(int userId, int herbId, UpdateInventoryRequest request, CancellationToken cancellationToken)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
@@ -89,14 +115,14 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null) return false;
+        if (herbalist == null) throw new KeyNotFoundException("Herbalist not found.");
 
         var item = await unitOfWork.HerbalistHerbRepository.GetAsync(
             filter: h => h.HerbId == herbId && h.HerbalistId == herbalist.HerbalistId,
             tracked: true,
             cancellationToken: cancellationToken);
 
-        if (item == null) return false;
+        if (item == null) throw new KeyNotFoundException("Herb not found in your inventory.");
 
         item.Price = request.Price;
         item.IsActive = request.IsActive;
@@ -112,14 +138,14 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null) return false;
+        if (herbalist == null) throw new KeyNotFoundException("Herbalist not found.");
 
         var item = await unitOfWork.HerbalistHerbRepository.GetAsync(
             filter: h => h.HerbId == herbId && h.HerbalistId == herbalist.HerbalistId,
             tracked: true,
             cancellationToken: cancellationToken);
 
-        if (item == null) return false;
+        if (item == null) throw new KeyNotFoundException("Herb not found in your inventory.");
 
         unitOfWork.HerbalistHerbRepository.Remove(item);
         await unitOfWork.SaveChangesAsync(cancellationToken);

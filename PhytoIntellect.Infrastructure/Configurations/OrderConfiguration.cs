@@ -22,7 +22,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.PaymentMethod).HasMaxLength(50);
         builder.Property(o => o.PaymentStatus).HasMaxLength(50);
         builder.Property(o => o.ExternalPaymentID).HasMaxLength(100);
-        builder.Property(o => o.ExternalDeliveryID).HasMaxLength(100);
+        
         builder.Property(o => o.OrderStatus).HasMaxLength(50);
 
         // العنوان نخليه كبير عشان ممكن يكون تفصيلي

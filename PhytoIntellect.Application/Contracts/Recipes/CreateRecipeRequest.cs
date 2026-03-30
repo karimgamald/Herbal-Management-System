@@ -8,6 +8,7 @@ public record CreateRecipeRequest
 {
     public string Description { get; init; } = string.Empty;
     public string Instructions { get; init; } = string.Empty;
-    public List<RecipeHerbRequest> Herbs { get; init; } = new();
-    public List<int> DiseaseIds { get; init; } = new();
+    public decimal Price { get; init; }
+    public List<RecipeHerbRequest> Herbs { get; init; } = [];
+    public List<int> DiseaseIds { get; init; } = [];
 }

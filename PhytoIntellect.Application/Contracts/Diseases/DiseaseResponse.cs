@@ -11,4 +11,5 @@ public record DiseaseResponse
     public string? DiseaseType { get; init; }
     public string? Description { get; init; }
     public string? Symptoms { get; init; }
+    public string? IsSupportedByAi { get; init; }
 }

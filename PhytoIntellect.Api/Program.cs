@@ -20,14 +20,14 @@ builder.Services.AddInfrastructureServices();
 
 
 var app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-// for wwwroot
-app.UseStaticFiles();
 
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseCors("AllowAll");

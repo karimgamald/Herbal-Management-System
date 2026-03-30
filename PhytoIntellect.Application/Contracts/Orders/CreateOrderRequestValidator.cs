@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using PhytoIntellect.Core.Enums;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -14,9 +15,6 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
         .When(req => !string.IsNullOrWhiteSpace(req.ShippingAddress) && req.ShippingAddress.Trim().ToLower() != "string")
         .WithMessage("Please provide a detailed shipping address (at least 10 characters).");
 
-        // Payment Method Validation
-        RuleFor(x => x.PaymentMethod)
-            .NotEmpty().WithMessage("Payment method is required.");
 
         // Apply nested validators
         RuleForEach(x => x.Recipes).SetValidator(new OrderRecipeRequestValidator());
@@ -26,6 +24,11 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
         RuleFor(x => x)
             .Must(HaveAtLeastOneItem)
             .WithMessage("Cannot create an empty order. You must add at least one recipe or one herb.");
+
+        RuleFor(x => x.PaymentMethod)
+         .NotEmpty().WithMessage("Payment method is required.")
+         .IsEnumName(typeof(PaymentMethod), caseSensitive: false) // caseSensitive: false عشان لو كتبها حروف سمول تعدي
+         .WithMessage("Invalid payment method. Please choose: Cash, CreditCard, or Wallet.");
     }
 
     private bool HaveAtLeastOneItem(CreateOrderRequest request)

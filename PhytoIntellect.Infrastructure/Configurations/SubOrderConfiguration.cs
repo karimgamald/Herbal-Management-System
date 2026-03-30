@@ -15,7 +15,7 @@ public class SubOrderConfiguration : IEntityTypeConfiguration<SubOrder>
 
         builder.Property(s => s.SubTotal).HasColumnType("decimal(10,2)");
         builder.Property(s => s.Status).HasMaxLength(50);
-        builder.Property(s => s.TrackingNumber).HasMaxLength(100);
+        builder.Property(s => s.ExternalDeliveryID).HasMaxLength(100);
 
         builder.HasOne(s => s.Order)
                .WithMany(o => o.SubOrders)

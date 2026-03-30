@@ -12,8 +12,8 @@ public class SubOrder
 
     public decimal SubTotal { get; set; }
     public string Status { get; set; } = "Pending";
-    public string? TrackingNumber { get; set; }
-
+    public string? ExternalDeliveryID { get; set; }
+    
     // Navigation Properties
     public Order? Order { get; set; }
     public Herbalist? Herbalist { get; set; }

@@ -2,6 +2,7 @@
 using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Contracts.SubOrders;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Core.Enums;
 
 namespace PhytoIntellect.Application.Services;
 
@@ -49,7 +50,7 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             SubOrderId = subOrder.SubOrderId,
             SubTotal = subOrder.SubTotal,
             Status = subOrder.Status,
-            TrackingNumber = subOrder.TrackingNumber,
+            TrackingNumber = subOrder.ExternalDeliveryID,
 
             // تعديل الوصفات
             Recipes = subOrder.OrderRecipes.Select(r => new OrderItemResponse
@@ -81,6 +82,10 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
         if (herbalist == null) throw new Exception("Herbalist not found.");
 
+        // 🎯 نتأكد إن الحالة المبعوتة موجودة في الـ Enum صح
+        if (!Enum.TryParse<SubOrderStatus>(request.Status, true, out var newSubStatus))
+            throw new InvalidOperationException("Invalid SubOrder Status.");
+
         var subOrder = await _unitOfWork.SubOrderRepository.GetAsync(
             filter: s => s.SubOrderId == subOrderId && s.HerbalistId == herbalist.HerbalistId,
             tracked: true,
@@ -88,46 +93,74 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
 
         if (subOrder == null) throw new Exception("SubOrder not found or access denied.");
 
-        // تحديث الحالة
-        subOrder.Status = request.Status;
+        subOrder.Status = newSubStatus.ToString();
 
-        // 🎯 اللوجيك الجديد: معالجة رقم التتبع
-        // لو العطار بعت رقم تتبع بإيده، احفظه
-        if (!string.IsNullOrWhiteSpace(request.TrackingNumber))
+        // معالجة رقم التتبع
+        
+        if (newSubStatus == SubOrderStatus.Shipped && string.IsNullOrWhiteSpace(subOrder.ExternalDeliveryID))
         {
-            subOrder.TrackingNumber = request.TrackingNumber;
-        }
-        // لو العطار مبعتش رقم، والحالة اتغيرت لـ Shipped، السيستم هيولد رقم من عنده
-        else if (request.Status == "Shipped" && string.IsNullOrWhiteSpace(subOrder.TrackingNumber))
-        {
-            subOrder.TrackingNumber = GenerateTrackingNumber(herbalist.HerbalistId);
+            subOrder.ExternalDeliveryID = GenerateTrackingNumber(herbalist.HerbalistId);
         }
 
         _unitOfWork.SubOrderRepository.Update(subOrder);
 
-        // فحص هل الأوردر الرئيسي اكتمل ولا لأ
-        if (request.Status == "Delivered")
-        {
-            var mainOrder = await _unitOfWork.OrderRepository.GetAsync(
-                filter: o => o.OrderId == subOrder.OrderId,
-                includeProperties: "SubOrders",
-                tracked: true,
-                cancellationToken: cancellationToken);
+        // 🎯 🎯 اللوجيك الذكي لتحديث الأوردر الرئيسي (The Smart Update)
+        var mainOrder = await _unitOfWork.OrderRepository.GetAsync(
+            filter: o => o.OrderId == subOrder.OrderId,
+            includeProperties: "SubOrders",
+            tracked: true,
+            cancellationToken: cancellationToken);
 
-            if (mainOrder != null && mainOrder.SubOrders.All(s => s.Status == "Delivered"))
-            {
-                mainOrder.OrderStatus = "Completed";
-                _unitOfWork.OrderRepository.Update(mainOrder);
-            }
+        if (mainOrder != null)
+        {
+            var allStatuses = mainOrder.SubOrders.Select(s => s.Status).ToList();
+
+            // تحديث الحالة بناءً على وضع كل العطارين
+            mainOrder.OrderStatus = DetermineMainOrderStatus(allStatuses);
+            _unitOfWork.OrderRepository.Update(mainOrder);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    // --- الدالة المساعدة (لازم تنقلها للـ SubOrderService) ---
+
     private string GenerateTrackingNumber(int herbalistId)
     {
         string randomString = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
         return $"PHYTO-H{herbalistId}-{randomString}";
+    }
+
+    // 🧠 دالة الذكاء الاصطناعي (بتفهم البيزنس وتحدد حالة الأوردر الكبير)
+    // 🧠 دالة الذكاء الاصطناعي (بتفهم البيزنس وتحدد حالة الأوردر الكبير)
+    private string DetermineMainOrderStatus(List<string> subStatuses)
+    {
+        // 1. لو كلهم اتلغوا 👈 الأوردر الرئيسي اتلغى
+        if (subStatuses.All(s => s == SubOrderStatus.Cancelled.ToString()))
+            return OrderStatus.Cancelled.ToString();
+
+        // 2. لو كلهم اتوصلوا (أو ميكس بين اتوصل واتلغى) 👈 تم التوصيل بنجاح
+        if (subStatuses.All(s => s == SubOrderStatus.Delivered.ToString() || s == SubOrderStatus.Cancelled.ToString()))
+        {
+            if (subStatuses.Contains(SubOrderStatus.Cancelled.ToString()))
+                return OrderStatus.PartiallyDelivered.ToString();
+
+            return OrderStatus.Delivered.ToString();
+        }
+
+        // 3. لو كلهم اتشحنوا (أو جزء اتلغى وجزء اتشحن) 👈 تم الشحن
+        if (subStatuses.All(s => s == SubOrderStatus.Shipped.ToString() || s == SubOrderStatus.Delivered.ToString() || s == SubOrderStatus.Cancelled.ToString()))
+        {
+            if (subStatuses.Contains(SubOrderStatus.Cancelled.ToString()))
+                return OrderStatus.PartiallyShipped.ToString();
+
+            return OrderStatus.Shipped.ToString();
+        }
+
+        // 4. لو أي عطار بدأ يجهز 👈 جاري المعالجة (التعديل هنا: بقينا بنسأل على Preparing)
+        if (subStatuses.Any(s => s == SubOrderStatus.Preparing.ToString() || s == SubOrderStatus.Shipped.ToString()))
+            return OrderStatus.Processing.ToString();
+
+        // 5. في أي حالة تانية (زي إنهم كلهم لسه Pending)
+        return OrderStatus.Pending.ToString();
     }
 }

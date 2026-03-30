@@ -99,6 +99,7 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
 
         recipe.Description = request.Description;
         recipe.Instructions = request.Instructions;
+        recipe.Price = request.Price;
 
         recipe.RecipeHerbs.Clear();
         foreach (var herbReq in request.Herbs)

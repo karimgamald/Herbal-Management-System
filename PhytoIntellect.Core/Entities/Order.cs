@@ -21,7 +21,6 @@ public class Order
 
     // الشحن
     public string ShippingAddress { get; set; } = string.Empty;
-    public string? ExternalDeliveryID { get; set; }
 
     // التواريخ والحالة
     public DateTime OrderDate { get; set; } = DateTime.UtcNow;
