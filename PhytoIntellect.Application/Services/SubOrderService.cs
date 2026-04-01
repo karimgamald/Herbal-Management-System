@@ -77,26 +77,32 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
     // --- 3. يغير حالة الطلب (أهم دالة) ---
     public async Task UpdateSubOrderStatusAsync(int subOrderId, string userId, UpdateSubOrderStatusRequest request, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) throw new Exception("Invalid User ID.");
+        // 1. لو الـ ID بايظ 👈 نرمي ArgumentException (عشان دي مشكلة في الداتا اللي مبعوتة)
+        if (!int.TryParse(userId, out int parsedUserId))
+            throw new ArgumentException("Invalid User ID format.");
 
+        // 2. لو العطار مش موجود 👈 نرمي UnauthorizedAccessException (عشان ده يوزر بيحاول يكسر الصلاحيات)
         var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (herbalist == null) throw new Exception("Herbalist not found.");
+        if (herbalist == null)
+            throw new UnauthorizedAccessException("Herbalist account not found or access denied.");
 
-        // 🎯 نتأكد إن الحالة المبعوتة موجودة في الـ Enum صح
+        // 3. لو الحالة مش في الـ Enum 👈 نرمي ArgumentException (عشان برضه الداتا المبعوتة غلط)
         if (!Enum.TryParse<SubOrderStatus>(request.Status, true, out var newSubStatus))
-            throw new InvalidOperationException("Invalid SubOrder Status.");
+            throw new ArgumentException("Invalid SubOrder Status. Please provide a valid status like Preparing or Shipped.");
 
+        // 4. لو الأوردر مش بتاعه أو مش موجود 👈 نرمي KeyNotFoundException (زي ما ظبطناها سوا)
         var subOrder = await _unitOfWork.SubOrderRepository.GetAsync(
             filter: s => s.SubOrderId == subOrderId && s.HerbalistId == herbalist.HerbalistId,
             tracked: true,
             cancellationToken: cancellationToken);
 
-        if (subOrder == null) throw new Exception("SubOrder not found or access denied.");
+        if (subOrder == null)
+            throw new KeyNotFoundException("SubOrder not found or you do not have permission to access it.");
 
+        // --- بقية اللوجيك بتاعك سليم وزي الفل ---
         subOrder.Status = newSubStatus.ToString();
 
         // معالجة رقم التتبع
-        
         if (newSubStatus == SubOrderStatus.Shipped && string.IsNullOrWhiteSpace(subOrder.ExternalDeliveryID))
         {
             subOrder.ExternalDeliveryID = GenerateTrackingNumber(herbalist.HerbalistId);
@@ -104,7 +110,7 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
 
         _unitOfWork.SubOrderRepository.Update(subOrder);
 
-        // 🎯 🎯 اللوجيك الذكي لتحديث الأوردر الرئيسي (The Smart Update)
+        // 🎯 اللوجيك الذكي لتحديث الأوردر الرئيسي
         var mainOrder = await _unitOfWork.OrderRepository.GetAsync(
             filter: o => o.OrderId == subOrder.OrderId,
             includeProperties: "SubOrders",
@@ -114,8 +120,6 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         if (mainOrder != null)
         {
             var allStatuses = mainOrder.SubOrders.Select(s => s.Status).ToList();
-
-            // تحديث الحالة بناءً على وضع كل العطارين
             mainOrder.OrderStatus = DetermineMainOrderStatus(allStatuses);
             _unitOfWork.OrderRepository.Update(mainOrder);
         }
@@ -123,11 +127,10 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-
     private string GenerateTrackingNumber(int herbalistId)
     {
         string randomString = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
-        return $"PHYTO-H{herbalistId}-{randomString}";
+        return $"HERBALIST-H{herbalistId}-{randomString}";
     }
 
     // 🧠 دالة الذكاء الاصطناعي (بتفهم البيزنس وتحدد حالة الأوردر الكبير)

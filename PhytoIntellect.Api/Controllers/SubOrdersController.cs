@@ -32,8 +32,34 @@ public class SubOrdersController(ISubOrderService subOrderService) : ControllerB
     [HttpPut("{subOrderId}/status")]
     public async Task<IActionResult> UpdateStatus(int subOrderId, [FromBody] UpdateSubOrderStatusRequest request, CancellationToken cancellationToken)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        await _subOrderService.UpdateSubOrderStatusAsync(subOrderId, userId!, request, cancellationToken);
-        return Ok(new { Message = "Status updated successfully." });
+        try
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized(new { Message = "User is not logged in." });
+
+            await subOrderService.UpdateSubOrderStatusAsync(subOrderId, userId, request, cancellationToken);
+
+            return Ok(new { Message = "SubOrder status updated successfully." });
+        }
+        catch (ArgumentException ex)
+        {
+            // 👈 بيمسك الداتا الغلط (زي حالة غلط أو يوزر ID غلط) ويرجع 400 Bad Request
+            return BadRequest(new { ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // 👈 بيمسك محاولة الدخول الممنوعة ويرجع 403 Forbidden
+            return StatusCode(403, new { ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            // 👈 بيمسك الأوردر اللي مش موجود أو مش بتاعه ويرجع 404 Not Found
+            return NotFound(new { ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // 👈 أي إيرور تاني سيرفر ويرجع 500
+            return StatusCode(500, new { Message = "An unexpected error occurred.", Details = ex.Message });
+        }
     }
 }
