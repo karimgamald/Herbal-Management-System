@@ -8,9 +8,7 @@ public class InventoryProfile : Profile
 {
     public InventoryProfile()
     {
-        // Get herbname from => HerbalistHerb.Herb.HerbName
         CreateMap<HerbalistHerb, InventoryResponse>()
-            .ForMember(dest => dest.HerbName,
-                       opt => opt.MapFrom(src => src.Herb.HerbName));
+            .ForMember(dest => dest.HerbName, opt => opt.MapFrom(src => src.Herb.HerbName));
     }
 }

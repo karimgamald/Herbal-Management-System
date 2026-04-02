@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
-using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Application.Contracts.SubOrders;
 using PhytoIntellect.Application.DTOs.HerbalistDTOs;
+using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Mappings
 {
@@ -8,10 +9,7 @@ namespace PhytoIntellect.Application.Mappings
     {
         public HerbalistProfile()
         {
-            // تحويل من Entity إلى DTO
             CreateMap<Herbalist, HerbalistDto>();
-
-            // لو عندك Create/Update DTOs
             CreateMap<CreateOrUpdateHerbalistDto, Herbalist>();
         }
     }

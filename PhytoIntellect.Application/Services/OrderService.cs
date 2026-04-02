@@ -11,185 +11,54 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IMapper _mapper = mapper;
 
-    // --- 1. إنشاء الطلب ---
     public async Task<string> CreateOrderAsync(string userId, CreateOrderRequest request, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) throw new Exception("Invalid User ID format.");
+        // 1. التحقق من المريض
+        int parsedUserId = ParseUserId(userId);
+        int patientId = await GetPatientIdAsync(parsedUserId, cancellationToken);
 
-        var patient = await _unitOfWork.PatientRepository.GetAsync(
-            filter: p => p.UserId == parsedUserId,
-            tracked: false,
-            cancellationToken: cancellationToken);
+        // 2. تجهيز العنوان
+        string finalShippingAddress = 
+            await ResolveShippingAddressAsync(parsedUserId, request.ShippingAddress, cancellationToken);
 
-        if (patient == null) throw new Exception("Patient not found.");
-        int patientId = patient.PatientId;
+        // 3. تحديد حالة الدفع
+        var (orderStatus, subOrderStatus) = DetermineOrderStatuses(request.PaymentMethod);
 
-        // --- سحب العنوان ---
-        string finalShippingAddress = request.ShippingAddress;
-        if (string.IsNullOrWhiteSpace(finalShippingAddress) || finalShippingAddress.Trim().ToLower() == "string")
-        {
-            var userEntity = await _unitOfWork.UserRepository.GetAsync(
-                filter: u => u.Id == parsedUserId,
-                tracked: false,
-                cancellationToken: cancellationToken);
-
-            if (userEntity != null)
-            {
-                var addressParts = new List<string>();
-                if (!string.IsNullOrWhiteSpace(userEntity.Governorate)) addressParts.Add(userEntity.Governorate);
-                if (!string.IsNullOrWhiteSpace(userEntity.City)) addressParts.Add(userEntity.City);
-                if (!string.IsNullOrWhiteSpace(userEntity.Street)) addressParts.Add(userEntity.Street);
-
-                finalShippingAddress = string.Join(", ", addressParts);
-            }
-
-            if (string.IsNullOrWhiteSpace(finalShippingAddress))
-            {
-                throw new InvalidOperationException("Shipping address is not provided in the request, and your profile does not have a saved address.");
-            }
-        }
-
-        // 🎯 معالجة الدفع باستخدام الـ Enums
-        if (!Enum.TryParse<PaymentMethod>(request.PaymentMethod, true, out var selectedPayment))
-            throw new InvalidOperationException("Invalid Payment Method.");
-
-        var paymentStatus = PaymentStatus.Pending;
-        var orderStatus = OrderStatus.Pending; // الأوردر دايماً بيبدأ Pending
-
-        // 🎯 المحاكاة: لو فيزا أو محفظة، هنستنى ثانيتين والفلوس تعتبر اتدفعت
-        if (selectedPayment == PaymentMethod.CreditCard || selectedPayment == PaymentMethod.Wallet)
-        {
-            await Task.Delay(10000, cancellationToken);
-            paymentStatus = PaymentStatus.Paid;
-        }
-
+        // 4. تهيئة الأوردر الرئيسي
         var mainOrder = new Order
         {
             PatientId = patientId,
             ShippingAddress = finalShippingAddress,
-            PaymentMethod = selectedPayment.ToString(),
-            OrderStatus = orderStatus.ToString(),
-            PaymentStatus = paymentStatus.ToString(), // 🚨 شيل الكومنت لو ضفت العمود في الداتابيز
+            PaymentMethod = request.PaymentMethod,
+            OrderStatus = orderStatus,
+            PaymentStatus = PaymentStatus.Pending.ToString(),
+            ExternalPaymentID = null,
             OrderDate = DateTime.UtcNow,
             SubOrders = new List<SubOrder>()
         };
 
-        // --- معالجة الوصفات ---
+        // 5. معالجة العناصر (الوصفات والأعشاب)
         if (request.Recipes != null && request.Recipes.Any())
         {
-            var recipeIds = request.Recipes.Select(r => r.RecipeId).ToList();
-            var recipesFromDb = await _unitOfWork.RecipeRepository.GetAllAsync(r => recipeIds.Contains(r.RecipeId));
-
-            if (recipesFromDb.Any(r => r.HerbalistId == null))
-            {
-                throw new InvalidOperationException("Cannot order AI recipes directly. Please order the herbs individually.");
-            }
-
-            var recipesGroupedByHerbalist = recipesFromDb.GroupBy(r => r.HerbalistId);
-
-            foreach (var group in recipesGroupedByHerbalist)
-            {
-                int currentHerbalistId = group.Key ?? 0;
-
-                var subOrder = new SubOrder
-                {
-                    HerbalistId = currentHerbalistId,
-                    Status = SubOrderStatus.Pending.ToString(), // 👈 استخدام الـ Enum
-                    ExternalDeliveryID = null,
-                    OrderRecipes = new List<OrderRecipe>(),
-                    OrderHerbs = new List<OrderHerb>()
-                };
-
-                foreach (var recipe in group)
-                {
-                    var quantity = request.Recipes.First(r => r.RecipeId == recipe.RecipeId).Quantity;
-
-                    decimal unitPrice = recipe.Price > 0 ? recipe.Price : 100; // ToDo ai لسه على ما ندخل ال 
-
-                    decimal itemTotal = unitPrice * quantity;
-
-                    subOrder.OrderRecipes.Add(new OrderRecipe
-                    {
-                        RecipeId = recipe.RecipeId,
-                        Quantity = quantity,
-                        UnitPrice = unitPrice,
-                        SubTotal = itemTotal
-                    });
-                }
-
-                subOrder.SubTotal = subOrder.OrderRecipes.Sum(r => r.SubTotal);
-                mainOrder.SubOrders.Add(subOrder);
-            }
+            await ProcessRecipesAsync(request.Recipes, mainOrder, subOrderStatus, cancellationToken);
         }
 
-        // --- معالجة الأعشاب ---
         if (request.Herbs != null && request.Herbs.Any())
         {
-            var herbsGroupedByHerbalist = request.Herbs.GroupBy(h => h.HerbalistId);
-
-            foreach (var group in herbsGroupedByHerbalist)
-            {
-                int currentHerbalistId = group.Key;
-
-                var existingSubOrder = mainOrder.SubOrders.FirstOrDefault(s => s.HerbalistId == currentHerbalistId);
-                var subOrder = existingSubOrder ?? new SubOrder
-                {
-                    HerbalistId = currentHerbalistId,
-                    Status = SubOrderStatus.Pending.ToString(), // 👈 استخدام الـ Enum
-                    ExternalDeliveryID = null,
-                    OrderRecipes = new List<OrderRecipe>(),
-                    OrderHerbs = new List<OrderHerb>()
-                };
-
-                foreach (var requestedHerb in group)
-                {
-                    var herbalistHerbFromDb = await _unitOfWork.HerbalistHerbRepository.GetAsync(
-                        filter: hh => hh.HerbId == requestedHerb.HerbId
-                                   && hh.HerbalistId == currentHerbalistId
-                                   && hh.IsActive == true,
-                        tracked: false,
-                        cancellationToken: cancellationToken);
-
-                    if (herbalistHerbFromDb == null) // ToDo
-                        throw new InvalidOperationException($"Herb ID {requestedHerb.HerbId} is not active or not sold by Herbalist ID {currentHerbalistId}.");
-
-                    if (herbalistHerbFromDb.Price == null)
-                        throw new InvalidOperationException($"Price is not set for Herb ID {requestedHerb.HerbId} by Herbalist ID {currentHerbalistId}.");
-
-                    decimal unitPrice = herbalistHerbFromDb.Price.Value;
-                    decimal itemTotal = unitPrice * requestedHerb.Quantity;
-
-                    subOrder.OrderHerbs.Add(new OrderHerb
-                    {
-                        HerbId = requestedHerb.HerbId,
-                        Quantity = requestedHerb.Quantity,
-                        UnitPrice = unitPrice,
-                        SubTotal = itemTotal
-                    });
-                }
-
-                subOrder.SubTotal = subOrder.OrderRecipes.Sum(r => r.SubTotal) + subOrder.OrderHerbs.Sum(h => h.SubTotal);
-
-                if (existingSubOrder == null)
-                {
-                    mainOrder.SubOrders.Add(subOrder);
-                }
-            }
+            await ProcessHerbsAsync(request.Herbs, mainOrder, subOrderStatus, cancellationToken);
         }
 
-        var random = new Random();
-
-        mainOrder.ItemsTotal = mainOrder.SubOrders.Sum(s => s.SubTotal);
-        mainOrder.DeliveryFee = random.Next(40, 101);
-        mainOrder.TotalPrice = mainOrder.ItemsTotal + mainOrder.DeliveryFee;
-
+        // 6. حساب الإجماليات والحفظ
+        CalculateOrderTotals(mainOrder);
         await _unitOfWork.OrderRepository.CreateAsync(mainOrder, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return "Order created successfully!";
+        return mainOrder.OrderStatus == "AwaitingPayment"
+            ? "Order created successfully. Please proceed to payment."
+            : "Order created successfully and sent to herbalists!";
     }
 
-    // --- 2. المريض بيشوف لستة طلباته ---
+
     public async Task<IEnumerable<OrderSummaryResponse>> GetPatientOrdersAsync(string userId, CancellationToken cancellationToken = default)
     {
         if (!int.TryParse(userId, out int parsedUserId)) return Enumerable.Empty<OrderSummaryResponse>();
@@ -205,7 +74,6 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         return _mapper.Map<IEnumerable<OrderSummaryResponse>>(orders);
     }
 
-    // --- 3. المريض بيشوف تفاصيل الطلب ---
     public async Task<OrderDetailsResponse?> GetOrderDetailsForPatientAsync(int orderId, string userId, CancellationToken cancellationToken = default)
     {
         if (!int.TryParse(userId, out int parsedUserId)) return null;
@@ -215,8 +83,7 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
 
         var order = await _unitOfWork.OrderRepository.GetAsync(
             filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
-            // 🎯 ضفنا اسم الجدول بتاع العطار هنا عشان الـ AutoMapper يعرف يجيب اسمه (عدلها حسب اسم الـ Navigation Property عندك)
-            includeProperties: "SubOrders.Herbalist.User",
+            includeProperties: "SubOrders.Herbalist.User,SubOrders.OrderRecipes.Recipe,SubOrders.OrderHerbs.Herb",
             tracked: false,
             cancellationToken: cancellationToken);
 
@@ -225,7 +92,6 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         return _mapper.Map<OrderDetailsResponse>(order);
     }
 
-    // --- 4. المريض بيلغي الطلب ---
     public async Task CancelOrderAsync(int orderId, string userId, CancellationToken cancellationToken = default)
     {
         if (!int.TryParse(userId, out int parsedUserId)) throw new Exception("Invalid User ID.");
@@ -241,7 +107,6 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
 
         if (order == null) throw new Exception("Order not found.");
 
-        // 👈 استخدام الـ Enums لمنع الإلغاء لو بدأ في التجهيز
         if (order.SubOrders.Any(s => s.Status != SubOrderStatus.Pending.ToString()))
             throw new Exception("Cannot cancel order because some items are already being prepared or shipped.");
 
@@ -254,6 +119,204 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<string> SimulatePaymentAsync(int orderId, string userId, CancellationToken cancellationToken = default)
+    {
+        if (!int.TryParse(userId, out int parsedUserId))
+            throw new ArgumentException("Invalid User ID format.");
+
+        var patient = await _unitOfWork.PatientRepository.GetAsync(
+            filter: p => p.UserId == parsedUserId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (patient == null)
+            throw new UnauthorizedAccessException("Patient account not found.");
+
+        var order = await _unitOfWork.OrderRepository.GetAsync(
+            filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
+            includeProperties: "SubOrders",
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (order == null)
+            throw new KeyNotFoundException("Order not found or you do not have permission to pay for it.");
+
+        if (!string.IsNullOrEmpty(order.ExternalPaymentID))
+            throw new InvalidOperationException("This order is already paid.");
+
+        string fakeTransactionId = $"TXN-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+
+        order.ExternalPaymentID = fakeTransactionId;
+        order.OrderStatus = OrderStatus.Pending.ToString();
+        order.PaymentStatus = PaymentStatus.Paid.ToString();
+        foreach (var subOrder in order.SubOrders)
+        {
+            subOrder.Status = SubOrderStatus.Pending.ToString();
+        }
+
+        _unitOfWork.OrderRepository.Update(order);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return fakeTransactionId;
+    }
+
+    #region Private Helper Methods
+
+    private int ParseUserId(string userId)
+    {
+        if (!int.TryParse(userId, out int parsedUserId))
+            throw new ArgumentException("Invalid User ID format.");
+        return parsedUserId;
+    }
+
+    private async Task<int> GetPatientIdAsync(int parsedUserId, CancellationToken cancellationToken)
+    {
+        var patient = await _unitOfWork.PatientRepository.GetAsync(
+            filter: p => p.UserId == parsedUserId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (patient == null) throw new UnauthorizedAccessException("Patient not found.");
+        return patient.PatientId;
+    }
+
+    private async Task<string> ResolveShippingAddressAsync(int parsedUserId, string requestedAddress, CancellationToken cancellationToken)
+    {
+        string finalAddress = requestedAddress;
+
+        if (string.IsNullOrWhiteSpace(finalAddress) || finalAddress.Trim().ToLower() == "string")
+        {
+            var userEntity = await _unitOfWork.UserRepository.GetAsync(
+                filter: u => u.Id == parsedUserId,
+                tracked: false,
+                cancellationToken: cancellationToken);
+
+            if (userEntity != null)
+            {
+                var addressParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(userEntity.Governorate)) addressParts.Add(userEntity.Governorate);
+                if (!string.IsNullOrWhiteSpace(userEntity.City)) addressParts.Add(userEntity.City);
+                if (!string.IsNullOrWhiteSpace(userEntity.Street)) addressParts.Add(userEntity.Street);
+
+                finalAddress = string.Join(", ", addressParts);
+            }
+
+            if (string.IsNullOrWhiteSpace(finalAddress))
+                throw new InvalidOperationException("Shipping address is not provided in the request, and your profile does not have a saved address.");
+        }
+
+        return finalAddress;
+    }
+
+    private (string OrderStatus, string SubOrderStatus) DetermineOrderStatuses(string paymentMethod)
+    {
+        if (!Enum.TryParse<PaymentMethod>(paymentMethod, true, out var selectedPayment))
+            throw new InvalidOperationException("Invalid Payment Method.");
+
+        string orderStatus = selectedPayment == PaymentMethod.Cash ? OrderStatus.Pending.ToString() : "AwaitingPayment";
+        string subOrderStatus = selectedPayment == PaymentMethod.Cash ? SubOrderStatus.Pending.ToString() : "AwaitingPayment";
+
+        return (orderStatus, subOrderStatus);
+    }
+
+    private async Task ProcessRecipesAsync(IEnumerable<OrderRecipeRequest> requestedRecipes, Order mainOrder, string status, CancellationToken cancellationToken)
+    {
+        var recipeIds = requestedRecipes.Select(r => r.RecipeId).ToList();
+        var recipesFromDb = await _unitOfWork.RecipeRepository.GetAllAsync(r => recipeIds.Contains(r.RecipeId));
+
+        if (recipesFromDb.Any(r => r.HerbalistId == null))
+            throw new InvalidOperationException("Cannot order AI recipes directly. Please order the herbs individually.");
+
+        var recipesGrouped = recipesFromDb.GroupBy(r => r.HerbalistId);
+
+        foreach (var group in recipesGrouped)
+        {
+            int currentHerbalistId = group.Key ?? 0;
+            var subOrder = GetOrCreateSubOrder(mainOrder, currentHerbalistId, status);
+
+            foreach (var recipe in group)
+            {
+                var quantity = requestedRecipes.First(r => r.RecipeId == recipe.RecipeId).Quantity;
+                decimal unitPrice = recipe.Price > 0 ? recipe.Price : 100; // ToDo: AI Pricing
+
+                subOrder.OrderRecipes.Add(new OrderRecipe
+                {
+                    RecipeId = recipe.RecipeId,
+                    Quantity = quantity,
+                    UnitPrice = unitPrice,
+                    SubTotal = unitPrice * quantity
+                });
+            }
+            subOrder.SubTotal = subOrder.OrderRecipes.Sum(r => r.SubTotal) + subOrder.OrderHerbs.Sum(h => h.SubTotal);
+        }
+    }
+
+    private async Task ProcessHerbsAsync(IEnumerable<OrderHerbRequest> requestedHerbs, Order mainOrder, string status, CancellationToken cancellationToken)
+    {
+        var herbsGrouped = requestedHerbs.GroupBy(h => h.HerbalistId);
+
+        foreach (var group in herbsGrouped)
+        {
+            int currentHerbalistId = group.Key;
+            var subOrder = GetOrCreateSubOrder(mainOrder, currentHerbalistId, status);
+
+            foreach (var requestedHerb in group)
+            {
+                var herbalistHerbFromDb = await _unitOfWork.HerbalistHerbRepository.GetAsync(
+                    filter: hh => hh.HerbId == requestedHerb.HerbId
+                               && hh.HerbalistId == currentHerbalistId
+                               && hh.IsActive == true,
+                    tracked: false,
+                    cancellationToken: cancellationToken);
+
+                if (herbalistHerbFromDb == null)
+                    throw new InvalidOperationException($"Herb ID {requestedHerb.HerbId} is not active or not sold by Herbalist ID {currentHerbalistId}.");
+
+                if (herbalistHerbFromDb.Price == null)
+                    throw new InvalidOperationException($"Price is not set for Herb ID {requestedHerb.HerbId}.");
+
+                decimal unitPrice = herbalistHerbFromDb.Price.Value;
+
+                decimal itemTotal = (requestedHerb.QuantityPerGram / 1000m) * unitPrice;
+
+                subOrder.OrderHerbs.Add(new OrderHerb
+                {
+                    HerbId = requestedHerb.HerbId,
+                    Quantity = requestedHerb.QuantityPerGram,
+                    UnitPrice = unitPrice,
+                    SubTotal = itemTotal
+                });
+            }
+            subOrder.SubTotal = subOrder.OrderRecipes.Sum(r => r.SubTotal) + subOrder.OrderHerbs.Sum(h => h.SubTotal);
+        }
+    }
+
+    private SubOrder GetOrCreateSubOrder(Order mainOrder, int herbalistId, string status)
+    {
+        var existingSubOrder = mainOrder.SubOrders.FirstOrDefault(s => s.HerbalistId == herbalistId);
+        if (existingSubOrder != null) return existingSubOrder;
+
+        var newSubOrder = new SubOrder
+        {
+            HerbalistId = herbalistId,
+            Status = status,
+            ExternalDeliveryID = null,
+            OrderRecipes = new List<OrderRecipe>(),
+            OrderHerbs = new List<OrderHerb>()
+        };
+        mainOrder.SubOrders.Add(newSubOrder);
+        return newSubOrder;
+    }
+
+    private void CalculateOrderTotals(Order mainOrder)
+    {
+        var random = new Random();
+        mainOrder.ItemsTotal = mainOrder.SubOrders.Sum(s => s.SubTotal);
+        mainOrder.DeliveryFee = random.Next(40, 151);
+        mainOrder.TotalPrice = mainOrder.ItemsTotal + mainOrder.DeliveryFee;
+    }
+
+    #endregion
 }
 
 

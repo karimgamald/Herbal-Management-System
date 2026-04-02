@@ -6,7 +6,7 @@ namespace PhytoIntellect.Application.Contracts.Inventory;
 
 public class UpdateInventoryRequest
 {
-    public decimal Price { get; set; }
+    public decimal PricePerKilo { get; set; }
 
     public bool IsActive { get; set; }
 }

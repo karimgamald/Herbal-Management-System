@@ -7,7 +7,8 @@ namespace PhytoIntellect.Core.Enums;
 public enum PaymentStatus
 {
     Pending = 1,    // لسه متدفعش (كاش أو لسه بيحول)
-    Paid = 2,       // تم الدفع (فيزا ) CreditCard
-    Failed = 3,     // عملية الدفع فشلت
-    Refunded = 4    // تم استرجاع الفلوس
+    AwaitingPayment, // دا لو هيدفع في حاله credit card or wallet بس
+    Paid,       // تم الدفع (فيزا ) CreditCard
+    Failed,     // عملية الدفع فشلت
+    Refunded    // تم استرجاع الفلوس
 }

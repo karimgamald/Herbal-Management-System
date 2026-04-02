@@ -53,22 +53,22 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             TrackingNumber = subOrder.ExternalDeliveryID,
 
             // تعديل الوصفات
-            Recipes = subOrder.OrderRecipes.Select(r => new OrderItemResponse
+            Recipes = subOrder.OrderRecipes.Select(r => new OrderRecipeResponse//OrderItemResponse
             {
-                ItemId = r.RecipeId,
-                Name = r.Recipe!.Description ?? "Recipe",
-                Quantity = r.Quantity,
-                UnitPrice = r.UnitPrice,
-                SubTotal = r.SubTotal
+                RecipeId = r.RecipeId,
+                RecipeName = r.Recipe!.Description ?? "Recipe",
+                QuantityPerOne = r.Quantity,
+                UnitPricePerOne = r.UnitPrice,
+                SubTotal = r.SubTotal,
             }).ToList(),
 
             // تعديل الأعشاب
-            Herbs = subOrder.OrderHerbs.Select(h => new OrderItemResponse
+            Herbs = subOrder.OrderHerbs.Select(h => new OrderHerbResponse//OrderItemResponse
             {
-                ItemId = h.HerbId,
-                Name = h.Herb!.HerbName ?? "Herb", // تأكد إن اسم العشبة عندك HerbName ولا Name
-                Quantity = h.Quantity,
-                UnitPrice = h.UnitPrice,
+                HerbId = h.HerbId,
+                HerbName = h.Herb!.HerbName ?? "Herb", // تأكد إن اسم العشبة عندك HerbName ولا Name
+                QuantityPerGram = h.Quantity,
+                UnitPricePerKilo = h.UnitPrice,
                 SubTotal = h.SubTotal
             }).ToList()
         };
@@ -133,7 +133,6 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         return $"HERBALIST-H{herbalistId}-{randomString}";
     }
 
-    // 🧠 دالة الذكاء الاصطناعي (بتفهم البيزنس وتحدد حالة الأوردر الكبير)
     // 🧠 دالة الذكاء الاصطناعي (بتفهم البيزنس وتحدد حالة الأوردر الكبير)
     private string DetermineMainOrderStatus(List<string> subStatuses)
     {

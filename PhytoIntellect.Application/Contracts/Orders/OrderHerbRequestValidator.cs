@@ -16,7 +16,7 @@ public class OrderHerbRequestValidator : AbstractValidator<OrderHerbRequest>
         RuleFor(x => x.HerbalistId)
             .GreaterThan(0).WithMessage("Herbalist ID is required to purchase this herb.");
 
-        RuleFor(x => x.Quantity)
+        RuleFor(x => x.QuantityPerGram)
             .GreaterThan(0).WithMessage("Quantity must be at least 1.");
     }
 }

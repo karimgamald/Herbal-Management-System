@@ -7,7 +7,7 @@ public class UpdateInventoryRequestValidator : AbstractValidator<UpdateInventory
 {
     public UpdateInventoryRequestValidator()
     {
-        RuleFor(x => x.Price)
+        RuleFor(x => x.PricePerKilo)
             .GreaterThan(0)
             .WithMessage("Price must be greater than zero.")
             .LessThan(1000)

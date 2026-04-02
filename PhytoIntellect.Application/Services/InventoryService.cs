@@ -91,7 +91,7 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
         {
             HerbId = request.HerbId,
             HerbalistId = herbalist.HerbalistId,
-            Price = request.Price,
+            Price = request.PricePerKilo,
             IsActive = true
         };
 
@@ -107,7 +107,6 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
         };
     }
 
-    // 🎯 شيلنا الـ return false وخليناها ترمي Exception عشان الـ Controller يفهم المشكلة فين
     public async Task<bool> UpdateInventoryAsync(int userId, int herbId, UpdateInventoryRequest request, CancellationToken cancellationToken)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
@@ -124,7 +123,7 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
 
         if (item == null) throw new KeyNotFoundException("Herb not found in your inventory.");
 
-        item.Price = request.Price;
+        item.Price = request.PricePerKilo;
         item.IsActive = request.IsActive;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

@@ -5,7 +5,6 @@ using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Orders;
 
-// 2. تفاصيل طلب المريض (عشان الـ Details)
 public record OrderDetailsResponse
 {
     public int OrderId { get; init; }
@@ -13,7 +12,11 @@ public record OrderDetailsResponse
     public decimal DeliveryFee { get; init; }
     public decimal TotalPrice { get; init; }
     public string ShippingAddress { get; init; } = string.Empty;
+    public string PaymentMethod { get; init; } = string.Empty;
+    public string PaymentStatus { get; init; } = string.Empty;
+    public string? TransactionId { get; init; } // ExternalPaymentId
     public string OrderStatus { get; init; } = string.Empty;
     public DateTime OrderDate { get; init; }
-    public List<SubOrderSummaryResponse> SubOrders { get; init; } = new();
+
+    public List<SubOrderDetailsResponse> SubOrders { get; init; } = new();
 }

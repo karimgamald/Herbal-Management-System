@@ -8,5 +8,5 @@ public class AddHerbToInventoryRequest
 {
     public int HerbId { get; set; }
 
-    public decimal Price { get; set; }
+    public decimal PricePerKilo { get; set; }
 }

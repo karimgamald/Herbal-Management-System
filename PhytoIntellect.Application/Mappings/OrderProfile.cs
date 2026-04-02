@@ -8,5 +8,7 @@ public class OrderProfile : Profile
     {
         CreateMap<Order, OrderSummaryResponse>();
         CreateMap<Order, OrderDetailsResponse>();
+        CreateMap<Order, OrderDetailsResponse>()
+            .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.ExternalPaymentID));
     }
 }

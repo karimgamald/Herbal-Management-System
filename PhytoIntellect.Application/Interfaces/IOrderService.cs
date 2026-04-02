@@ -8,4 +8,5 @@ public interface IOrderService
     Task<IEnumerable<OrderSummaryResponse>> GetPatientOrdersAsync(string userId, CancellationToken cancellationToken = default);
     Task<OrderDetailsResponse> GetOrderDetailsForPatientAsync(int orderId, string userId, CancellationToken cancellationToken = default);
     Task CancelOrderAsync(int orderId, string userId, CancellationToken cancellationToken = default);
+    Task<string> SimulatePaymentAsync(int orderId, string userId, CancellationToken cancellationToken = default);
 }

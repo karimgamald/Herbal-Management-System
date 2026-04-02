@@ -11,7 +11,7 @@ public class AddHerbToInventoryRequestValidator : AbstractValidator<AddHerbToInv
             .GreaterThan(0)
             .WithMessage("Invalid Herb Id.");
 
-        RuleFor(x => x.Price)
+        RuleFor(x => x.PricePerKilo)
             .GreaterThan(0)
             .WithMessage("Price must be greater than zero.")
             .LessThan(100000)

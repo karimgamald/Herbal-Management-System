@@ -25,3 +25,4 @@ public class RecipeHerbConfiguration : IEntityTypeConfiguration<RecipeHerb>
                .OnDelete(DeleteBehavior.Restrict); // لكن مسح العشبة ميمسحش الوصفة
     }
 }
+ 
