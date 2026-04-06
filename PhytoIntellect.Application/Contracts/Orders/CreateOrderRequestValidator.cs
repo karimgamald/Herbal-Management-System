@@ -27,7 +27,7 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
 
         RuleFor(x => x.PaymentMethod)
          .NotEmpty().WithMessage("Payment method is required.")
-         .IsEnumName(typeof(PaymentMethod), caseSensitive: false) // caseSensitive: false عشان لو كتبها حروف سمول تعدي
+         .IsEnumName(typeof(PaymentMethod), caseSensitive: false) 
          .WithMessage("Invalid payment method. Please choose: Cash, CreditCard, or Wallet.");
     }
 

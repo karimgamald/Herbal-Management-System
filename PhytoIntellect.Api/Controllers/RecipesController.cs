@@ -63,35 +63,36 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return StatusCode(403, new { Message = ex.Message });
+            return StatusCode(403, new { ex.Message });
         }
         catch (Exception ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
     [Authorize(Roles = "Herbalist")]
-    [HttpDelete("{id}/delete")]
-    public async Task<IActionResult> DeleteRecipe(int id, CancellationToken cancellationToken)
+    [HttpPut("{id}/deactivate")] 
+    public async Task<IActionResult> DeactivateRecipe(int id, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId)) 
+        if (!int.TryParse(userIdStr, out int userId))
             return Unauthorized();
 
-        var success = await recipeService.DeleteRecipeAsync(userId, id, cancellationToken);
+        var success = await recipeService.UpdateRecipeAvailabilityAsync(userId, id, cancellationToken);
 
-        if (!success) 
-            return BadRequest(new { Message = "Failed to delete recipe. It may not exist or you don't have permission." });
+        if (!success)
+            return BadRequest(new { Message = "Failed to deactivate recipe. It may not exist or you don't have permission to modify it." });
 
-        return Ok(new { Message = "Recipe deleted successfully." });
+        return Ok(new { Message = "Recipe deactivated successfully. It is no longer visible to patients." });
     }
 
     [HttpGet("herbalist/{herbalistId}")]
-    public async Task<IActionResult> GetRecipesByHerbalist(int herbalistId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetRecipesByHerbalist([FromRoute] int herbalistId, [FromQuery] bool? isActive, CancellationToken cancellationToken)
     {
-        // الكنترولر بياخد الـ ID من الرابط ويبعته للـ Service
-        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(herbalistId, cancellationToken);
+        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(herbalistId, isActive, cancellationToken);
+
         return Ok(recipes);
     }
+
 }

@@ -24,19 +24,16 @@ public class OrdersController(IOrderService orderService) : ControllerBase
 
         try
         {
-            // بنكلم الـ Service
             var result = await _orderService.CreateOrderAsync(userId, request, cancellationToken);
             return Ok(new { Message = result });
         }
         catch (InvalidOperationException ex)
         {
-            // 🎯 هنا بنمسك إيرور الـ AI أو إيرور الأعشاب اللي ملهاش عطار، وبنرد بـ 400
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
         catch (Exception ex)
         {
-            // أي إيرور تاني مش متوقع (زي الداتابيز وقعت) بنرجعه 500
-            return StatusCode(500, new { Message = ex.Message });
+            return StatusCode(500, new { ex.Message });
         }
     }
 
