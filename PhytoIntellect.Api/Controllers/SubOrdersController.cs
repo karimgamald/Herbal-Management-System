@@ -30,12 +30,14 @@ public class SubOrdersController(ISubOrderService subOrderService) : ControllerB
     }
 
     [HttpPut("{subOrderId}/status")]
-    public async Task<IActionResult> UpdateStatus(int subOrderId, [FromBody] UpdateSubOrderStatusRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateStatus(int subOrderId, [FromBody] UpdateSubOrderStatusRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null) return Unauthorized(new { Message = "User is not logged in." });
+            if (userId == null) 
+                return Unauthorized(new { Message = "User is not logged in." });
 
             await subOrderService.UpdateSubOrderStatusAsync(subOrderId, userId, request, cancellationToken);
 

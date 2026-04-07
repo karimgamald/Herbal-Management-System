@@ -30,23 +30,6 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
         return Ok(herbalist);
     }
 
-    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
-    [HttpPut("update-profile/me")]
-    public async Task<IActionResult> UpdateMyProfile([FromBody] CreateOrUpdateHerbalistDto request,
-        CancellationToken cancellationToken)
-    {
-        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId))
-            return Unauthorized();
-
-        var result = await herbalistService.UpdateMyProfileAsync(userId, request, cancellationToken);
-
-        if (result == "Herbalist profile not found.")
-            return NotFound(new { Message = result });
-
-        return Ok(new { Message = result });
-    }
-
     // ===============================
     // Endpoints للإدارة / العرض العام
     // ===============================
@@ -69,5 +52,22 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
     {
         var herbalists = await herbalistService.GetAllHerbalistsAsync(cancellationToken);
         return Ok(herbalists);
+    }
+
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
+    [HttpPut("update-profile/me")]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] CreateOrUpdateHerbalistDto request,
+        CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
+
+        var result = await herbalistService.UpdateMyProfileAsync(userId, request, cancellationToken);
+
+        if (result == "Herbalist profile not found.")
+            return NotFound(new { Message = result });
+
+        return Ok(new { Message = result });
     }
 }

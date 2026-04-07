@@ -94,5 +94,4 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
 
         return Ok(recipes);
     }
-
 }

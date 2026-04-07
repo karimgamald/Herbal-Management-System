@@ -11,24 +11,20 @@ namespace PhytoIntellect.Api.Controllers;
 [Route("api/[controller]")]
 public class ReviewRecipesController(IReviewRecipeService reviewService) : ControllerBase
 {
-    [HttpPost("/api/recipe/{recipeId}/reviews/submit")]
+    [HttpGet("/api/recipe/{recipeId}/reviews/get-me")]
     [Authorize(Roles = AppRoles.Herbalist)]
-    public async Task<IActionResult> SubmitReview(int recipeId, [FromBody] SubmitReviewRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyReview(int recipeId, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+        if (!int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
 
-        try
-        {
-            var result = await reviewService.SubmitReviewAsync(userId, recipeId, request, cancellationToken);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Message = ex.Message });
-        }
+        var result = await reviewService.GetMyReviewAsync(userId, recipeId, cancellationToken);
+        if (result == null)
+            return NotFound(new { Message = "You haven't reviewed this recipe yet." });
+
+        return Ok(result);
     }
-
 
     [HttpGet("/api/recipe/{recipeId}/reviews/all")]
     public async Task<IActionResult> GetRecipeReviews(int recipeId, CancellationToken cancellationToken)
@@ -42,18 +38,24 @@ public class ReviewRecipesController(IReviewRecipeService reviewService) : Contr
         return Ok(reviews);
     }
 
-
-    [HttpGet("/api/recipe/{recipeId}/reviews/get-me")]
+    [HttpPost("/api/recipe/{recipeId}/reviews/submit")]
     [Authorize(Roles = AppRoles.Herbalist)]
-    public async Task<IActionResult> GetMyReview(int recipeId, CancellationToken cancellationToken)
+    public async Task<IActionResult> SubmitReview(int recipeId, [FromBody] SubmitReviewRequest request,
+        CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+        if (!int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
 
-        var result = await reviewService.GetMyReviewAsync(userId, recipeId, cancellationToken);
-        if (result == null) return NotFound(new { Message = "You haven't reviewed this recipe yet." });
-
-        return Ok(result);
+        try
+        {
+            var result = await reviewService.SubmitReviewAsync(userId, recipeId, request, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
     [HttpDelete("/api/recipe/{recipeId}/reviews/delete-me")]
@@ -61,10 +63,12 @@ public class ReviewRecipesController(IReviewRecipeService reviewService) : Contr
     public async Task<IActionResult> DeleteMyReview(int recipeId, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+        if (!int.TryParse(userIdStr, out int userId)) 
+            return Unauthorized();
 
         var success = await reviewService.DeleteMyReviewAsync(userId, recipeId, cancellationToken);
-        if (!success) return NotFound(new { Message = "Review not found." });
+        if (!success) 
+            return NotFound(new { Message = "Review not found." });
 
         return Ok(new { Message = "Review deleted successfully." });
     }

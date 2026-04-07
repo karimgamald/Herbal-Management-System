@@ -28,19 +28,6 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         return Ok(patient);
     }
 
-    [Authorize(Roles = AppRoles.Patient)]
-    [HttpPut("me")]
-    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdatePatientDto request, CancellationToken cancellationToken)
-    {
-        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
-
-        var result = await patientService.UpdateMyProfileAsync(userId, request, cancellationToken);
-        if (result == "Patient profile not found.") return NotFound(new { Message = result });
-
-        return Ok(new { Message = result });
-    }
-
     // Endpoints خاصة بالعشاب / الإدارة
 
     //[Authorize(Roles = AppRoles.Herbalist)] // العشاب بس اللي يدخل يشوف بروفايل مريض بالـ ID
@@ -56,7 +43,7 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         if (patient.UserId != loggedInUserId)
         {
             //return Forbid("You are not authorized to view this patient's data.");
-             return BadRequest(new { Message = "Invalid Patient ID requested." });
+            return BadRequest(new { Message = "Invalid Patient ID requested." });
         }
 
         return Ok(patient);
@@ -69,5 +56,18 @@ public class PatientsController(IPatientService patientService) : ControllerBase
     {
         var patients = await patientService.GetAllPatientsAsync(cancellationToken);
         return Ok(patients);
+    }
+
+    [Authorize(Roles = AppRoles.Patient)]
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdatePatientDto request, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+
+        var result = await patientService.UpdateMyProfileAsync(userId, request, cancellationToken);
+        if (result == "Patient profile not found.") return NotFound(new { Message = result });
+
+        return Ok(new { Message = result });
     }
 }

@@ -15,22 +15,22 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
     // 1️⃣ إضافة أو تعديل تقييم
     public async Task<FeedbackResponse> SubmitFeedbackAsync(int userId, int recipeId, SubmitFeedbackRequest request, CancellationToken cancellationToken = default)
     {
-        
-
         var patient = await unitOfWork.PatientRepository.GetAsync(
             filter: p => p.UserId == userId,
             tracked: false,
             includeProperties: "User",
             cancellationToken: cancellationToken);
 
-        if (patient == null) throw new Exception("Patient not found.");
+        if (patient == null) 
+            throw new Exception("Patient not found.");
 
         var recipe = await unitOfWork.RecipeRepository.GetAsync(
             filter: r => r.RecipeId == recipeId && r.IsActive,
             tracked: true, // عشان هنعدل التوتال والمتوسط بتاعها
             cancellationToken: cancellationToken);
 
-        if (recipe == null) throw new Exception("Recipe not found.");
+        if (recipe == null) 
+            throw new Exception("Recipe not found.");
 
         var existingFeedback = await unitOfWork.FeedbackRepository.GetAsync(
             filter: f => f.RecipeId == recipe.RecipeId && f.PatientId == patient.PatientId,

@@ -14,29 +14,6 @@ public class OrdersController(IOrderService orderService) : ControllerBase
 {
     private readonly IOrderService _orderService = orderService;
 
-    [HttpPost("create")]
-    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken cancellationToken)
-    {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized();
-
-        try
-        {
-            var result = await _orderService.CreateOrderAsync(userId, request, cancellationToken);
-            return Ok(new { Message = result });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { ex.Message });
-        }
-    }
-
     [HttpGet("all-my-orders")]
     public async Task<IActionResult> GetMyOrders(CancellationToken cancellationToken)
     {
@@ -69,6 +46,29 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { Message = "An error occurred while fetching the order details.", Details = ex.Message });
+        }
+    }
+
+    [HttpPost("create")]
+    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        try
+        {
+            var result = await _orderService.CreateOrderAsync(userId, request, cancellationToken);
+            return Ok(new { Message = result });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { ex.Message });
         }
     }
 
@@ -128,6 +128,4 @@ public class OrdersController(IOrderService orderService) : ControllerBase
             return StatusCode(500, new { Message = "An unexpected error occurred.", Details = ex.Message });
         }
     }
-
-
 }

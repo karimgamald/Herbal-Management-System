@@ -11,14 +11,21 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
     {
         // 🛡️ التنظيف والتقريب لرقم عشري واحد
         float cleanRating = (float)Math.Round(request.RatingValue, 1);
-        if (cleanRating < 1 || cleanRating > 5) throw new Exception("Rating must be between 1 and 5.");
+        if (cleanRating < 1 || cleanRating > 5) 
+            throw new Exception("Rating must be between 1 and 5.");
 
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == userId, tracked: false, includeProperties: "User", cancellationToken: cancellationToken);
-        if (herbalist == null) throw new Exception("Herbalist not found.");
+        if (herbalist == null)
+            throw new Exception("Herbalist not found.");
 
         // 👈 مش بنسأل عن IsActive عشان يقيم وصفات الـ AI
-        var recipe = await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == recipeId, tracked: true, cancellationToken: cancellationToken);
-        if (recipe == null) throw new Exception("Recipe not found.");
+        var recipe = await unitOfWork.RecipeRepository.GetAsync(
+            r => r.RecipeId == recipeId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (recipe == null) 
+            throw new Exception("Recipe not found.");
 
         // 🛡️ السد المنيع: لو العطار هو صاحب الوصفة، ارفض التقييم فوراً
         if (recipe.HerbalistId == herbalist.HerbalistId)

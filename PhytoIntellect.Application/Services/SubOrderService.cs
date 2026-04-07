@@ -14,10 +14,12 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
     // --- 1. يجيب لستة طلبات العطار ---
     public async Task<IEnumerable<SubOrderSummaryResponse>> GetHerbalistSubOrdersAsync(string userId, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) return Enumerable.Empty<SubOrderSummaryResponse>();
+        if (!int.TryParse(userId, out int parsedUserId)) 
+            return Enumerable.Empty<SubOrderSummaryResponse>();
 
         var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (herbalist == null) return Enumerable.Empty<SubOrderSummaryResponse>();
+        if (herbalist == null) 
+            return Enumerable.Empty<SubOrderSummaryResponse>();
 
         var subOrders = await _unitOfWork.SubOrderRepository.GetAllAsync(
             filter: s => s.HerbalistId == herbalist.HerbalistId,
@@ -32,10 +34,13 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
     // --- 2. يجيب تفاصيل طلب معين عشان يجهزه ---
     public async Task<SubOrderDetailsResponse?> GetSubOrderDetailsAsync(int subOrderId, string userId, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) return null;
+        if (!int.TryParse(userId, out int parsedUserId)) 
+            return null;
 
         var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (herbalist == null) return null;
+
+        if (herbalist == null) 
+            return null;
 
         var subOrder = await _unitOfWork.SubOrderRepository.GetAsync(
             filter: s => s.SubOrderId == subOrderId && s.HerbalistId == herbalist.HerbalistId,
@@ -43,7 +48,8 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (subOrder == null) return null;
+        if (subOrder == null) 
+            return null;
 
         return new SubOrderDetailsResponse
         {
