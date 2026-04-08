@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Herbs;
+using PhytoIntellect.Application.Services;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 
@@ -35,6 +36,18 @@ public class HerbsController(IHerbService herbService) : ControllerBase
             return NotFound("Herb not found.");
 
         return Ok(herb);
+    }
+
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Patient}")]
+    [HttpGet("herb/{herbId}/herbalists")]
+    public async Task<IActionResult> GetHerbalistsByHerb(int herbId, CancellationToken cancellationToken)
+    {
+        var result = await herbService.GetHerbalistsByHerbIdAsync(herbId, cancellationToken);
+
+        if (!result.Any())
+            return NotFound("No herbalists found for this herb.");
+
+        return Ok(result);
     }
 
     [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]

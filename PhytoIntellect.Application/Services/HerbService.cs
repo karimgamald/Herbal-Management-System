@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using PhytoIntellect.Application.Contracts.Herbs;
+using PhytoIntellect.Application.DTOs.HerbalistHerbDTOs;
 using PhytoIntellect.Application.DTOs.HerbDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
@@ -46,6 +47,27 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
             return null;
 
         return mapper.Map<HerbWithHerbalistDto>(herb);
+    }
+
+    // Get herbalist (id-name-address) that added this herb to their inventories by herbid
+    public async Task<IEnumerable<HerbalistHerbResponse>> GetHerbalistsByHerbIdAsync(int herbId,CancellationToken cancellationToken = default)
+    {
+        var herbalistHerbs = await unitOfWork.HerbalistHerbRepository.GetAllAsync(
+            filter: hh => hh.HerbId == herbId && hh.IsActive,
+            includeProperties: "Herbalist.User",
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        var result = herbalistHerbs.Select(hh => new HerbalistHerbResponse
+        {
+            HerbalistId = hh.HerbalistId,
+            HerbalistName = hh.Herbalist?.User?.FullName ?? "Unknown",
+            Address = $"{hh.Herbalist?.User?.Governorate}, {hh.Herbalist?.User?.City}, {hh.Herbalist?.User?.Street}",
+            Price = hh.Price ?? 0
+        });
+
+        // ترتيب حسب السعر =>الأرخص الأول
+        return result.OrderBy(x => x.Price);
     }
     public async Task<HerbResponse?> CreateHerbAsync(int userId, HerbRequest request, CancellationToken cancellationToken)
     {
@@ -141,9 +163,7 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
 
 
     // 5️⃣ Approve Herb
-    public async Task<bool> ApproveHerbAsync(
-        int herbId,
-        CancellationToken cancellationToken = default)
+    public async Task<bool> ApproveHerbAsync(int herbId,CancellationToken cancellationToken = default)
     {
         var herb = await unitOfWork.HerbRepository.GetAsync(
             filter: h => h.HerbId == herbId,
@@ -161,9 +181,7 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
     }
 
     // 6️⃣ Delete Herb
-    public async Task<bool> DeleteHerbAsync(
-        int herbId,
-        CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteHerbAsync(int herbId,CancellationToken cancellationToken = default)
     {
         var herb = await unitOfWork.HerbRepository.GetAsync(
             filter: h => h.HerbId == herbId,

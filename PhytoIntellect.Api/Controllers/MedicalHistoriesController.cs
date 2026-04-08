@@ -26,6 +26,17 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
         return Ok(history);
     }
 
+    [Authorize(Roles = AppRoles.Herbalist)]
+    [HttpGet("patient/{patientId}")]
+    public async Task<IActionResult> GetPatientMedicalHistory(int patientId, CancellationToken cancellationToken)
+    {
+        var history = await medicalHistoryService.GetPatientMedicalHistoryByPatientIdAsync(patientId, cancellationToken);
+
+        if (history == null) return NotFound(new { Message = "This patient has not provided a medical history yet." });
+
+        return Ok(history);
+    }
+
     [Authorize(Roles = AppRoles.Patient)]
     [HttpPost("me")]
     public async Task<IActionResult> ManageMyMedicalHistory([FromBody] ManageMedicalHistoryDto request,
@@ -39,16 +50,5 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
         if (result.Contains("not found") || result.Contains("Error")) return BadRequest(new { Message = result });
 
         return Ok(new { Message = result });
-    }
-
-    [Authorize(Roles = AppRoles.Herbalist)] 
-    [HttpGet("patient/{patientId}")]
-    public async Task<IActionResult> GetPatientMedicalHistory(int patientId, CancellationToken cancellationToken)
-    {
-        var history = await medicalHistoryService.GetPatientMedicalHistoryByPatientIdAsync(patientId, cancellationToken);
-
-        if (history == null) return NotFound(new { Message = "This patient has not provided a medical history yet." });
-
-        return Ok(history);
     }
 }

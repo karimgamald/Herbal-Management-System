@@ -77,7 +77,8 @@ public class AccountsController(IAuthService authService) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await authService.RefreshTokenAsync(model.RefreshToken, cancellationToken);
-        if (!result.Success) return Unauthorized(new { result.Message });
+        if (!result.Success) 
+            return Unauthorized(new { result.Message });
         return Ok(result.Data);
     }
 

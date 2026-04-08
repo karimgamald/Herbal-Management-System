@@ -12,6 +12,31 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class RecipesController(IRecipeService recipeService) : ControllerBase
 {
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllRecipes(CancellationToken cancellationToken)
+    {
+        var recipes = await recipeService.GetAllActiveRecipesAsync(cancellationToken);
+        return Ok(recipes);
+    }
+
+    [HttpGet("{id}/get-id")]
+    public async Task<IActionResult> GetRecipeById(int id, CancellationToken cancellationToken)
+    {
+        var recipe = await recipeService.GetRecipeByIdAsync(id, cancellationToken);
+        if (recipe == null)
+            return NotFound(new { Message = "Recipe not found." });
+
+        return Ok(recipe);
+    }
+
+    [HttpGet("herbalist/{herbalistId}")]
+    public async Task<IActionResult> GetRecipesByHerbalist([FromRoute] int herbalistId, [FromQuery] bool? isActive, CancellationToken cancellationToken)
+    {
+        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(herbalistId, isActive, cancellationToken);
+
+        return Ok(recipes);
+    }
+
     [Authorize(Roles =AppRoles.Herbalist)]
     [HttpPost("add")]
     public async Task<IActionResult> AddRecipe([FromBody] CreateRecipeRequest request, CancellationToken cancellationToken)
@@ -29,23 +54,6 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         {
             return BadRequest(new { Message = ex.Message });
         }
-    }
-
-    [HttpGet("all")]
-    public async Task<IActionResult> GetAllRecipes(CancellationToken cancellationToken)
-    {
-        var recipes = await recipeService.GetAllActiveRecipesAsync(cancellationToken);
-        return Ok(recipes);
-    }
-
-    [HttpGet("{id}/get-id")]
-    public async Task<IActionResult> GetRecipeById(int id, CancellationToken cancellationToken)
-    {
-        var recipe = await recipeService.GetRecipeByIdAsync(id, cancellationToken);
-        if (recipe == null) 
-            return NotFound(new { Message = "Recipe not found." });
-
-        return Ok(recipe);
     }
 
     [Authorize(Roles = "Herbalist")]
@@ -85,13 +93,5 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
             return BadRequest(new { Message = "Failed to deactivate recipe. It may not exist or you don't have permission to modify it." });
 
         return Ok(new { Message = "Recipe deactivated successfully. It is no longer visible to patients." });
-    }
-
-    [HttpGet("herbalist/{herbalistId}")]
-    public async Task<IActionResult> GetRecipesByHerbalist([FromRoute] int herbalistId, [FromQuery] bool? isActive, CancellationToken cancellationToken)
-    {
-        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(herbalistId, isActive, cancellationToken);
-
-        return Ok(recipes);
     }
 }
