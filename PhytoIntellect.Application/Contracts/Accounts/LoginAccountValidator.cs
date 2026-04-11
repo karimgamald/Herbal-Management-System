@@ -1,12 +1,11 @@
 ﻿using FluentValidation;
-using PhytoIntellect.Application.DTOs.AuthDTOs;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Accounts
 {
-    public class LoginAccountValidator : AbstractValidator<LoginRequestDto>
+    public class LoginAccountValidator : AbstractValidator<LoginAccountRequest>
     {
         public LoginAccountValidator()
         {

@@ -1,14 +1,10 @@
 ﻿using FluentValidation;
-using PhytoIntellect.Application.DTOs.AuthDTOs;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Accounts
 {
-    public class RegisterAccountValidator : AbstractValidator<RegisterUserAuthDto>
+    public class RegisterUserAuthValidator : AbstractValidator<RegisterUserAuthRequest>
     {
-        public RegisterAccountValidator()
+        public RegisterUserAuthValidator()
         {
             RuleFor(x => x.FullName)
                 .NotEmpty().WithMessage("Full name is required.")

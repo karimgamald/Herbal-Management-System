@@ -39,7 +39,7 @@ public class HerbsController(IHerbService herbService) : ControllerBase
     }
 
     [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Patient}")]
-    [HttpGet("herb/{herbId}/herbalists")]
+    [HttpGet("{herbId}/herbalists")]
     public async Task<IActionResult> GetHerbalistsByHerb(int herbId, CancellationToken cancellationToken)
     {
         var result = await herbService.GetHerbalistsByHerbIdAsync(herbId, cancellationToken);

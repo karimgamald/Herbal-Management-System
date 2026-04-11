@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
-using PhytoIntellect.Application.DTOs.AuthDTOs;
+using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Services;
 
@@ -13,7 +14,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterUserAuthDto model, 
+    public async Task<IActionResult> Register([FromBody] RegisterUserAuthRequest model, 
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -30,7 +31,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequestDto model, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login([FromBody] LoginAccountRequest model, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -44,7 +45,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
     }
 
     [HttpPost("reset-password")]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordAccountRequest model)
     {
         // Reset password via UserService (it will hash the new password)
         var result = await authService.ResetPasswordAsync(model);
@@ -56,14 +57,13 @@ public class AccountsController(IAuthService authService) : ControllerBase
     }
 
     [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model,
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgetPasswordAccountRequest model,
     CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await authService
-            .ForgotPasswordAsync(model, cancellationToken);
+        var result = await authService.ForgotPasswordAsync(model, cancellationToken);
 
         if (!result.Success)
             return BadRequest(result);
@@ -73,7 +73,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
 
 
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] TokenRequestDto model, 
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest model, 
         CancellationToken cancellationToken)
     {
         var result = await authService.RefreshTokenAsync(model.RefreshToken, cancellationToken);
@@ -84,7 +84,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
 
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] TokenRequestDto model, 
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest model, 
         CancellationToken cancellationToken)
     {
         var result = await authService.LogoutAsync(model.RefreshToken, cancellationToken);

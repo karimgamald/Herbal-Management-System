@@ -1,14 +1,14 @@
-﻿using PhytoIntellect.Application.DTOs;
-using PhytoIntellect.Application.DTOs.AuthDTOs;
+﻿using PhytoIntellect.Application.Contracts.Accounts;
+using PhytoIntellect.Application.DTOs;
 
 namespace PhytoIntellect.Application.Interfaces;
 
 public interface IAuthService
 {
-    Task<AuthResultDto> RegisterAsync(RegisterUserAuthDto model, CancellationToken cancellationToken = default);
-    Task<AuthResultDto> LoginAsync(LoginRequestDto model, CancellationToken cancellationToken = default);
-    Task<AuthResultDto> ResetPasswordAsync(ResetPasswordDto model, CancellationToken cancellationToken = default);
-    Task<AuthResultDto> ForgotPasswordAsync(ForgotPasswordDto model, CancellationToken cancellationToken = default);
-    Task<AuthResultDto> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
-    Task<AuthResultDto> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
+    Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model, CancellationToken cancellationToken = default);
+    Task<RegisterUserAuthResponse> LoginAsync(LoginAccountRequest model, CancellationToken cancellationToken = default);
+    Task<RegisterUserAuthResponse> ResetPasswordAsync(ResetPasswordAccountRequest model, CancellationToken cancellationToken = default);
+    Task<RegisterUserAuthResponse> ForgotPasswordAsync(ForgetPasswordAccountRequest model, CancellationToken cancellationToken = default);
+    Task<RegisterUserAuthResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+    Task<RegisterUserAuthResponse> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
 }

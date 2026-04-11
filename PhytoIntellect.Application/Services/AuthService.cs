@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.Extensions.Configuration; // ضيف دي عشان الـ Configuration
-using PhytoIntellect.Application.DTOs.AuthDTOs;
+using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
@@ -15,12 +15,12 @@ public class AuthService(
     IConfiguration _config,
     IEmailService emailService) : IAuthService // ضفنا الـ Configuration هنا
 {
-    public async Task<AuthResultDto> RegisterAsync(RegisterUserAuthDto model, 
+    public async Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model, 
         CancellationToken cancellationToken = default)
     {
         // 1. التحقق من الـ Role
         if (!AppRoles.IsValidRole(model.Role))
-            return new AuthResultDto
+            return new RegisterUserAuthResponse
             {
                 Success = false,
                 Message = $"Invalid Role. Role must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'."
@@ -29,7 +29,7 @@ public class AuthService(
         // 2. Validate Confirm Password
         if (model.Password != model.ConfirmPassword)
         {
-            return new AuthResultDto
+            return new RegisterUserAuthResponse
             {
                 Success = false,
                 Message = "Password and Confirm Password do not match."
@@ -41,7 +41,7 @@ public class AuthService(
             tracked: false, cancellationToken: cancellationToken);
 
         if (existingUser != null)
-            return new AuthResultDto { Success = false, Message = "Email already exists." };
+            return new RegisterUserAuthResponse { Success = false, Message = "Email already exists." };
 
         // 3. تحويل الداتا وتشفير الباسورد
         var user = mapper.Map<User>(model);
@@ -106,15 +106,15 @@ public class AuthService(
             "Welcome to Herbal System",
             message);
 
-        return new AuthResultDto { Success = true, Message = "User registered successfully with profile." };
+        return new RegisterUserAuthResponse { Success = true, Message = "User registered successfully with profile." };
     }
-    public async Task<AuthResultDto> LoginAsync(LoginRequestDto model, 
+    public async Task<RegisterUserAuthResponse> LoginAsync(LoginAccountRequest model, 
         CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email, tracked: false,
             cancellationToken: cancellationToken);
         if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
-            return new AuthResultDto { Success = false, Message = "Invalid Email or password." };
+            return new RegisterUserAuthResponse { Success = false, Message = "Invalid Email or password." };
 
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();
@@ -133,11 +133,12 @@ public class AuthService(
         await unitOfWork.RefreshTokenRepository.CreateAsync(tokenEntity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResultDto { Success = true, Data = new { AccessToken = accessToken, 
+        return new RegisterUserAuthResponse
+        { Success = true, Data = new { AccessToken = accessToken, 
             RefreshToken = refreshToken, Role = user.Role } };
     }
 
-    public async Task<AuthResultDto> ResetPasswordAsync(ResetPasswordDto model,
+    public async Task<RegisterUserAuthResponse> ResetPasswordAsync(ResetPasswordAccountRequest model,
     CancellationToken cancellationToken = default)
     {
         // 1️⃣ التأكد إن اليوزر موجود
@@ -147,7 +148,7 @@ public class AuthService(
             cancellationToken: cancellationToken);
 
         if (user == null)
-            return new AuthResultDto
+            return new RegisterUserAuthResponse
             {
                 Success = false,
                 Message = "User not found."
@@ -158,7 +159,7 @@ public class AuthService(
         {
             var isValidOldPassword = BCrypt.Net.BCrypt.Verify(model.OldPassword, user.PasswordHash);
             if (!isValidOldPassword)
-                return new AuthResultDto
+                return new RegisterUserAuthResponse
                 {
                     Success = false,
                     Message = "Old password is incorrect."
@@ -193,14 +194,14 @@ public class AuthService(
             "Password Changed - Herbal System",
             message);
 
-        return new AuthResultDto
+        return new RegisterUserAuthResponse
         {
             Success = true,
             Message = "Password reset successfully."
         };
     }
 
-    public async Task<AuthResultDto> ForgotPasswordAsync(ForgotPasswordDto model,
+    public async Task<RegisterUserAuthResponse> ForgotPasswordAsync(ForgetPasswordAccountRequest model,
     CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(
@@ -209,7 +210,7 @@ public class AuthService(
             cancellationToken: cancellationToken);
 
         if (user == null)
-            return new AuthResultDto
+            return new RegisterUserAuthResponse
             {
                 Success = false,
                 Message = "User not found."
@@ -242,14 +243,14 @@ public class AuthService(
             "Password Reset - Herbal System",
             message);
 
-        return new AuthResultDto
+        return new RegisterUserAuthResponse
         {
             Success = true,
             Message = "Password reset successfully."
         };
     }
 
-    public async Task<AuthResultDto> RefreshTokenAsync(string refreshToken, 
+    public async Task<RegisterUserAuthResponse> RefreshTokenAsync(string refreshToken, 
         CancellationToken cancellationToken = default)
     {
         var tokenHash = TokenHasher.HashToken(refreshToken);
@@ -258,7 +259,7 @@ public class AuthService(
             tracked: true, cancellationToken: cancellationToken);
 
         if (storedToken == null)
-            return new AuthResultDto { Success = false, Message = "Invalid or expired refresh token." };
+            return new RegisterUserAuthResponse { Success = false, Message = "Invalid or expired refresh token." };
 
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == storedToken.UserId, 
             tracked: false, cancellationToken: cancellationToken);
@@ -283,23 +284,24 @@ public class AuthService(
         await unitOfWork.RefreshTokenRepository.CreateAsync(newTokenEntity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResultDto { Success = true, Data = new { AccessToken = newAccessToken,
+        return new RegisterUserAuthResponse
+        { Success = true, Data = new { AccessToken = newAccessToken,
             RefreshToken = newRefreshToken } };
     }
 
-    public async Task<AuthResultDto> LogoutAsync(string refreshToken, 
+    public async Task<RegisterUserAuthResponse> LogoutAsync(string refreshToken, 
         CancellationToken cancellationToken = default)
     {
         var tokenHash = TokenHasher.HashToken(refreshToken);
         var storedToken = await unitOfWork.RefreshTokenRepository.GetAsync(t => t.TokenHash == tokenHash && !t.IsRevoked, tracked: true, cancellationToken: cancellationToken);
 
         if (storedToken == null)
-            return new AuthResultDto { Success = false, Message = "Token not found or already revoked." };
+            return new RegisterUserAuthResponse { Success = false, Message = "Token not found or already revoked." };
 
         storedToken.IsRevoked = true;
         unitOfWork.RefreshTokenRepository.Update(storedToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResultDto { Success = true, Message = "Logged out successfully." };
+        return new RegisterUserAuthResponse { Success = true, Message = "Logged out successfully." };
     }
 }
