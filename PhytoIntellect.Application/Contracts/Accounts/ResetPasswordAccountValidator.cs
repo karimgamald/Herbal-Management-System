@@ -1,14 +1,13 @@
 ﻿using FluentValidation;
-using PhytoIntellect.Application.DTOs.AuthDTOs;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Accounts
 {
-    public class ResetPasswordValidator : AbstractValidator<ResetPasswordDto>
+    public class ResetPasswordAccountValidator : AbstractValidator<ResetPasswordAccountRequest>
     {
-        public ResetPasswordValidator()
+        public ResetPasswordAccountValidator()
         {
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email is required.")

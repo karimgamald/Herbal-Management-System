@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using PhytoIntellect.Application.Contracts.Users;
-using PhytoIntellect.Application.DTOs.AuthDTOs;
 using PhytoIntellect.Application.DTOs.UserDTOs;
 
 namespace YourProject.Contracts.Users

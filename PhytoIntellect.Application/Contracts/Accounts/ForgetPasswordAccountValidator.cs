@@ -1,14 +1,14 @@
 ﻿using FluentValidation;
-using PhytoIntellect.Application.DTOs.AuthDTOs;
+using Microsoft.AspNetCore.Identity.Data;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Accounts
 {
-    public class ForgetPasswordValidator : AbstractValidator<ForgotPasswordDto>
+    public class ForgetPasswordAccountValidator : AbstractValidator<ForgetPasswordAccountRequest>
     {
-        public ForgetPasswordValidator()
+        public ForgetPasswordAccountValidator()
         {
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email is required.")

@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace PhytoIntellect.Application.DTOs.AuthDTOs
+namespace PhytoIntellect.Application.Contracts.Accounts
 {
-    public class ResetPasswordDto
+    public class ResetPasswordAccountRequest
     {
         public string Email { get; set; } = string.Empty;
         public string? OldPassword { get; set; } // اختياري حسب السيستم

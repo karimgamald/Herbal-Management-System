@@ -53,7 +53,7 @@ public static class AddApplicationServicesDI
         //services.AddValidatorsFromAssemblyContaining<ManageUserAddressValidator>();
 
         // Register all validators 
-        services.AddValidatorsFromAssemblyContaining<RegisterAccountValidator>();
+        services.AddValidatorsFromAssemblyContaining<RegisterUserAuthValidator>();
 
         // 2. تفعيل الـ Auto Validation باستخدام مكتبة SharpGrip
         services.AddFluentValidationAutoValidation();

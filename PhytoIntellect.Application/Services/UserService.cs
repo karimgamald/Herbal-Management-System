@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using PhytoIntellect.Application.DTOs.AuthDTOs;
+using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.DTOs.UserDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
@@ -91,13 +91,13 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         return "User deleted successfully.";
     }
 
-    public async Task<AuthResultDto> UpdateAddressAsync(int userId, UpdateUserAddressDto model, CancellationToken cancellationToken = default)
+    public async Task<RegisterUserAuthResponse> UpdateAddressAsync(int userId, UpdateUserAddressDto model, CancellationToken cancellationToken = default)
     {
         // بنجيب اليوزر من Repository اليوزر نفسه
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == userId, tracked: true, cancellationToken: cancellationToken);
 
         if (user == null)
-            return new AuthResultDto { Success = false, Message = "User not found." };
+            return new RegisterUserAuthResponse { Success = false, Message = "User not found." };
 
         // تحديث البيانات (حتى لو مبعوتة بـ null هتتحدث عادي)
         if (!string.IsNullOrWhiteSpace(model.Governorate) && model.Governorate != "string")
@@ -112,6 +112,6 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         unitOfWork.UserRepository.Update(user);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResultDto { Success = true, Message = "User address updated successfully." };
+        return new RegisterUserAuthResponse { Success = true, Message = "User address updated successfully." };
     }
 }
