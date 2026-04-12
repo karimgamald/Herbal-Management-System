@@ -29,10 +29,7 @@ public class ReviewRecipesController(IReviewRecipeService reviewService) : Contr
     [HttpGet("/api/recipe/{recipeId}/reviews/all")]
     public async Task<IActionResult> GetRecipeReviews(int recipeId, CancellationToken cancellationToken)
     {
-        // 👈 بنسأل الـ Context: هل اليوزر ده عامل لوجين؟ وهل الرول بتاعه عطار؟
         bool isHerbalist = User.Identity?.IsAuthenticated == true && User.IsInRole(AppRoles.Herbalist);
-
-        // بنباصي النتيجة للـ Service
         var reviews = await reviewService.GetAllRecipeReviewsAsync(recipeId, isHerbalist, cancellationToken);
 
         return Ok(reviews);
@@ -54,7 +51,7 @@ public class ReviewRecipesController(IReviewRecipeService reviewService) : Contr
         }
         catch (Exception ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
