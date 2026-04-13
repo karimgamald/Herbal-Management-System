@@ -1,16 +1,16 @@
-﻿using PhytoIntellect.Application.DTOs.HerbalistDTOs;
+﻿using PhytoIntellect.Application.Contracts.Herbalists;
 
 namespace PhytoIntellect.Application.Interfaces;
 
 public interface IHerbalistService
 {
-    Task<HerbalistDto?> GetMyProfileAsync(int userId, CancellationToken cancellationToken);
+    Task<HerbalistResponse?> GetMyProfileAsync(int userId, CancellationToken cancellationToken);
 
-    Task<string> CreateProfileAsync(int userId, CreateOrUpdateHerbalistDto request, CancellationToken cancellationToken);
+    Task<string> CreateProfileAsync(int userId, CreateOrUpdateHerbalistRequest request, CancellationToken cancellationToken);
 
-    Task<string> UpdateMyProfileAsync(int userId, CreateOrUpdateHerbalistDto request, CancellationToken cancellationToken);
+    Task<string> UpdateMyProfileAsync(int userId, CreateOrUpdateHerbalistRequest request, CancellationToken cancellationToken);
 
-    Task<HerbalistDto?> GetHerbalistByIdAsync(int id, CancellationToken cancellationToken);
+    Task<HerbalistResponse?> GetHerbalistByIdAsync(int id, CancellationToken cancellationToken);
 
-    Task<IEnumerable<HerbalistDto>> GetAllHerbalistsAsync(CancellationToken cancellationToken);
+    Task<IEnumerable<HerbalistResponse>> GetAllHerbalistsAsync(CancellationToken cancellationToken);
 }

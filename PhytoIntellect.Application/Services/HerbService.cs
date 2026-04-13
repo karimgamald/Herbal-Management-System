@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using PhytoIntellect.Application.Contracts.Herbs;
 using PhytoIntellect.Application.DTOs.HerbalistHerbDTOs;
-using PhytoIntellect.Application.DTOs.HerbDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 
@@ -34,7 +33,7 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
         return mapper.Map<HerbResponse>(herb);
     }
     // 3 Get the herb with herbalist
-    public async Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(int herbId,
+    public async Task<HerbWithHerbalistResponse?> GetHerbWithHerbalistAsync(int herbId,
             CancellationToken cancellationToken = default)
     {
         var herb = await unitOfWork.HerbRepository.GetAsync(
@@ -46,7 +45,7 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
         if (herb == null)
             return null;
 
-        return mapper.Map<HerbWithHerbalistDto>(herb);
+        return mapper.Map<HerbWithHerbalistResponse>(herb);
     }
 
     // Get herbalist (id-name-address) that added this herb to their inventories by herbid

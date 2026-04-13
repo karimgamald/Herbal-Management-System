@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
+using PhytoIntellect.Application.Contracts.Herbalists;
 using PhytoIntellect.Application.Contracts.SubOrders;
-using PhytoIntellect.Application.DTOs.HerbalistDTOs;
 using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Mappings
@@ -9,8 +9,8 @@ namespace PhytoIntellect.Application.Mappings
     {
         public HerbalistProfile()
         {
-            CreateMap<Herbalist, HerbalistDto>();
-            CreateMap<CreateOrUpdateHerbalistDto, Herbalist>();
+            CreateMap<Herbalist, HerbalistResponse>();
+            CreateMap<CreateOrUpdateHerbalistRequest, Herbalist>();
         }
     }
 }

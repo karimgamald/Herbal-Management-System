@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PhytoIntellect.Application.DTOs.HerbDTOs
+namespace PhytoIntellect.Application.Contracts.Herbs
 {
-    public class HerbWithHerbalistDto
+    public class HerbWithHerbalistResponse
     {
         public int HerbId { get; set; }
         public string HerbName { get; set; } = string.Empty;

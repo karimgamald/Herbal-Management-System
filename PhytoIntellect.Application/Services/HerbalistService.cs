@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using PhytoIntellect.Application.DTOs.HerbalistDTOs;
+using PhytoIntellect.Application.Contracts.Herbalists;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Interfaces;
@@ -10,16 +10,33 @@ namespace PhytoIntellect.Application.Services;
 public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbalistService
 {
     // 1️⃣ العشاب يجيب بروفايله
-    public async Task<HerbalistDto?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<HerbalistResponse?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
             .GetAsync(h => h.UserId == userId, tracked: false, cancellationToken: cancellationToken);
 
-        return herbalist == null ? null : mapper.Map<HerbalistDto>(herbalist);
+        return herbalist == null ? null : mapper.Map<HerbalistResponse>(herbalist);
     }
 
+    // 4️⃣ جلب عشاب بالـ Id (للإدارة أو العرض)
+    public async Task<HerbalistResponse?> GetHerbalistByIdAsync(int herbalistId, CancellationToken cancellationToken = default)
+    {
+        var herbalist = await unitOfWork.HerbalistRepository
+            .GetAsync(h => h.HerbalistId == herbalistId, tracked: false, cancellationToken: cancellationToken);
+
+        return herbalist == null ? null : mapper.Map<HerbalistResponse>(herbalist);
+    }
+
+    // 5️⃣ عرض كل العشابين
+    public async Task<IEnumerable<HerbalistResponse>> GetAllHerbalistsAsync(CancellationToken cancellationToken = default)
+    {
+        var herbalists = await unitOfWork.HerbalistRepository
+            .GetAllAsync(tracked: false, cancellationToken: cancellationToken);
+
+        return mapper.Map<IEnumerable<HerbalistResponse>>(herbalists);
+    }
     // 2️⃣ إنشاء بروفايل
-    public async Task<string> CreateProfileAsync(int userId, CreateOrUpdateHerbalistDto request, CancellationToken cancellationToken = default)
+    public async Task<string> CreateProfileAsync(int userId, CreateOrUpdateHerbalistRequest request, CancellationToken cancellationToken = default)
     {
         var exists = await unitOfWork.HerbalistRepository
             .GetAsync(h => h.UserId == userId, tracked: false, cancellationToken: cancellationToken);
@@ -38,9 +55,7 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
     }
 
     // 3️⃣ تعديل البروفايل
-    public async Task<string> UpdateMyProfileAsync(
-     int userId,
-     CreateOrUpdateHerbalistDto request,
+    public async Task<string> UpdateMyProfileAsync(int userId,CreateOrUpdateHerbalistRequest request,
      CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
@@ -58,23 +73,5 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return "Profile updated successfully.";
-    }
-
-    // 4️⃣ جلب عشاب بالـ Id (للإدارة أو العرض)
-    public async Task<HerbalistDto?> GetHerbalistByIdAsync(int herbalistId, CancellationToken cancellationToken = default)
-    {
-        var herbalist = await unitOfWork.HerbalistRepository
-            .GetAsync(h => h.HerbalistId == herbalistId, tracked: false, cancellationToken: cancellationToken);
-
-        return herbalist == null ? null : mapper.Map<HerbalistDto>(herbalist);
-    }
-
-    // 5️⃣ عرض كل العشابين
-    public async Task<IEnumerable<HerbalistDto>> GetAllHerbalistsAsync(CancellationToken cancellationToken = default)
-    {
-        var herbalists = await unitOfWork.HerbalistRepository
-            .GetAllAsync(tracked: false, cancellationToken: cancellationToken);
-
-        return mapper.Map<IEnumerable<HerbalistDto>>(herbalists);
     }
 }

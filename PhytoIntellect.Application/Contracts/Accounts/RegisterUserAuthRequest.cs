@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Accounts
 {
-    public class RegisterUserAuthRequest
+    public record RegisterUserAuthRequest
     {
         public string FullName { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;

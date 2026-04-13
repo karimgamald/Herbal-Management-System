@@ -1,6 +1,6 @@
-﻿namespace PhytoIntellect.Application.DTOs.HerbalistDTOs
+﻿namespace PhytoIntellect.Application.Contracts.Herbalists
 {
-    public class CreateOrUpdateHerbalistDto
+    public record CreateOrUpdateHerbalistRequest
     {
         //public string LicenseNumber { get; set; } = string.Empty;
         // those attributes are nullable, because the herbalist created at register first

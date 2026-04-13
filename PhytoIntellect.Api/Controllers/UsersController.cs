@@ -32,8 +32,7 @@ public class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpPut("update/{id}")]
-    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto request,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto request,CancellationToken cancellationToken)
     {
         var result = await userService.UpdateUserAsync(id, request, cancellationToken);
         if (result.Contains("Invalid") || result.Contains("not found")) 
@@ -43,8 +42,7 @@ public class UsersController(IUserService userService) : ControllerBase
 
     [Authorize]
     [HttpPatch("update-my-address")]
-    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model,CancellationToken cancellationToken)
     {
         // get the userid from claims
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

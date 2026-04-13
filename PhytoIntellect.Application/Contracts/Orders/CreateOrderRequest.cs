@@ -1,5 +1,4 @@
-﻿
-namespace PhytoIntellect.Application.Contracts.Orders;
+﻿namespace PhytoIntellect.Application.Contracts.Orders;
 
 public record CreateOrderRequest
 {

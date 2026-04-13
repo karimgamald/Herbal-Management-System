@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PhytoIntellect.Application.DTOs.HerbalistDTOs;
+using PhytoIntellect.Application.Contracts.Herbalists;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
@@ -56,7 +56,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
 
     [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpPut("update-profile/me")]
-    public async Task<IActionResult> UpdateMyProfile([FromBody] CreateOrUpdateHerbalistDto request,
+    public async Task<IActionResult> UpdateMyProfile([FromBody] CreateOrUpdateHerbalistRequest request,
         CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

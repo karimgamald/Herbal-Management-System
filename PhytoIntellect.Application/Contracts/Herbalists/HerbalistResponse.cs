@@ -1,6 +1,6 @@
-﻿namespace PhytoIntellect.Application.DTOs.HerbalistDTOs;
+﻿namespace PhytoIntellect.Application.Contracts.Herbalists;
 
-public class HerbalistDto
+public class HerbalistResponse
 {
     public int HerbalistId { get; set; }
     public int UserId { get; set; }

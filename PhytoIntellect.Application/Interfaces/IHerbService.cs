@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Herbs;
 using PhytoIntellect.Application.DTOs.HerbalistHerbDTOs;
-using PhytoIntellect.Application.DTOs.HerbDTOs;
 using PhytoIntellect.Application.Services;
 
 public interface IHerbService
@@ -13,7 +12,7 @@ public interface IHerbService
     // 2️⃣ عرض تفاصيل عشبة
     Task<HerbResponse?> GetHerbByIdAsync(int herbId,CancellationToken cancellationToken = default);
     
-    Task<HerbWithHerbalistDto?> GetHerbWithHerbalistAsync(int herbId, CancellationToken cancellationToken = default);
+    Task<HerbWithHerbalistResponse?> GetHerbWithHerbalistAsync(int herbId, CancellationToken cancellationToken = default);
 
     Task<IEnumerable<HerbalistHerbResponse>> GetHerbalistsByHerbIdAsync(int herbId,CancellationToken cancellationToken = default);
     // 4 اقتراح عشبة جديدة

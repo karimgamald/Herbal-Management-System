@@ -1,12 +1,11 @@
 ﻿using FluentValidation;
-using PhytoIntellect.Application.DTOs.HerbalistDTOs;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Herbalists
 {
-    public class HerbalistValidator : AbstractValidator<CreateOrUpdateHerbalistDto>
+    public class HerbalistValidator : AbstractValidator<CreateOrUpdateHerbalistRequest>
     {
         public HerbalistValidator()
         {

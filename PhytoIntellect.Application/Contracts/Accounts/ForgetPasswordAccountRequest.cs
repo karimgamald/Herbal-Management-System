@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Accounts
 {
-    public class ForgetPasswordAccountRequest
+    public record ForgetPasswordAccountRequest
     {
         public string Email { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
