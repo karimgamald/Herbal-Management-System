@@ -7,5 +7,5 @@ namespace PhytoIntellect.Application.Interfaces;
 
 public interface IAiPredictionService
 {
-    Task<AiPredictionResult> GetPredictionAsync(CreateAiRecipeRequest request);
+    Task<AiPredictionResult> GetPredictionAsync(AiEngineInput request);
 }

@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace PhytoIntellect.Infrastructure.UOW;
 
-// شوف الحقن كله بقى فوق إزاي
 public class UnitOfWork(
     ApplicationDbContext context,
     IRepository<User> userRepository,
-    IRepository<Patient> patientRepository,
+    //IRepository<Patient> patientRepository,
+    IPatientRepository patientRepository,
     IRepository<Herbalist> herbalistRepository,
     IRepository<RefreshToken> refreshTokenRepository,
     IRepository<MedicalHistory> medicalHistoryRepository,
@@ -28,7 +28,8 @@ public class UnitOfWork(
     ) : IUnitOfWork
 {
     public IRepository<User> UserRepository { get; } = userRepository;
-    public IRepository<Patient> PatientRepository { get; } = patientRepository;
+    //public IRepository<Patient> PatientRepository { get; } = patientRepository;
+    public IPatientRepository PatientRepository { get; } = patientRepository;
     public IRepository<Herbalist> HerbalistRepository { get; } = herbalistRepository;
     public IRepository<RefreshToken> RefreshTokenRepository { get; } = refreshTokenRepository;
     public IRepository<MedicalHistory> MedicalHistoryRepository { get; } = medicalHistoryRepository;

@@ -7,5 +7,5 @@ namespace PhytoIntellect.Application.Interfaces;
 
 public interface IAiRecipeService
 {
-    Task<AiRecipeResponse> GenerateRecipeAsync(CreateAiRecipeRequest request);
-}
+    Task<AiRecipeResponse> GenerateRecipeAsync(int userId, CreateAiRecipeRequest request);
+} 

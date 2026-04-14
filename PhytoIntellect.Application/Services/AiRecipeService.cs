@@ -4,32 +4,70 @@ using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Services;
 
-public class AiRecipeService : IAiRecipeService
+public class AiRecipeService(
+    IUnitOfWork unitOfWork, 
+    IAiPredictionService aiPredictionService) 
+    : IAiRecipeService
 {
-    private readonly IUnitOfWork _unitOfWork; // غيرناها من DbContext لـ UnitOfWork
-    private readonly IAiPredictionService _aiPredictionService;
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IAiPredictionService _aiPredictionService = aiPredictionService;
 
-    public AiRecipeService(IUnitOfWork unitOfWork, IAiPredictionService aiPredictionService)
+
+    public async Task<AiRecipeResponse> GenerateRecipeAsync(int userId, CreateAiRecipeRequest request)
     {
-        _unitOfWork = unitOfWork;
-        _aiPredictionService = aiPredictionService;
-    }
+        int patientId = await _unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
 
-    public async Task<AiRecipeResponse> GenerateRecipeAsync(CreateAiRecipeRequest request)
-    {
-        // 1. نكلم الـ AI مباشرة (الـ Wrapper اللي في الـ Infra هو اللي هيترجم اللستة للفلاسك)
-        var predictionResult = await _aiPredictionService.GetPredictionAsync(request);
+        if (patientId == 0)
+            throw new UnauthorizedAccessException("Patient profile not found for this user.");
 
-        // 2. حساب الـ BMI عشان نسيفه في الداتابيز
+        var patient = await _unitOfWork.PatientRepository.GetPatientWithHistoryAsync(patientId);
+
+        if (patient == null)
+            throw new Exception("Patient not found.");
+
+        if (!patient.BirthDate.HasValue) 
+            throw new InvalidOperationException("PROFILE_INCOMPLETE_DOB");
+
+        if (string.IsNullOrWhiteSpace(patient.Gender.ToString()))
+            throw new InvalidOperationException("PROFILE_INCOMPLETE_GENDER");
+
+        if (patient.MedicalHistory == null)
+            throw new InvalidOperationException("MEDICAL_HISTORY_MISSING");
+
+
+
+        var bday = patient.BirthDate.Value;
+        var today = DateTime.Today;
+
+        int calculatedAge = today.Year - bday.Year;
+
+        if (bday.Month > today.Month || (bday.Month == today.Month && bday.Day > today.Day))
+        {
+            calculatedAge--; 
+        }
+
+        var aiInput = new AiEngineInput
+        {
+            Age = calculatedAge, 
+            Gender = patient.Gender.ToString(),
+            HasDiabetes = patient.MedicalHistory.Diabetes,
+            HasHypertension = patient.MedicalHistory.HeartDisease,// ==
+            HasAllergies = patient.MedicalHistory.Asthma, // ==
+            IsPregnant = patient.MedicalHistory.Pregnancy,
+            IsSmoker = patient.MedicalHistory.Smoker,
+            CurrentVitals = request 
+        };
+
+        var predictionResult = await _aiPredictionService.GetPredictionAsync(aiInput);
+
         var heightInMeters = request.HeightCm / 100.0;
         var bmi = request.WeightKg / (heightInMeters * heightInMeters);
 
-        // 3. نسيف النتيجة في الداتابيز بتاعتنا (الـ Entity)
         var recipeRecord = new AiRecipe
         {
-            PatientId = request.PatientId,
-            Age = request.Age,
-            Gender = request.Gender,
+            PatientId = patientId,
+            Age = calculatedAge,
+            Gender = aiInput.Gender,
             WeightKg = request.WeightKg,
             HeightCm = request.HeightCm,
             Bmi = Math.Round(bmi, 1),
@@ -39,14 +77,15 @@ public class AiRecipeService : IAiRecipeService
             TemperatureCelsius = request.TemperatureCelsius,
             HeartRateBpm = request.HeartRateBpm,
             SymptomDurationDays = request.SymptomDurationDays,
-            HasDiabetes = request.HasDiabetes,
-            HasHypertension = request.HasHypertension,
-            HasAllergies = request.HasAllergies,
-            IsPregnant = request.IsPregnant,
-            IsSmoker = request.IsSmoker,
-            Symptoms = request.SelectedSymptoms, // هتتسيف كـ JSON أوتوماتيك
 
-            // مخرجات الـ AI اللي راجعة من الـ Wrapper النظيف
+            HasDiabetes = aiInput.HasDiabetes,
+            HasHypertension = aiInput.HasHypertension,
+            HasAllergies = aiInput.HasAllergies,
+            IsPregnant = aiInput.IsPregnant,
+            IsSmoker = aiInput.IsSmoker,
+
+            Symptoms = request.SelectedSymptoms,
+
             RecommendedRecipeName = predictionResult.RecommendedRecipeName,
             Condition = predictionResult.Condition,
             ConfidenceScore = predictionResult.ConfidenceScore,
@@ -54,11 +93,9 @@ public class AiRecipeService : IAiRecipeService
             CautionWarning = predictionResult.CautionWarning
         };
 
-        // 4. الحفظ باستخدام الـ UnitOfWork
         await _unitOfWork.AiRecipeRepository.CreateAsync(recipeRecord);
-        await _unitOfWork.SaveChangesAsync(); // أو SaveChangesAsync() حسب ما إنت مسميها
+        await _unitOfWork.SaveChangesAsync();
 
-        // 5. نرجع الرد للـ Controller ومعاه الـ ID الجديد
         return new AiRecipeResponse
         {
             RecipeId = recipeRecord.Id,
