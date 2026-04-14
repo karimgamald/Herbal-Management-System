@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PhytoIntellect.Application.Contracts.Accounts;
+using PhytoIntellect.Application.Contracts.AiRecipes;
 using PhytoIntellect.Application.Contracts.Patients;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Services;
@@ -28,7 +29,9 @@ public static class AddApplicationServicesDI
         services.AddScoped<IReviewRecipeService, ReviewRecipeService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<ISubOrderService, SubOrderService>();
+        services.AddScoped<IAiRecipeService, AiRecipeService>();
 
+       
         //for Email
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
         services.AddScoped<IEmailService, EmailService>();
@@ -50,7 +53,11 @@ public static class AddApplicationServicesDI
         // 1. تسجيل كل الـ Validators اللي في البروجيكت بتاعك مرة واحدة
         services.AddValidatorsFromAssemblyContaining<PatientValidator>();
         services.AddValidatorsFromAssemblyContaining<UserValidator>();
+        services.AddValidatorsFromAssemblyContaining<CreateAiRecipeValidator>();
         //services.AddValidatorsFromAssemblyContaining<ManageUserAddressValidator>();
+
+        //services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
 
         // Register all validators 
         services.AddValidatorsFromAssemblyContaining<RegisterUserAuthValidator>();

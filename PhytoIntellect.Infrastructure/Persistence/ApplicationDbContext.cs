@@ -24,6 +24,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SubOrder> SubOrders { get; set; }
     public DbSet<OrderRecipe> OrderRecipes { get; set; }
     public DbSet<OrderHerb> OrderHerbs { get; set; }
+    public DbSet<AiRecipe> AiRecipes { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

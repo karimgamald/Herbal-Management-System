@@ -23,7 +23,8 @@ public class UnitOfWork(
     IRepository<Feedback> feedbackRepository,
     IRepository<ReviewRecipe> reviewRecipeRepository,
     IRepository<Order> orderRepository,
-    IRepository<SubOrder> subOrderRepository
+    IRepository<SubOrder> subOrderRepository,
+    IRepository<AiRecipe> aiRecipeRepository
     ) : IUnitOfWork
 {
     public IRepository<User> UserRepository { get; } = userRepository;
@@ -40,6 +41,7 @@ public class UnitOfWork(
     public IRepository<ReviewRecipe> ReviewRecipeRepository { get; } = reviewRecipeRepository;
     public IRepository<Order> OrderRepository { get; } = orderRepository;
     public IRepository<SubOrder> SubOrderRepository { get; } = subOrderRepository;
+    public IRepository<AiRecipe> AiRecipeRepository { get; } = aiRecipeRepository;
 
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

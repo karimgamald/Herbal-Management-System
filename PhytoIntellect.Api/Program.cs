@@ -1,5 +1,7 @@
+using FluentValidation;
 using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application;
+using PhytoIntellect.Application.Contracts.AiRecipes;
 using PhytoIntellect.Infrastructure;
 
 
@@ -11,12 +13,13 @@ builder.Services.AddCorsServices();
 builder.Services.AddEndpointsApiExplorer();
 
 
+
 builder.Services.AddDbContextServices(builder.Configuration);
 builder.Services.AddAuthenticationServices(builder.Configuration);
 
 
 builder.Services.AddApplicationServices(builder.Configuration);
-builder.Services.AddInfrastructureServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 
 var app = builder.Build();

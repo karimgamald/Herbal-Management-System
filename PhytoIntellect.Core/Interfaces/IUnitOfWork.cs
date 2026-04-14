@@ -21,6 +21,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<ReviewRecipe> ReviewRecipeRepository { get; }
     IRepository<Order> OrderRepository { get; }
     IRepository<SubOrder> SubOrderRepository { get; }
+    IRepository<AiRecipe> AiRecipeRepository { get; }
     // ضفنا الـ CancellationToken هنا
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
