@@ -11,26 +11,6 @@ namespace PhytoIntellect.Api.Controllers;
 [Route("api/recipe/{recipeId}/[controller]")]
 public class FeedbacksController(IFeedbackService feedbackService) : ControllerBase
 {
-    // 1️⃣ إضافة أو تعديل تقييم
-    [HttpPost("submit")]
-    [Authorize(Roles = AppRoles.Patient)]
-    public async Task<IActionResult> SubmitFeedback(int recipeId, [FromBody] SubmitFeedbackRequest request, CancellationToken cancellationToken)
-    {
-        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
-
-        try
-        {
-            // ✅ بص هنا: باصينا الـ recipeId لوحده، والـ request لوحده للـ Service
-            var result = await feedbackService.SubmitFeedbackAsync(userId, recipeId, request, cancellationToken);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Message = ex.Message });
-        }
-    }
-
     // 2️⃣ جلب كل التقييمات لوصفة معينة (متاحة للكل)
     [HttpGet("all")]
     public async Task<IActionResult> GetRecipeFeedbacks(int recipeId, CancellationToken cancellationToken)
@@ -51,6 +31,26 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
         if (result == null) return NotFound(new { Message = "You haven't rated this recipe yet." });
 
         return Ok(result);
+    }
+
+    // 1️⃣ إضافة أو تعديل تقييم
+    [HttpPost("submit")]
+    [Authorize(Roles = AppRoles.Patient)]
+    public async Task<IActionResult> SubmitFeedback(int recipeId, [FromBody] SubmitFeedbackRequest request, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+
+        try
+        {
+            // ✅ بص هنا: باصينا الـ recipeId لوحده، والـ request لوحده للـ Service
+            var result = await feedbackService.SubmitFeedbackAsync(userId, recipeId, request, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
     // 4️⃣ حذف التقييم

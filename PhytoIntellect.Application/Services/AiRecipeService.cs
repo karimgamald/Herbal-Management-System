@@ -1,4 +1,5 @@
-﻿using PhytoIntellect.Application.Contracts.AiRecipes;
+﻿using AutoMapper;
+using PhytoIntellect.Application.Contracts.AiRecipes;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 
@@ -6,13 +7,82 @@ namespace PhytoIntellect.Application.Services;
 
 public class AiRecipeService(
     IUnitOfWork unitOfWork, 
-    IAiPredictionService aiPredictionService) 
+    IAiPredictionService aiPredictionService,IMapper mapper) 
     : IAiRecipeService
 {
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IAiPredictionService _aiPredictionService = aiPredictionService;
+    private readonly IMapper _mapper = mapper;
+    // Get all AI recipes in the system
+    public async Task<IEnumerable<AiRecipeResponse>> GetAllPublicAsync(
+    CancellationToken cancellationToken = default)
+    {
+        var recipes = await _unitOfWork.AiRecipeRepository.GetAllAsync(
+            tracked: false,
+            cancellationToken: cancellationToken
+        );
 
+        // ترتيب بالأحدث
+        recipes = await _unitOfWork.AiRecipeRepository.GetAllAsync(tracked: false,cancellationToken:cancellationToken);
 
+        var orderedRecipes = recipes
+            .OrderByDescending(r => r.CreatedAt)
+            .ToList();
+
+        return _mapper.Map<IEnumerable<AiRecipeResponse>>(recipes);
+    }
+    public async Task<AiRecipeResponse> GetPublicByIdAsync(int recipeId,
+    CancellationToken cancellationToken = default)
+    {
+        var recipe = await _unitOfWork.AiRecipeRepository.GetAsync(
+            filter: r => r.Id == recipeId,
+            tracked: false,
+            cancellationToken: cancellationToken
+        );
+
+        if (recipe == null)
+            throw new KeyNotFoundException("AI Recipe not found.");
+
+        return _mapper.Map<AiRecipeResponse>(recipe);
+    }
+
+    // Get all recipes added by the patient 
+    public async Task<IEnumerable<AiRecipeResponse>> GetAllAsync(int userId,CancellationToken cancellationToken = default)
+    {
+        int patientId = await _unitOfWork.PatientRepository
+            .GetIdByUserIdAsync(userId.ToString());
+
+        if (patientId == 0)
+            throw new UnauthorizedAccessException("Patient profile not found.");
+
+        var recipes = await _unitOfWork.AiRecipeRepository.GetAllAsync(
+            filter: r => r.PatientId == patientId,
+            tracked: false,
+            cancellationToken: cancellationToken
+        );
+
+        return _mapper.Map<IEnumerable<AiRecipeResponse>>(recipes);
+    }
+    // Get the 
+    public async Task<AiRecipeResponse> GetByIdAsync(int userId,int recipeId,CancellationToken cancellationToken = default)
+    {
+        int patientId = await _unitOfWork.PatientRepository
+            .GetIdByUserIdAsync(userId.ToString());
+
+        if (patientId == 0)
+            throw new UnauthorizedAccessException("Patient profile not found.");
+
+        var recipe = await _unitOfWork.AiRecipeRepository.GetAsync(
+            filter: r => r.Id == recipeId && r.PatientId == patientId,
+            tracked: false,
+            cancellationToken: cancellationToken
+        );
+
+        if (recipe == null)
+            throw new UnauthorizedAccessException("Recipe not found or access denied.");
+
+        return _mapper.Map<AiRecipeResponse>(recipe);
+    }
     public async Task<AiRecipeResponse> GenerateRecipeAsync(int userId, CreateAiRecipeRequest request)
     {
         int patientId = await _unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
@@ -96,14 +166,18 @@ public class AiRecipeService(
         await _unitOfWork.AiRecipeRepository.CreateAsync(recipeRecord);
         await _unitOfWork.SaveChangesAsync();
 
-        return new AiRecipeResponse
-        {
-            RecipeId = recipeRecord.Id,
-            RecommendedRecipeName = recipeRecord.RecommendedRecipeName,
-            Condition = recipeRecord.Condition,
-            ConfidenceScore = recipeRecord.ConfidenceScore,
-            PreparationInstructions = recipeRecord.PreparationInstructions,
-            CautionWarning = recipeRecord.CautionWarning
-        };
+        return _mapper.Map<AiRecipeResponse>(recipeRecord);
     }
+
+    //public async Task DeleteAsync(int recipeId, CancellationToken cancellationToken = default)
+    //{
+    //    var recipe = await _unitOfWork.AiRecipeRepository.GetByIdAsync(recipeId);
+
+    //    if (recipe == null)
+    //        throw new KeyNotFoundException("AI Recipe not found.");
+
+    //    await _unitOfWork.AiRecipeRepository.DeleteAsync(recipe);
+
+    //    await _unitOfWork.SaveChangesAsync();
+    //}
 }

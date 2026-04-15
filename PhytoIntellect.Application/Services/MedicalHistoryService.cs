@@ -22,6 +22,15 @@ public class MedicalHistoryService(IUnitOfWork unitOfWork, IMapper mapper) : IMe
         return mapper.Map<MedicalHistoryDto>(history);
     }
 
+    public async Task<MedicalHistoryDto?> GetPatientMedicalHistoryByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
+    {
+        // بما إننا معانا الـ PatientId جاهز، هندور بيه في جدول التاريخ المرضي على طول (أسرع بكتير)
+        var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.PatientId == patientId, tracked: false, cancellationToken: cancellationToken);
+
+        if (history == null) return null;
+
+        return mapper.Map<MedicalHistoryDto>(history);
+    }
     public async Task<string> AddOrUpdateMyMedicalHistoryAsync(int userId, ManageMedicalHistoryDto request, CancellationToken cancellationToken = default)
     {
         // 1. نجيب المريض عشان محتاجين الـ PatientId بتاعه
@@ -55,15 +64,5 @@ public class MedicalHistoryService(IUnitOfWork unitOfWork, IMapper mapper) : IMe
 
             return "Medical history updated successfully.";
         }
-    }
-
-    public async Task<MedicalHistoryDto?> GetPatientMedicalHistoryByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
-    {
-        // بما إننا معانا الـ PatientId جاهز، هندور بيه في جدول التاريخ المرضي على طول (أسرع بكتير)
-        var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.PatientId == patientId, tracked: false, cancellationToken: cancellationToken);
-
-        if (history == null) return null;
-
-        return mapper.Map<MedicalHistoryDto>(history);
     }
 }

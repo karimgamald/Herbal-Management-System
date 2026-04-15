@@ -16,7 +16,7 @@ public class AiRecipe
     public Patient Patient { get; set; }
 
     public int Age { get; set; }
-    public string Gender { get; set; }
+    public string Gender { get; set; } = string.Empty;
     public double WeightKg { get; set; }
     public double HeightCm { get; set; }
     public double Bmi { get; set; }
@@ -35,14 +35,14 @@ public class AiRecipe
     public List<string> Symptoms { get; set; } = [];
 
 
-    public string RecommendedRecipeName { get; set; } // "Feverfew Tea & Lavender Massage"
-    public string Condition { get; set; } // "Migraine"
+    public string RecommendedRecipeName { get; set; } = string.Empty;// "Feverfew Tea & Lavender Massage"
+    public string Condition { get; set; } = string.Empty; // "Migraine"
     public double ConfidenceScore { get; set; } // 92.6
 
     public List<string> PreparationInstructions { get; set; } = [];
-    public string CautionWarning { get; set; } // "Do not use feverfew if pregnant..."
+    public string CautionWarning { get; set; } = string.Empty; // "Do not use feverfew if pregnant..."
 
-    public string AllProbabilitiesJson { get; set; }
+    public string AllProbabilitiesJson { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
