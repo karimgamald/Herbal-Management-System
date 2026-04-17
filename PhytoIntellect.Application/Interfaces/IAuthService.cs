@@ -1,5 +1,4 @@
 ﻿using PhytoIntellect.Application.Contracts.Accounts;
-using PhytoIntellect.Application.DTOs;
 
 namespace PhytoIntellect.Application.Interfaces;
 

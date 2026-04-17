@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
+using PhytoIntellect.Application.Contracts.MedicalHistories;
 using PhytoIntellect.Core.Entities;
 using System;
 using System.Collections.Generic;
@@ -11,8 +11,8 @@ public class MedicalHistoryProfile : Profile
 {
     public MedicalHistoryProfile()
     {
-        CreateMap<MedicalHistory, MedicalHistoryDto>();
+        CreateMap<MedicalHistory, MedicalHistoryResponse>();
 
-        CreateMap<ManageMedicalHistoryDto, MedicalHistory>();
+        CreateMap<MedicalHistoryRequest, MedicalHistory>();
     }
 }

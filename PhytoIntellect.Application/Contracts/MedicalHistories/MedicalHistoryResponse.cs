@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
+namespace PhytoIntellect.Application.Contracts.MedicalHistories;
 
-// 1. DTO للعرض
-public class MedicalHistoryDto
+public class MedicalHistoryResponse
 {
     public int MedicalHistoryId { get; set; }
     public bool Diabetes { get; set; }

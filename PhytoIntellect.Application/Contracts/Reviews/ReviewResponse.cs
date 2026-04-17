@@ -7,9 +7,9 @@ namespace PhytoIntellect.Application.Contracts.Reviews;
 public record ReviewResponse
 {
     public int ReviewRecipeId { get; init; }
-    public int RecipeId { get; init; }
+    public int AiRecipeId { get; init; }
     public float RatingValue { get; init; }
     public string? Comment { get; init; }
     public DateTime RatingDate { get; init; }
     public string HerbalistName { get; init; } = string.Empty;
-}
+} 

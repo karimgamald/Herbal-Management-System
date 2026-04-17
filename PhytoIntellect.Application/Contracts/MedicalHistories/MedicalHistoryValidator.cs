@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
-using PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
+using PhytoIntellect.Application.Contracts.MedicalHistories;
 using System.Text.RegularExpressions;
 
 namespace PhytoIntellect.Application.Contracts.MedicalHistory;
 
-public class ManageMedicalHistoryValidator : AbstractValidator<ManageMedicalHistoryDto>
+public class ManageMedicalHistoryValidator : AbstractValidator<MedicalHistoryRequest>
 {
     public ManageMedicalHistoryValidator()
     {

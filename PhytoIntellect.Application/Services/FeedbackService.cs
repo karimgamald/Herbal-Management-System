@@ -12,160 +12,186 @@ namespace PhytoIntellect.Application.Services;
 
 public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedbackService
 {
-    // 1️⃣ إضافة أو تعديل تقييم
-    public async Task<FeedbackResponse> SubmitFeedbackAsync(int userId, int recipeId, SubmitFeedbackRequest request, CancellationToken cancellationToken = default)
+    public async Task<FeedbackResponse> SubmitRecipeFeedbackAsync(int userId, int recipeId, SubmitFeedbackRequest request, CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(
-            filter: p => p.UserId == userId,
-            tracked: false,
-            includeProperties: "User",
-            cancellationToken: cancellationToken);
+        int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
+        if (patientId == 0) throw new Exception("Patient not found.");
 
-        if (patient == null) 
-            throw new Exception("Patient not found.");
+        var recipe = await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == recipeId && r.IsActive, tracked: true, cancellationToken: cancellationToken);
+        if (recipe == null) throw new Exception("Recipe not found.");
 
-        var recipe = await unitOfWork.RecipeRepository.GetAsync(
-            filter: r => r.RecipeId == recipeId && r.IsActive,
-            tracked: true, // عشان هنعدل التوتال والمتوسط بتاعها
-            cancellationToken: cancellationToken);
-
-        if (recipe == null) 
-            throw new Exception("Recipe not found.");
-
-        var existingFeedback = await unitOfWork.FeedbackRepository.GetAsync(
-            filter: f => f.RecipeId == recipe.RecipeId && f.PatientId == patient.PatientId,
-            tracked: true,
-            cancellationToken: cancellationToken);
+        var existingFeedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.RecipeId == recipeId && f.PatientId == patientId, tracked: true, cancellationToken: cancellationToken);
 
         Feedback feedbackEntity;
         float cleanRating = (float)Math.Round(request.RatingValue, 1);
 
         if (existingFeedback != null)
         {
-            // 🔄 حالة التعديل (Update)
             float oldRating = existingFeedback.RatingValue;
-
             existingFeedback.RatingValue = cleanRating;
             existingFeedback.Comment = request.Comment;
             existingFeedback.RatingDate = DateTime.UtcNow;
 
-            // 👈 حسبة المتوسط الجديد بعد التعديل (مع التقريب لرقمين عشريين)
-            var calculatedAverage = ((recipe.AverageRating * recipe.TotalRatings) - oldRating + request.RatingValue) / recipe.TotalRatings;
-            recipe.AverageRating = (float)Math.Round(calculatedAverage, 1);
-
+            var calc = ((recipe.AverageRating * recipe.TotalRatings) - oldRating + cleanRating) / recipe.TotalRatings;
+            recipe.AverageRating = (float)Math.Round(calc, 1);
             feedbackEntity = existingFeedback;
         }
         else
         {
-            // ➕ حالة الإضافة (Insert)
             feedbackEntity = new Feedback
             {
-                RecipeId = recipe.RecipeId,
-                PatientId = patient.PatientId,
+                RecipeId = recipeId,
+                AiRecipeId = null, 
+                PatientId = patientId,
                 RatingValue = cleanRating,
                 Comment = request.Comment,
                 RatingDate = DateTime.UtcNow
             };
-
             await unitOfWork.FeedbackRepository.CreateAsync(feedbackEntity, cancellationToken);
 
-            // 👈 حسبة المتوسط الجديد بعد الإضافة (مع التقريب لرقمين عشريين)
-            var calculatedAverage = ((recipe.AverageRating * recipe.TotalRatings) + request.RatingValue) / (recipe.TotalRatings + 1);
-            recipe.AverageRating = (float)Math.Round(calculatedAverage, 1);
+            var calc = ((recipe.AverageRating * recipe.TotalRatings) + cleanRating) / (recipe.TotalRatings + 1);
+            recipe.AverageRating = (float)Math.Round(calc, 1);
             recipe.TotalRatings += 1;
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return new FeedbackResponse
-        {
-            FeedbackId = feedbackEntity.FeedbackId,
-            RecipeId = feedbackEntity.RecipeId,
-            RatingValue = feedbackEntity.RatingValue,
-            Comment = feedbackEntity.Comment,
-            RatingDate = feedbackEntity.RatingDate,
-            PatientName = patient.User?.FullName ?? "Unknown Patient"
-        };
+        return mapper.Map<FeedbackResponse>(feedbackEntity);
     }
 
-    // 2️⃣ جلب كل تقييمات وصفة
     public async Task<IEnumerable<FeedbackResponse>> GetRecipeFeedbacksAsync(int recipeId, CancellationToken cancellationToken = default)
     {
-        var feedbacks = await unitOfWork.FeedbackRepository.GetAllAsync(
-            filter: f => f.RecipeId == recipeId,
-            tracked: false,
-            includeProperties: "Patient.User",
-            cancellationToken: cancellationToken);
-
-        return feedbacks.Select(f => new FeedbackResponse
-        {
-            FeedbackId = f.FeedbackId,
-            RecipeId = f.RecipeId,
-            RatingValue = f.RatingValue,
-            Comment = f.Comment,
-            RatingDate = f.RatingDate,
-            PatientName = f.Patient?.User?.FullName ?? "Unknown Patient"
-        }).OrderByDescending(f => f.RatingDate).ToList();
+        var feedbacks = await unitOfWork.FeedbackRepository.GetAllAsync(filter: f => f.RecipeId == recipeId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
+        return mapper.Map<IEnumerable<FeedbackResponse>>(feedbacks).OrderByDescending(f => f.RatingDate);
     }
 
-    // 3️⃣ جلب تقييم المريض الحالي (لو كان مقيم الوصفة قبل كده)
-    public async Task<FeedbackResponse?> GetMyFeedbackAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
+    public async Task<FeedbackResponse?> GetMyRecipeFeedbackAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken: cancellationToken);
-        if (patient == null) return null;
-
-        var feedback = await unitOfWork.FeedbackRepository.GetAsync(
-            filter: f => f.RecipeId == recipeId && f.PatientId == patient.PatientId,
-            tracked: false,
-            includeProperties: "Patient.User",
-            cancellationToken: cancellationToken);
-
-        if (feedback == null) return null;
-
-        return new FeedbackResponse
-        {
-            FeedbackId = feedback.FeedbackId,
-            RecipeId = feedback.RecipeId,
-            RatingValue = feedback.RatingValue,
-            Comment = feedback.Comment,
-            RatingDate = feedback.RatingDate,
-            PatientName = feedback.Patient?.User?.FullName ?? "Unknown Patient"
-        };
+        int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
+        var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.RecipeId == recipeId && f.PatientId == patientId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
+        return feedback == null ? null : mapper.Map<FeedbackResponse>(feedback);
     }
 
-    // 4️⃣ حذف تقييم المريض (وتعديل الحسبة)
-    public async Task<bool> DeleteMyFeedbackAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteMyRecipeFeedbackAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken: cancellationToken);
-        if (patient == null) return false;
-
-        var feedback = await unitOfWork.FeedbackRepository.GetAsync(
-            filter: f => f.RecipeId == recipeId && f.PatientId == patient.PatientId,
-            tracked: true,
-            cancellationToken: cancellationToken);
-
+        int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
+        var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.RecipeId == recipeId && f.PatientId == patientId, tracked: true, cancellationToken: cancellationToken);
         if (feedback == null) return false;
 
         var recipe = await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == recipeId, tracked: true, cancellationToken: cancellationToken);
         if (recipe != null)
         {
-            // 🧮 حسبة الحذف: لو هو التقييم الوحيد، بنصفر الوصفة
-            if (recipe.TotalRatings == 1)
-            {
-                recipe.AverageRating = 0;
-                recipe.TotalRatings = 0;
-            }
+            if (recipe.TotalRatings == 1) { recipe.AverageRating = 0; recipe.TotalRatings = 0; }
             else
             {
-                // 👈 حسبة المتوسط الجديد بعد الحذف (مع التقريب لرقمين عشريين)
-                var calculatedAverage = ((recipe.AverageRating * recipe.TotalRatings) - feedback.RatingValue) / (recipe.TotalRatings - 1);
-                recipe.AverageRating = (float)Math.Round(calculatedAverage, 1);
+                var calc = ((recipe.AverageRating * recipe.TotalRatings) - feedback.RatingValue) / (recipe.TotalRatings - 1);
+                recipe.AverageRating = (float)Math.Round(calc, 1);
                 recipe.TotalRatings -= 1;
             }
         }
-
         unitOfWork.FeedbackRepository.Remove(feedback);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    // (AiRecipeId)
+
+    public async Task<FeedbackResponse> SubmitAiRecipeFeedbackAsync(int userId, int aiRecipeId, SubmitFeedbackRequest request, CancellationToken cancellationToken = default)
+    {
+        int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
+        if (patientId == 0) throw new Exception("Patient not found.");
+
+        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: true, cancellationToken: cancellationToken);
+        if (aiRecipe == null) throw new Exception("AI Recipe not found.");
+
+        var existingFeedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.AiRecipeId == aiRecipeId && f.PatientId == patientId, tracked: true, cancellationToken: cancellationToken);
+
+        Feedback feedbackEntity;
+        float cleanRating = (float)Math.Round(request.RatingValue, 1);
+
+        if (existingFeedback != null)
+        {
+            float oldRating = existingFeedback.RatingValue;
+            existingFeedback.RatingValue = cleanRating;
+            existingFeedback.Comment = request.Comment;
+            existingFeedback.RatingDate = DateTime.UtcNow;
+
+            // 👈 بنعدل عواميد المريض في جدول الـ AI
+            var calc = ((aiRecipe.PatientAverageRating * aiRecipe.PatientTotalRatings) - oldRating + cleanRating) / aiRecipe.PatientTotalRatings;
+            aiRecipe.PatientAverageRating = (float)Math.Round(calc, 1);
+            feedbackEntity = existingFeedback;
+        }
+        else
+        {
+            feedbackEntity = new Feedback
+            {
+                RecipeId = null, // 👈 الجوكر شغال في الناحية التانية
+                AiRecipeId = aiRecipeId,
+                PatientId = patientId,
+                RatingValue = cleanRating,
+                Comment = request.Comment,
+                RatingDate = DateTime.UtcNow
+            };
+            await unitOfWork.FeedbackRepository.CreateAsync(feedbackEntity, cancellationToken);
+
+            var calc = ((aiRecipe.PatientAverageRating * aiRecipe.PatientTotalRatings) + cleanRating) / (aiRecipe.PatientTotalRatings + 1);
+            aiRecipe.PatientAverageRating = (float)Math.Round(calc, 1);
+            aiRecipe.PatientTotalRatings += 1;
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return mapper.Map<FeedbackResponse>(feedbackEntity);
+    }
+
+    public async Task<IEnumerable<FeedbackResponse>> GetAiRecipeFeedbacksAsync(int aiRecipeId, CancellationToken cancellationToken = default)
+    {
+        var feedbacks = await unitOfWork.FeedbackRepository.GetAllAsync(filter: f => f.AiRecipeId == aiRecipeId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
+        return mapper.Map<IEnumerable<FeedbackResponse>>(feedbacks).OrderByDescending(f => f.RatingDate);
+    }
+
+    public async Task<FeedbackResponse?> GetMyAiRecipeFeedbackAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)
+    {
+        int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
+        var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.AiRecipeId == aiRecipeId && f.PatientId == patientId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
+        return feedback == null ? null : mapper.Map<FeedbackResponse>(feedback);
+    }
+
+    public async Task<bool> DeleteMyAiRecipeFeedbackAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)
+    {
+        int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
+        var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.AiRecipeId == aiRecipeId && f.PatientId == patientId, tracked: true, cancellationToken: cancellationToken);
+        if (feedback == null) return false;
+
+        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: true, cancellationToken: cancellationToken);
+        if (aiRecipe != null)
+        {
+            if (aiRecipe.PatientTotalRatings == 1) { aiRecipe.PatientAverageRating = 0; aiRecipe.PatientTotalRatings = 0; }
+            else
+            {
+                var calc = ((aiRecipe.PatientAverageRating * aiRecipe.PatientTotalRatings) - feedback.RatingValue) / (aiRecipe.PatientTotalRatings - 1);
+                aiRecipe.PatientAverageRating = (float)Math.Round(calc, 1);
+                aiRecipe.PatientTotalRatings -= 1;
+            }
+        }
+        unitOfWork.FeedbackRepository.Remove(feedback);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+
+    public async Task<IEnumerable<FeedbackResponse>> GetMyFeedbacksAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        // 1. نجيب رقم المريض
+        int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
+        if (patientId == 0) return new List<FeedbackResponse>();
+
+        // 2. نجيب كل تقييماته سواء كانت لوصفات AI أو وصفات عطارين
+        var feedbacks = await unitOfWork.FeedbackRepository.GetAllAsync(
+            filter: f => f.PatientId == patientId,
+            tracked: false,
+            includeProperties: "Patient.User",
+            cancellationToken: cancellationToken);
+
+        // 3. نحولها لـ DTO ونرتبها من الأحدث للأقدم
+        return mapper.Map<IEnumerable<FeedbackResponse>>(feedbacks).OrderByDescending(f => f.RatingDate).ToList();
     }
 }

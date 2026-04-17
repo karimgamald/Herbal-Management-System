@@ -7,8 +7,8 @@ namespace PhytoIntellect.Application.Interfaces;
 
 public interface IReviewRecipeService
 {
-    Task<ReviewResponse> SubmitReviewAsync(int userId, int recipeId, SubmitReviewRequest request, CancellationToken cancellationToken = default);
-    Task<IEnumerable<ReviewResponse>> GetAllRecipeReviewsAsync(int recipeId, bool isHerbalist, CancellationToken cancellationToken = default);
-    Task<ReviewResponse?> GetMyReviewAsync(int userId, int recipeId, CancellationToken cancellationToken = default);
-    Task<bool> DeleteMyReviewAsync(int userId, int recipeId, CancellationToken cancellationToken = default);
+    Task<ReviewResponse> SubmitReviewAsync(int userId, int aiRecipeId, SubmitReviewRequest request, CancellationToken cancellationToken = default);
+    Task<IEnumerable<ReviewResponse>> GetAllRecipeReviewsAsync(int aiRecipeId, CancellationToken cancellationToken = default);
+    Task<ReviewResponse?> GetMyReviewAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteMyReviewAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default);
 }

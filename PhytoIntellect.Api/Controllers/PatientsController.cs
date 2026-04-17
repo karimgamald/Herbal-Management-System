@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PhytoIntellect.Application.DTOs.PatientDTOs;
+using PhytoIntellect.Application.Contracts.Patients;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
@@ -13,7 +13,6 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class PatientsController(IPatientService patientService) : ControllerBase
 {
-    // Endpoints خاصة بالمريض
 
     [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("me")]
@@ -28,10 +27,7 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         return Ok(patient);
     }
 
-    // Endpoints خاصة بالعشاب / الإدارة
 
-    //[Authorize(Roles = AppRoles.Herbalist)] // العشاب بس اللي يدخل يشوف بروفايل مريض بالـ ID
-    //[Authorize(Roles = AppRoles.Patient)]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPatientById(int id, CancellationToken cancellationToken)
     {
@@ -42,14 +38,12 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         var loggedInUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         if (patient.UserId != loggedInUserId)
         {
-            //return Forbid("You are not authorized to view this patient's data.");
             return BadRequest(new { Message = "Invalid Patient ID requested." });
         }
 
         return Ok(patient);
     }
 
-    // تقدر تزود Admin هنا قدام لو حبيت
     [Authorize]
     [HttpGet("all")]
     public async Task<IActionResult> GetAllPatients(CancellationToken cancellationToken)
@@ -60,7 +54,7 @@ public class PatientsController(IPatientService patientService) : ControllerBase
 
     [Authorize(Roles = AppRoles.Patient)]
     [HttpPut("me")]
-    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdatePatientDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdatePatientRequest request, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();

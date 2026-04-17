@@ -2,10 +2,7 @@
 using PhytoIntellect.Application.Contracts.Recipes;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+
 
 namespace PhytoIntellect.Application.Services;
 
@@ -26,7 +23,6 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
 
         recipe.HerbalistId = herbalist.HerbalistId;
         recipe.CreatedDate = DateTime.UtcNow;
-        recipe.CreatedByAI = false;
         recipe.IsActive = true;
 
         recipe.RecipeHerbs = request.Herbs.Select(h => new RecipeHerb

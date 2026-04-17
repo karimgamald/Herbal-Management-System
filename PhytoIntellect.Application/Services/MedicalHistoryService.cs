@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
+using PhytoIntellect.Application.Contracts.MedicalHistories;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Interfaces;
@@ -10,7 +10,7 @@ namespace PhytoIntellect.Application.Services;
 
 public class MedicalHistoryService(IUnitOfWork unitOfWork, IMapper mapper) : IMedicalHistoryService
 {
-    public async Task<MedicalHistoryDto?> GetMyMedicalHistoryAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<MedicalHistoryResponse?> GetMyMedicalHistoryAsync(int userId, CancellationToken cancellationToken = default)
     {
         // 1. نجيب الـ PatientId بتاع اليوزر ده
         var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken: cancellationToken);
@@ -19,19 +19,19 @@ public class MedicalHistoryService(IUnitOfWork unitOfWork, IMapper mapper) : IMe
         // 2. ندور في جدول التاريخ المرضي مباشرة بالـ PatientId
         var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.PatientId == patient.PatientId, tracked: false, cancellationToken: cancellationToken);
 
-        return mapper.Map<MedicalHistoryDto>(history);
+        return mapper.Map<MedicalHistoryResponse>(history);
     }
 
-    public async Task<MedicalHistoryDto?> GetPatientMedicalHistoryByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
+    public async Task<MedicalHistoryResponse?> GetPatientMedicalHistoryByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
     {
         // بما إننا معانا الـ PatientId جاهز، هندور بيه في جدول التاريخ المرضي على طول (أسرع بكتير)
         var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.PatientId == patientId, tracked: false, cancellationToken: cancellationToken);
 
         if (history == null) return null;
 
-        return mapper.Map<MedicalHistoryDto>(history);
+        return mapper.Map<MedicalHistoryResponse>(history);
     }
-    public async Task<string> AddOrUpdateMyMedicalHistoryAsync(int userId, ManageMedicalHistoryDto request, CancellationToken cancellationToken = default)
+    public async Task<string> AddOrUpdateMyMedicalHistoryAsync(int userId, MedicalHistoryRequest request, CancellationToken cancellationToken = default)
     {
         // 1. نجيب المريض عشان محتاجين الـ PatientId بتاعه
         var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, cancellationToken: cancellationToken);

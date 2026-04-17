@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using PhytoIntellect.Application.Contracts.Accounts;
-using PhytoIntellect.Application.DTOs.UserDTOs;
+using PhytoIntellect.Application.Contracts.Users;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
@@ -13,19 +13,19 @@ namespace PhytoIntellect.Application.Services;
 
 public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
 {
-    public async Task<IEnumerable<UserDto>> GetAllUsersAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<UserResponse>> GetAllUsersAsync(CancellationToken cancellationToken = default)
     {
         var users = await unitOfWork.UserRepository.GetAllAsync(tracked: false, cancellationToken: cancellationToken);
-        return mapper.Map<IEnumerable<UserDto>>(users);
+        return mapper.Map<IEnumerable<UserResponse>>(users);
     }
 
-    public async Task<UserDto?> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<UserResponse?> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: false, cancellationToken: cancellationToken);
-        return user == null ? null : mapper.Map<UserDto>(user);
+        return user == null ? null : mapper.Map<UserResponse>(user);
     }
 
-    public async Task<string> CreateUserAsync(CreateUserDto request, CancellationToken cancellationToken = default)
+    public async Task<string> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
     {
         // 1. Validation للـ Role
         if (!AppRoles.IsValidRole(request.Role))
@@ -46,7 +46,7 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         return "User created successfully.";
     }
 
-    public async Task<string> UpdateUserAsync(int id, UpdateUserDto request, CancellationToken cancellationToken = default)
+    public async Task<string> UpdateUserAsync(int id, UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id,tracked: true, cancellationToken: cancellationToken);
 
@@ -91,7 +91,7 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         return "User deleted successfully.";
     }
 
-    public async Task<RegisterUserAuthResponse> UpdateAddressAsync(int userId, UpdateUserAddressDto model, CancellationToken cancellationToken = default)
+    public async Task<RegisterUserAuthResponse> UpdateAddressAsync(int userId, UpdateUserAddressRequest model, CancellationToken cancellationToken = default)
     {
         // بنجيب اليوزر من Repository اليوزر نفسه
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == userId, tracked: true, cancellationToken: cancellationToken);

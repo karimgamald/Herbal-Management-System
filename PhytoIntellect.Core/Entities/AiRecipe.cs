@@ -26,6 +26,7 @@ public class AiRecipe
     public double TemperatureCelsius { get; set; }
     public int HeartRateBpm { get; set; }
     public int SymptomDurationDays { get; set; }
+
     public bool HasDiabetes { get; set; }
     public bool HasHypertension { get; set; }
     public bool HasAllergies { get; set; }
@@ -41,8 +42,16 @@ public class AiRecipe
 
     public List<string> PreparationInstructions { get; set; } = [];
     public string CautionWarning { get; set; } = string.Empty; // "Do not use feverfew if pregnant..."
-
-    public string AllProbabilitiesJson { get; set; } = string.Empty;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+
+    public float PatientAverageRating { get; set; } = 0;
+    public int PatientTotalRatings { get; set; } = 0;
+
+    public float HerbalistAverageRating { get; set; } = 0;
+    public int HerbalistTotalRatings { get; set; } = 0;
+
+    // Navigation Properties للعلاقات الجديدة
+    public ICollection<ReviewRecipe> HerbalistReviews { get; set; } = [];
+    public ICollection<Feedback> Feedbacks { get; set; } = [];
 }

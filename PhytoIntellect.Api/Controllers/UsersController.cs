@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PhytoIntellect.Application.DTOs.UserDTOs;
+using PhytoIntellect.Application.Contracts.Users;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Services;
 using System.Security.Claims;
@@ -11,7 +11,6 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-// تقدر قدام تفك الكومنت ده عشان تخلي الإدارة بس اللي تدخل هنا
 // [Authorize(Roles = "Admin")] 
 public class UsersController(IUserService userService) : ControllerBase
 {
@@ -32,7 +31,7 @@ public class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpPut("update/{id}")]
-    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto request,CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request,CancellationToken cancellationToken)
     {
         var result = await userService.UpdateUserAsync(id, request, cancellationToken);
         if (result.Contains("Invalid") || result.Contains("not found")) 
@@ -42,7 +41,7 @@ public class UsersController(IUserService userService) : ControllerBase
 
     [Authorize]
     [HttpPatch("update-my-address")]
-    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressDto model,CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressRequest model,CancellationToken cancellationToken)
     {
         // get the userid from claims
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

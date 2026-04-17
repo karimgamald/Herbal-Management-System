@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
+using PhytoIntellect.Application.Contracts.MedicalHistories;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
@@ -39,7 +39,7 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
 
     [Authorize(Roles = AppRoles.Patient)]
     [HttpPost("me")]
-    public async Task<IActionResult> ManageMyMedicalHistory([FromBody] ManageMedicalHistoryDto request,
+    public async Task<IActionResult> ManageMyMedicalHistory([FromBody] MedicalHistoryRequest request,
         CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

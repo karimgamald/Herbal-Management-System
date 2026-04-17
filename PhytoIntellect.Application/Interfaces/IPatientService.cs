@@ -1,15 +1,12 @@
-﻿using PhytoIntellect.Application.DTOs;
-using PhytoIntellect.Application.DTOs.PatientDTOs;
+﻿using PhytoIntellect.Application.Contracts.Patients;
 
 namespace PhytoIntellect.Application.Interfaces;
 
 public interface IPatientService
 {
-    // للمريض
-    Task<PatientDto?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default);
-    Task<string> UpdateMyProfileAsync(int userId, UpdatePatientDto request, CancellationToken cancellationToken = default);
+    Task<PatientRequest?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default);
+    Task<string> UpdateMyProfileAsync(int userId, UpdatePatientRequest request, CancellationToken cancellationToken = default);
 
-    // للإدارة والعشابين
-    Task<PatientDto?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default);
-    Task<IEnumerable<PatientDto>> GetAllPatientsAsync(CancellationToken cancellationToken = default);
+    Task<PatientRequest?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<PatientRequest>> GetAllPatientsAsync(CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using PhytoIntellect.Application.Contracts.Accounts;
-using PhytoIntellect.Application.DTOs.UserDTOs;
+using PhytoIntellect.Application.Contracts.Users;
 using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Mappings;
@@ -15,8 +15,8 @@ internal class UserProfile : Profile
             .ForMember(dest => dest.PasswordHash, opt => opt.Ignore());// بنشفره مانيوال
 
         // بتوع الـ Users Management
-        CreateMap<User, UserDto>();
-        CreateMap<CreateUserDto, User>()
+        CreateMap<User, UserResponse>();
+        CreateMap<CreateUserRequest, User>()
             .ForMember(dest => dest.PasswordHash, opt => opt.Ignore());
     }
 }

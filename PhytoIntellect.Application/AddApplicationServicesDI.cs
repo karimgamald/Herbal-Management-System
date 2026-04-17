@@ -51,7 +51,7 @@ public static class AddApplicationServicesDI
     private static IServiceCollection AddFluentValidationServices(this IServiceCollection services)
     {
         // 1. تسجيل كل الـ Validators اللي في البروجيكت بتاعك مرة واحدة
-        services.AddValidatorsFromAssemblyContaining<PatientValidator>();
+        services.AddValidatorsFromAssemblyContaining<UpdatePatientValidator>();
         services.AddValidatorsFromAssemblyContaining<UserValidator>();
         services.AddValidatorsFromAssemblyContaining<CreateAiRecipeValidator>();
         //services.AddValidatorsFromAssemblyContaining<ManageUserAddressValidator>();

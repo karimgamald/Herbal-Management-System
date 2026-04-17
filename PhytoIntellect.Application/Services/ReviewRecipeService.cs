@@ -7,33 +7,30 @@ namespace PhytoIntellect.Application.Services;
 
 public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IReviewRecipeService
 {
-    public async Task<ReviewResponse> SubmitReviewAsync(int userId, int recipeId, SubmitReviewRequest request, CancellationToken cancellationToken = default)
+    public async Task<ReviewResponse> SubmitReviewAsync(int userId, int aiRecipeId, SubmitReviewRequest request, CancellationToken cancellationToken = default)
     {
         float cleanRating = (float)Math.Round(request.RatingValue, 1);
-        if (cleanRating < 1 || cleanRating > 5) 
+        if (cleanRating < 1 || cleanRating > 5)
             throw new Exception("Rating must be between 1 and 5.");
 
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == userId, tracked: false, includeProperties: "User", cancellationToken: cancellationToken);
         if (herbalist == null)
             throw new Exception("Herbalist not found.");
 
-        var recipe = await unitOfWork.RecipeRepository.GetAsync(
-            r => r.RecipeId == recipeId && r.CreatedByAI,
+        // 👈 2. بنكلم جدول الـ AiRecipe بدل الـ Recipe العادي
+        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(
+            r => r.Id == aiRecipeId, // تأكد إن الـ Primary Key اسمه Id في كلاس AiRecipe
             tracked: true,
             cancellationToken: cancellationToken);
 
+        if (aiRecipe == null)
+            throw new Exception("AI Recipe not found.");
 
-        if (recipe == null) 
-            throw new Exception("Not found to review another herbalist's recipe");
+        // ❌ شلنا الـ Validations القديمة بتاعة (IsActive) و (Your own recipe) لأن الـ AI ملوش مالك ومش بيحتاج تفعيل
 
-        if (recipe.HerbalistId == herbalist.HerbalistId)
-            throw new Exception("You cannot review your own recipe.");
-
-        if (!recipe.IsActive && recipe.HerbalistId != null)
-            throw new Exception("You cannot review another herbalist's recipe before it is approved and active.");
-
+        // 👈 3. بندور في جدول المراجعات باستخدام AiRecipeId
         var existingReview = await unitOfWork.ReviewRecipeRepository.GetAsync(
-            r => r.RecipeId == recipeId && r.HerbalistId == herbalist.HerbalistId, tracked: true, cancellationToken: cancellationToken);
+            r => r.AiRecipeId == aiRecipeId && r.HerbalistId == herbalist.HerbalistId, tracked: true, cancellationToken: cancellationToken);
 
         ReviewRecipe reviewEntity;
 
@@ -44,8 +41,9 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
             existingReview.Comment = request.Comment;
             existingReview.RatingDate = DateTime.UtcNow;
 
-            var calculatedAverage = ((recipe.HerbalistAverageRating * recipe.HerbalistTotalRatings) - oldRating + cleanRating) / recipe.HerbalistTotalRatings;
-            recipe.HerbalistAverageRating = (float)Math.Round(calculatedAverage, 1); 
+            // 👈 4. بنحسب المتوسط على عواميد الـ AiRecipe الجديدة
+            var calculatedAverage = ((aiRecipe.HerbalistAverageRating * aiRecipe.HerbalistTotalRatings) - oldRating + cleanRating) / aiRecipe.HerbalistTotalRatings;
+            aiRecipe.HerbalistAverageRating = (float)Math.Round(calculatedAverage, 1);
 
             reviewEntity = existingReview;
         }
@@ -53,8 +51,8 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         {
             reviewEntity = new ReviewRecipe
             {
-                RecipeId = recipeId,
-                HerbalistId = herbalist.HerbalistId, 
+                AiRecipeId = aiRecipeId, // 👈 استخدمنا AiRecipeId
+                HerbalistId = herbalist.HerbalistId,
                 RatingValue = cleanRating,
                 Comment = request.Comment,
                 RatingDate = DateTime.UtcNow
@@ -62,9 +60,10 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
 
             await unitOfWork.ReviewRecipeRepository.CreateAsync(reviewEntity, cancellationToken);
 
-            var calculatedAverage = ((recipe.HerbalistAverageRating * recipe.HerbalistTotalRatings) + cleanRating) / (recipe.HerbalistTotalRatings + 1);
-            recipe.HerbalistAverageRating = (float)Math.Round(calculatedAverage, 1); 
-            recipe.HerbalistTotalRatings += 1;
+            // 👈 5. بنحسب المتوسط الجديد
+            var calculatedAverage = ((aiRecipe.HerbalistAverageRating * aiRecipe.HerbalistTotalRatings) + cleanRating) / (aiRecipe.HerbalistTotalRatings + 1);
+            aiRecipe.HerbalistAverageRating = (float)Math.Round(calculatedAverage, 1);
+            aiRecipe.HerbalistTotalRatings += 1;
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -72,71 +71,65 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         var response = mapper.Map<ReviewResponse>(reviewEntity);
         return response with { HerbalistName = herbalist.User?.FullName ?? "Unknown Herbalist" };
     }
-    public async Task<IEnumerable<ReviewResponse>> GetAllRecipeReviewsAsync(int recipeId, bool isHerbalist, CancellationToken cancellationToken = default)
+
+    public async Task<IEnumerable<ReviewResponse>> GetAllRecipeReviewsAsync(int aiRecipeId, CancellationToken cancellationToken = default)
     {
-        var recipe = await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == recipeId, tracked: false, cancellationToken: cancellationToken);
+        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: false, cancellationToken: cancellationToken);
 
-        if (recipe == null) return new List<ReviewResponse>();
-
-        if (!recipe.IsActive) // لو الوصفة لسه مخفية
-        {
-            if (!isHerbalist || recipe.HerbalistId != null)
-            {
-                return new List<ReviewResponse>();
-            }
-        }
+        if (aiRecipe == null) return new List<ReviewResponse>();
 
         var reviews = await unitOfWork.ReviewRecipeRepository.GetAllAsync(
-            filter: r => r.RecipeId == recipeId,
+            filter: r => r.AiRecipeId == aiRecipeId, // 👈 فلترة بـ AiRecipeId
             tracked: false,
             includeProperties: "Herbalist.User",
             cancellationToken: cancellationToken);
 
-        // 🪄 سحر الـ AutoMapper
         var mappedReviews = mapper.Map<IEnumerable<ReviewResponse>>(reviews);
         return mappedReviews.OrderByDescending(r => r.RatingDate).ToList();
     }
-    public async Task<ReviewResponse?> GetMyReviewAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
+
+    public async Task<ReviewResponse?> GetMyReviewAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == userId, tracked: false, cancellationToken: cancellationToken);
         if (herbalist == null) return null;
 
         var review = await unitOfWork.ReviewRecipeRepository.GetAsync(
-            filter: r => r.RecipeId == recipeId && r.HerbalistId == herbalist.HerbalistId,
+            filter: r => r.AiRecipeId == aiRecipeId && r.HerbalistId == herbalist.HerbalistId, // 👈 AiRecipeId
             tracked: false,
             includeProperties: "Herbalist.User",
             cancellationToken: cancellationToken);
 
         if (review == null) return null;
 
-        // 🪄 سحر الـ AutoMapper
         return mapper.Map<ReviewResponse>(review);
     }
-    public async Task<bool> DeleteMyReviewAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
+
+    public async Task<bool> DeleteMyReviewAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == userId, tracked: false, cancellationToken: cancellationToken);
         if (herbalist == null) return false;
 
         var review = await unitOfWork.ReviewRecipeRepository.GetAsync(
-            filter: r => r.RecipeId == recipeId && r.HerbalistId == herbalist.HerbalistId,
+            filter: r => r.AiRecipeId == aiRecipeId && r.HerbalistId == herbalist.HerbalistId, // 👈 AiRecipeId
             tracked: true,
             cancellationToken: cancellationToken);
 
         if (review == null) return false;
 
-        var recipe = await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == recipeId, tracked: true, cancellationToken: cancellationToken);
-        if (recipe != null)
+        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: true, cancellationToken: cancellationToken);
+
+        if (aiRecipe != null)
         {
-            if (recipe.HerbalistTotalRatings == 1)
+            if (aiRecipe.HerbalistTotalRatings == 1)
             {
-                recipe.HerbalistAverageRating = 0;
-                recipe.HerbalistTotalRatings = 0;
+                aiRecipe.HerbalistAverageRating = 0;
+                aiRecipe.HerbalistTotalRatings = 0;
             }
             else
             {
-                var calculatedAverage = ((recipe.HerbalistAverageRating * recipe.HerbalistTotalRatings) - review.RatingValue) / (recipe.HerbalistTotalRatings - 1);
-                recipe.HerbalistAverageRating = (float)Math.Round(calculatedAverage, 1); // التقريب لـ 1
-                recipe.HerbalistTotalRatings -= 1;
+                var calculatedAverage = ((aiRecipe.HerbalistAverageRating * aiRecipe.HerbalistTotalRatings) - review.RatingValue) / (aiRecipe.HerbalistTotalRatings - 1);
+                aiRecipe.HerbalistAverageRating = (float)Math.Round(calculatedAverage, 1);
+                aiRecipe.HerbalistTotalRatings -= 1;
             }
         }
 

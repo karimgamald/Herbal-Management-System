@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260417202554_SeparateAiFromRecipes")]
+    partial class SeparateAiFromRecipes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -233,7 +236,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<float>("RatingValue")
                         .HasColumnType("real");
 
-                    b.Property<int?>("RecipeId")
+                    b.Property<int>("RecipeId")
                         .HasColumnType("int");
 
                     b.HasKey("FeedbackId");

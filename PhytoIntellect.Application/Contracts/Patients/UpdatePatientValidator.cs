@@ -1,12 +1,11 @@
 ﻿using FluentValidation;
-using PhytoIntellect.Application.DTOs.PatientDTOs;
 
 
 namespace PhytoIntellect.Application.Contracts.Patients;
 
-public class PatientValidator: AbstractValidator<UpdatePatientDto>
+public class UpdatePatientValidator: AbstractValidator<UpdatePatientRequest>
 {
-    public PatientValidator()
+    public UpdatePatientValidator()
     {
         RuleFor(x => x.BirthDate)
             .NotEmpty().WithMessage("Birth date is required.")

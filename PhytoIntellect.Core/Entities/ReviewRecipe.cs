@@ -10,9 +10,9 @@ public class ReviewRecipe
     public string? Comment { get; set; }
     public DateTime RatingDate { get; set; } = DateTime.UtcNow;
 
-    public int RecipeId { get; set; }
-    public Recipe? Recipe { get; set; }
+    public int AiRecipeId { get; set; }
+    public AiRecipe? AiRecipe { get; set; }
 
     public int HerbalistId { get; set; }
     public Herbalist? Herbalist { get; set; }
-}
+} 

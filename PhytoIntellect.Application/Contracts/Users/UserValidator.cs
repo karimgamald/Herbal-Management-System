@@ -1,13 +1,9 @@
 ﻿using FluentValidation;
 using PhytoIntellect.Application.Contracts.Users;
-using PhytoIntellect.Application.DTOs.UserDTOs;
 
 namespace YourProject.Contracts.Users
 {
-
-    //Registered in AddApplicationServiceDI 
-    //The validator must use the model that is used in the controller => RegisterUserAuthDto
-    public class UserValidator : AbstractValidator<UpdateUserDto>
+    public class UserValidator : AbstractValidator<UpdateUserRequest>
     {
         public UserValidator()
         {

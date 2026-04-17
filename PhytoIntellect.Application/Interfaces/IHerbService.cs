@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using PhytoIntellect.Application.Contracts.HerbalistHerb;
 using PhytoIntellect.Application.Contracts.Herbs;
-using PhytoIntellect.Application.DTOs.HerbalistHerbDTOs;
 using PhytoIntellect.Application.Services;
 
 public interface IHerbService

@@ -12,15 +12,13 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
 
     public void Configure(EntityTypeBuilder<Recipe> builder)
     {
-        builder.Property(r => r.CreatedByAI).HasDefaultValue(true);
         builder.Property(r => r.IsActive).HasDefaultValue(true);
-        builder.Property(r => r.CreatedDate).HasDefaultValueSql("GETUTCDATE()"); // بيسجل الوقت أوتوماتيك
+        builder.Property(r => r.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
 
-        // العلاقة مع العطار (اختيارية)
         builder.HasOne(r => r.Herbalist)
                .WithMany(h => h.Recipes)
                .HasForeignKey(r => r.HerbalistId)
-               .IsRequired(false) // 👈 مهمة جداً لوصفات الذكاء الاصطناعي
+               .IsRequired(false) 
                .OnDelete(DeleteBehavior.SetNull);
 
      

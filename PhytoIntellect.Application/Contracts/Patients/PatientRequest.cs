@@ -1,11 +1,10 @@
-﻿using PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PhytoIntellect.Application.DTOs.PatientDTOs;
+namespace PhytoIntellect.Application.Contracts.Patients;
 
-public class PatientDto
+public class PatientRequest
 {
     public int PatientId { get; set; }
     public int UserId { get; set; }

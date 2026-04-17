@@ -15,35 +15,23 @@ public class AiRecipeConfiguration : IEntityTypeConfiguration<AiRecipe>
         builder.HasKey(x => x.Id);
 
         builder.HasOne(x => x.Patient)
-               .WithMany() // لو عندك List<AiRecipe> في كلاس المريض حطها هنا
+               .WithMany()
                .HasForeignKey(x => x.PatientId)
                .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Property(x => x.Gender)
-               .HasMaxLength(15)
-               .IsRequired(); // Male / Female
+        builder.Property(x => x.Gender).HasMaxLength(15).IsRequired();
+        builder.Property(x => x.Condition).HasMaxLength(150);
+        builder.Property(x => x.RecommendedRecipeName).HasMaxLength(250);
+        builder.Property(x => x.CautionWarning).IsRequired(false);
+        builder.Property(x => x.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
-        builder.Property(x => x.Condition)
-               .HasMaxLength(150); // اسم المرض زي Migraine
-
-        builder.Property(x => x.RecommendedRecipeName)
-               .HasMaxLength(250); // اسم الوصفة
-
-        builder.Property(x => x.CautionWarning)
-               .IsRequired(false);
-
-        builder.Property(x => x.AllProbabilitiesJson)
-               .IsRequired(false);
-
-        builder.Property(x => x.CreatedAt)
-               .HasDefaultValueSql("GETUTCDATE()");
-
+        // Json Conversions
         builder.Property(x => x.Symptoms)
                .HasConversion(
-                   v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!), // وهو رايح الداتابيز
-                   v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) // وهو راجع للـ C#
+                   v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                   v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!)
                )
-               .HasColumnType("nvarchar(max)"); 
+               .HasColumnType("nvarchar(max)");
 
         builder.Property(x => x.PreparationInstructions)
                .HasConversion(
@@ -51,5 +39,15 @@ public class AiRecipeConfiguration : IEntityTypeConfiguration<AiRecipe>
                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!)
                )
                .HasColumnType("nvarchar(max)");
+
+        builder.HasMany(x => x.Feedbacks)
+               .WithOne(f => f.AiRecipe)
+               .HasForeignKey(f => f.AiRecipeId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(x => x.HerbalistReviews)
+               .WithOne(r => r.AiRecipe)
+               .HasForeignKey(r => r.AiRecipeId)
+               .OnDelete(DeleteBehavior.Cascade);
     }
 }

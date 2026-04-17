@@ -12,26 +12,38 @@ public class FeedbackConfiguration : IEntityTypeConfiguration<Feedback>
     public void Configure(EntityTypeBuilder<Feedback> builder)
     {
         builder.HasKey(f => f.FeedbackId);
-
-        // 1. تقييد التعليق
         builder.Property(f => f.Comment).HasMaxLength(1000);
 
-        // 2. 🚨 منع التكرار (Unique Index): مفيش مريض يقيم نفس الوصفة مرتين!
-        builder.HasIndex(f => new { f.RecipeId, f.PatientId }).IsUnique();
+        builder.ToTable("Feedbacks", t =>
+        {
+            t.HasCheckConstraint("CK_Feedback_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5");
 
-        // 3. 🚨 تقييد الأرقام (Check Constraint): التقييم لازم يكون بين 1 و 5 بس
-        builder.ToTable("Feedbacks", t => t.HasCheckConstraint("CK_Feedback_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5"));
+            t.HasCheckConstraint("CK_Feedback_Target", "([RecipeId] IS NOT NULL AND [AiRecipeId] IS NULL) OR ([RecipeId] IS NULL AND [AiRecipeId] IS NOT NULL)");
+        });
 
-        // 4. تظبيط العلاقات
+        builder.HasIndex(f => new { f.RecipeId, f.PatientId })
+               .IsUnique()
+               .HasFilter("[RecipeId] IS NOT NULL"); 
+
+        builder.HasIndex(f => new { f.AiRecipeId, f.PatientId })
+               .IsUnique()
+               .HasFilter("[AiRecipeId] IS NOT NULL");
+        
         builder.HasOne(f => f.Recipe)
                .WithMany(r => r.Feedbacks)
                .HasForeignKey(f => f.RecipeId)
-               .OnDelete(DeleteBehavior.Cascade); // لو الوصفة اتمسحت، تقييماتها تتمسح
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(f => f.AiRecipe)
+               .WithMany(a => a.Feedbacks)
+               .HasForeignKey(f => f.AiRecipeId)
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(f => f.Patient)
                .WithMany(p => p.Feedbacks)
                .HasForeignKey(f => f.PatientId)
-               // استخدمنا Restrict عشان لو مسحنا المريض الداتابيز متضربش Multiple Cascade Paths
                .OnDelete(DeleteBehavior.Restrict);
     }
-}
+} 

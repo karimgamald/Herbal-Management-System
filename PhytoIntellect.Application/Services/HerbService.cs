@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
+using PhytoIntellect.Application.Contracts.HerbalistHerb;
 using PhytoIntellect.Application.Contracts.Herbs;
-using PhytoIntellect.Application.DTOs.HerbalistHerbDTOs;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 

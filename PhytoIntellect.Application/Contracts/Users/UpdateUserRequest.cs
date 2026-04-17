@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace PhytoIntellect.Application.DTOs.UserDTOs;
+namespace PhytoIntellect.Application.Contracts.Users;
 
-// للإنشاء عن طريق الإدارة
-public class CreateUserDto
+public class UpdateUserRequest
 {
     public string FullName { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
+    public string? Governorate { get; set; }
+    public string? City { get; set; }
+    public string? Street { get; set; }
 }

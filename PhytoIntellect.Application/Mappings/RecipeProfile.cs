@@ -12,10 +12,9 @@ public class RecipeProfile : Profile
     public RecipeProfile()
     {
         CreateMap<CreateRecipeRequest, Recipe>()
-            .ForMember(dest => dest.CreatedByAI, opt => opt.MapFrom(src => false))
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
-            .ForMember(dest => dest.RecipeHerbs, opt => opt.MapFrom(src => src.Herbs)) // ربط الأعشاب
-            .ForMember(dest => dest.RecipeDiseases, opt => opt.MapFrom(src =>          // ربط الأمراض
+            .ForMember(dest => dest.RecipeHerbs, opt => opt.MapFrom(src => src.Herbs)) 
+            .ForMember(dest => dest.RecipeDiseases, opt => opt.MapFrom(src =>       
                 src.DiseaseIds != null ? src.DiseaseIds.Select(id => new RecipeDisease { DiseaseId = id }) : null));
 
         CreateMap<RecipeHerbRequest, RecipeHerb>();

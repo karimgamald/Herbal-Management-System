@@ -14,8 +14,7 @@ public class AiRecipeService(
     private readonly IAiPredictionService _aiPredictionService = aiPredictionService;
     private readonly IMapper _mapper = mapper;
     // Get all AI recipes in the system
-    public async Task<IEnumerable<AiRecipeResponse>> GetAllPublicAsync(
-    CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<AiRecipeResponse>> GetAllPublicAsync(CancellationToken cancellationToken = default)
     {
         var recipes = await _unitOfWork.AiRecipeRepository.GetAllAsync(
             tracked: false,
@@ -121,8 +120,8 @@ public class AiRecipeService(
             Age = calculatedAge, 
             Gender = patient.Gender.ToString(),
             HasDiabetes = patient.MedicalHistory.Diabetes,
-            HasHypertension = patient.MedicalHistory.HeartDisease,// ==
-            HasAllergies = patient.MedicalHistory.Asthma, // ==
+            HasHypertension = patient.MedicalHistory.Hypertension,
+            HasAllergies = patient.MedicalHistory.Asthma,
             IsPregnant = patient.MedicalHistory.Pregnancy,
             IsSmoker = patient.MedicalHistory.Smoker,
             CurrentVitals = request 

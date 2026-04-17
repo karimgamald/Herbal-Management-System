@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
-using PhytoIntellect.Application.DTOs.MedicalHistoryDTOs;
-using PhytoIntellect.Application.DTOs.PatientDTOs;
+using PhytoIntellect.Application.Contracts.MedicalHistories;
+using PhytoIntellect.Application.Contracts.Patients;
 using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Mappings;
@@ -9,15 +9,15 @@ public class PatientProfile : Profile
 {
     public PatientProfile()
     {
-        CreateMap<Patient, PatientDto>()
+        CreateMap<Patient, PatientRequest>()
             .ForMember(dest => dest.GenderName, opt => opt.MapFrom(src => src.Gender.ToString()))
             .ForMember(dest => dest.Age, opt => opt.MapFrom(src => CalculateAge(src.BirthDate)))
             .ForMember(dest => dest.MedicalHistoryId, opt => opt.MapFrom(src => src.MedicalHistory != null ? src.MedicalHistory.MedicalHistoryId : (int?)null));
 
-        CreateMap<PatientDto, Patient>()
+        CreateMap<PatientRequest, Patient>()
             .ForMember(dest => dest.BirthDate, opt => opt.MapFrom(src => DateOnly.Parse(src.BirthDate)));
 
-        CreateMap<MedicalHistory, MedicalHistoryDto>();
+        CreateMap<MedicalHistory, MedicalHistoryResponse>();
     }
 
     private int CalculateAge(DateOnly? birthDate)
