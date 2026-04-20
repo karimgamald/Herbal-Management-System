@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PhytoIntellect.Core.Entities;
 using System;
@@ -25,20 +26,26 @@ public class AiRecipeConfiguration : IEntityTypeConfiguration<AiRecipe>
         builder.Property(x => x.CautionWarning).IsRequired(false);
         builder.Property(x => x.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
-        // Json Conversions
+        var stringListComparer = new ValueComparer<List<string>>(
+            (c1, c2) => c1 != null && c2 != null ? c1.SequenceEqual(c2) : c1 == c2,
+            c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v != null ? v.GetHashCode() : 0)) : 0,
+            c => c != null ? c.ToList() : new List<string>());
+
         builder.Property(x => x.Symptoms)
                .HasConversion(
                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                   v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!)
+                   v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>() // تأمين الـ Null
                )
-               .HasColumnType("nvarchar(max)");
+               .HasColumnType("nvarchar(max)")
+               .Metadata.SetValueComparer(stringListComparer);
 
         builder.Property(x => x.PreparationInstructions)
                .HasConversion(
                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                   v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!)
+                   v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>() // تأمين الـ Null
                )
-               .HasColumnType("nvarchar(max)");
+               .HasColumnType("nvarchar(max)")
+               .Metadata.SetValueComparer(stringListComparer); 
 
         builder.HasMany(x => x.Feedbacks)
                .WithOne(f => f.AiRecipe)

@@ -30,14 +30,12 @@ public static class AddApplicationServicesDI
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<ISubOrderService, SubOrderService>();
         services.AddScoped<IAiRecipeService, AiRecipeService>();
+        services.AddScoped<IHerbalistAiRecipeService, HerbalistAiRecipeService>();
 
-       
         //for Email
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
         services.AddScoped<IEmailService, EmailService>();
 
-        // 2. تسجيل الـ AutoMapper (السطر السحري ده بيقرا كل الـ Profiles لوحده)
-        // AutoMapper ✅
         services.AddAutoMapper(cfg =>
         {
             cfg.AddMaps(Assembly.GetExecutingAssembly());
@@ -50,7 +48,6 @@ public static class AddApplicationServicesDI
 
     private static IServiceCollection AddFluentValidationServices(this IServiceCollection services)
     {
-        // 1. تسجيل كل الـ Validators اللي في البروجيكت بتاعك مرة واحدة
         services.AddValidatorsFromAssemblyContaining<UpdatePatientValidator>();
         services.AddValidatorsFromAssemblyContaining<UserValidator>();
         services.AddValidatorsFromAssemblyContaining<CreateAiRecipeValidator>();
@@ -59,10 +56,7 @@ public static class AddApplicationServicesDI
         //services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
 
-        // Register all validators 
         services.AddValidatorsFromAssemblyContaining<RegisterUserAuthValidator>();
-
-        // 2. تفعيل الـ Auto Validation باستخدام مكتبة SharpGrip
         services.AddFluentValidationAutoValidation();
 
         return services;

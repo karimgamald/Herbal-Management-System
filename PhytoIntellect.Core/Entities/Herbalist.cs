@@ -7,7 +7,6 @@ namespace PhytoIntellect.Core.Entities;
 public class Herbalist
 {
     public int HerbalistId { get; set; }
-
     public int UserId { get; set; }
 
     public string LicenseNumber { get; set; } = string.Empty;
@@ -18,16 +17,11 @@ public class Herbalist
 
     // Navigation Property
     public User? User { get; set; }
-
-    // 2. فاترينة العطار (الأعشاب اللي بيبيعها ومأكتفها عنده)
-    public ICollection<HerbalistHerb> HerbalistHerbs { get; set; } = [];
-
-    // 3. الوصفات اللي العطار ده ألفها أو عملها
-    public ICollection<Recipe> Recipes { get; set; } = [];
-
-    // 5. المراجعات والتقييمات اللي العطار عملها لوصفات الـ AI
     public ICollection<ReviewRecipe> ReviewRecipes { get; set; } = [];
 
-    // 4. (مستقبلاً) الطلبات الفرعية اللي مطلوبة من العطار ده عشان يجهزها
-    // public ICollection<SubOrder> SubOrders { get; set; } = new List<SubOrder>();
+    public ICollection<Recipe> Recipes { get; set; } = [];
+    public ICollection<HerbalistHerb> HerbalistHerbs { get; set; } = [];
+    public ICollection<HerbalistAiRecipe> HerbalistAiRecipes { get; set; } = [];
+
+
 }

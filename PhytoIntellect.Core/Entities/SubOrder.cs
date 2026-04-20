@@ -17,6 +17,7 @@ public class SubOrder
     // Navigation Properties
     public Order? Order { get; set; }
     public Herbalist? Herbalist { get; set; }
-    public ICollection<OrderRecipe> OrderRecipes { get; set; } = [];
     public ICollection<OrderHerb> OrderHerbs { get; set; } = [];
+    public ICollection<OrderRecipe> OrderRecipes { get; set; } = [];
+    public ICollection<OrderAiRecipe> OrderAiRecipes { get; set; } = [];
 }

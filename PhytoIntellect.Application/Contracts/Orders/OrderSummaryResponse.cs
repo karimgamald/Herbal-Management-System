@@ -8,4 +8,5 @@ public record OrderSummaryResponse(
     decimal TotalPrice,
     string OrderStatus,
     DateTime OrderDate,
-    string PaymentStatus);
+    string PaymentStatus,
+    bool IsFavorite);

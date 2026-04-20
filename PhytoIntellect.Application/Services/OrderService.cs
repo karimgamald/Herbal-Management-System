@@ -38,14 +38,18 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         };
 
         // 5. معالجة العناصر (الوصفات والأعشاب)
-        if (request.Recipes != null && request.Recipes.Any())
-        {
-            await ProcessRecipesAsync(request.Recipes, mainOrder, subOrderStatus, cancellationToken);
-        }
 
         if (request.Herbs != null && request.Herbs.Any())
         {
             await ProcessHerbsAsync(request.Herbs, mainOrder, subOrderStatus, cancellationToken);
+        }
+        if (request.Recipes != null && request.Recipes.Any())
+        {
+            await ProcessRecipesAsync(request.Recipes, mainOrder, subOrderStatus, cancellationToken);
+        }
+        if (request.AiRecipes != null && request.AiRecipes.Any())
+        {
+            await ProcessAiRecipesAsync(request.AiRecipes, mainOrder, subOrderStatus, cancellationToken);
         }
 
         // 6. حساب الإجماليات والحفظ
@@ -57,7 +61,6 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             ? "Order created successfully. Please proceed to payment."
             : "Order created successfully and sent to herbalists!";
     }
-
 
     public async Task<IEnumerable<OrderSummaryResponse>> GetPatientOrdersAsync(string userId, CancellationToken cancellationToken = default)
     {
@@ -83,7 +86,7 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
 
         var order = await _unitOfWork.OrderRepository.GetAsync(
             filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
-            includeProperties: "SubOrders.Herbalist.User,SubOrders.OrderRecipes.Recipe,SubOrders.OrderHerbs.Herb",
+            includeProperties: "SubOrders.Herbalist.User,SubOrders.OrderRecipes.Recipe,SubOrders.OrderHerbs.Herb,SubOrders.OrderAiRecipes.AiRecipe",
             tracked: false,
             cancellationToken: cancellationToken);
 
@@ -159,6 +162,42 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
 
         return fakeTransactionId;
     }
+
+    public async Task<bool> ToggleFavoriteOrderAsync(string userId, int orderId, CancellationToken cancellationToken = default)
+    {
+        if (!int.TryParse(userId, out int parsedUserId)) throw new ArgumentException("Invalid User ID.");
+
+        var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
+        if (patient == null) throw new UnauthorizedAccessException("Patient not found.");
+
+        var order = await _unitOfWork.OrderRepository.GetAsync(
+            filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
+            tracked: true, 
+            cancellationToken: cancellationToken);
+
+        if (order == null) throw new KeyNotFoundException("Order not found.");
+
+        order.IsFavorite = !order.IsFavorite;
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return order.IsFavorite;
+    }
+
+    public async Task<IEnumerable<OrderSummaryResponse>> GetFavoriteOrdersAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        if (!int.TryParse(userId, out int parsedUserId)) return Enumerable.Empty<OrderSummaryResponse>();
+
+        var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
+        if (patient == null) return Enumerable.Empty<OrderSummaryResponse>();
+
+        var orders = await _unitOfWork.OrderRepository.GetAllAsync(
+            filter: o => o.PatientId == patient.PatientId && o.IsFavorite == true,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        return _mapper.Map<IEnumerable<OrderSummaryResponse>>(orders);
+    }
+
 
     #region Private Helper Methods
 
@@ -247,7 +286,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
                     SubTotal = unitPrice * quantity
                 });
             }
-            subOrder.SubTotal = subOrder.OrderRecipes.Sum(r => r.SubTotal) + subOrder.OrderHerbs.Sum(h => h.SubTotal);
+
+            UpdateSubOrderTotal(subOrder);
         }
     }
 
@@ -287,7 +327,45 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
                     SubTotal = itemTotal
                 });
             }
-            subOrder.SubTotal = subOrder.OrderRecipes.Sum(r => r.SubTotal) + subOrder.OrderHerbs.Sum(h => h.SubTotal);
+
+            UpdateSubOrderTotal(subOrder);
+        }
+    }
+
+    private async Task ProcessAiRecipesAsync(IEnumerable<OrderAiRecipeRequest> requestedAiRecipes, Order mainOrder, string status, CancellationToken cancellationToken)
+    {
+        var aiRecipesGrouped = requestedAiRecipes.GroupBy(r => r.HerbalistId);
+
+        foreach (var group in aiRecipesGrouped)
+        {
+            int currentHerbalistId = group.Key;
+            var subOrder = GetOrCreateSubOrder(mainOrder, currentHerbalistId, status);
+
+            foreach (var requestedRecipe in group)
+            {
+                var inventoryItem = await _unitOfWork.HerbalistAiRecipeRepository.GetAsync(
+                    filter: h => h.HerbalistId == currentHerbalistId
+                              && h.AiRecipeId == requestedRecipe.AiRecipeId
+                              && h.IsActive == true,
+                    tracked: false,
+                    cancellationToken: cancellationToken);
+
+                if (inventoryItem == null)
+                    throw new InvalidOperationException($"AI Recipe ID {requestedRecipe.AiRecipeId} is not active or not sold by Herbalist ID {currentHerbalistId}.");
+
+                decimal unitPrice = inventoryItem.Price;
+                decimal itemTotal = unitPrice * requestedRecipe.Quantity;
+
+                subOrder.OrderAiRecipes.Add(new OrderAiRecipe
+                {
+                    AiRecipeId = requestedRecipe.AiRecipeId,
+                    Quantity = requestedRecipe.Quantity,
+                    UnitPrice = unitPrice,
+                    SubTotal = itemTotal
+                });
+            }
+
+            UpdateSubOrderTotal(subOrder);
         }
     }
 
@@ -302,10 +380,19 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             Status = status,
             ExternalDeliveryID = null,
             OrderRecipes = new List<OrderRecipe>(),
-            OrderHerbs = new List<OrderHerb>()
+            OrderHerbs = new List<OrderHerb>(),
+            OrderAiRecipes = new List<OrderAiRecipe>()
         };
         mainOrder.SubOrders.Add(newSubOrder);
         return newSubOrder;
+    }
+
+    private void UpdateSubOrderTotal(SubOrder subOrder)
+    {
+        subOrder.SubTotal =
+            (subOrder.OrderRecipes?.Sum(r => r.SubTotal) ?? 0) +
+            (subOrder.OrderHerbs?.Sum(h => h.SubTotal) ?? 0) +
+            (subOrder.OrderAiRecipes?.Sum(a => a.SubTotal) ?? 0);
     }
 
     private void CalculateOrderTotals(Order mainOrder)

@@ -7,7 +7,7 @@ using System.Text;
 
 namespace PhytoIntellect.Infrastructure.Repository;
 
-public class HerbalistHerbRepository(ApplicationDbContext context) : Repository<HerbalistHerb>(context)
-    ,IHerbalistHerbRepository
+public class HerbalistAiRecipeRepository(ApplicationDbContext context) : Repository<HerbalistAiRecipe>(context), IHerbalistAiRecipeRepository
 {
+   
 }

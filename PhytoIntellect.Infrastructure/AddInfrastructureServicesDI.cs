@@ -17,6 +17,7 @@ public static class AddInfrastructureServicesDI
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPatientRepository, PatientRepository>();
@@ -24,8 +25,8 @@ public static class AddInfrastructureServicesDI
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<ISubOrderRepository, SubOrderRepository>();
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IAiPredictionService, AiPredictionWrapperService>();
+        services.AddScoped<IHerbalistAiRecipeRepository, HerbalistAiRecipeRepository>();
 
         services.AddExternalApiAiServices(configuration);
         return services;

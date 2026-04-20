@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
@@ -27,20 +28,16 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     {
         try
         {
-            // 1. استخراج الـ ID بتاع المريض من التوكن للأمان
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized(new { Message = "User is not logged in." });
 
-            // 2. بنكلم السيرفيس اللي ظبطناها بالـ Includes والـ AutoMapper
             var orderDetails = await orderService.GetOrderDetailsForPatientAsync(orderId, userId, cancellationToken);
 
-            // 3. لو السيرفيس رجعت null، ده معناه إن الأوردر مش موجود أو مش بتاع المريض ده
             if (orderDetails == null)
             {
                 return NotFound(new { Message = "Order not found or you do not have permission to view it." });
             }
 
-            // 4. لو كله تمام، نرجع الفاتورة بالتفاصيل
             return Ok(orderDetails);
         }
         catch (Exception ex)
@@ -93,11 +90,9 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     {
         try
         {
-            // 👈 استخراج الـ ID بتاع المريض من التوكن عشان الأمان
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized(new { Message = "User is not logged in." });
 
-            // 👈 بنبعت الـ userId للسيرفيس
             var transactionId = await orderService.SimulatePaymentAsync(orderId, userId, cancellationToken);
 
             return Ok(new
@@ -116,7 +111,6 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            // 👈 لو حاول يدفع أوردر مش بتاعه هيرجعله 404 (كان الأوردر مش موجود أصلاً)
             return NotFound(new { Message = ex.Message });
         }
         catch (InvalidOperationException ex)
@@ -127,5 +121,26 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         {
             return StatusCode(500, new { Message = "An unexpected error occurred.", Details = ex.Message });
         }
+    }
+
+    [HttpPatch("{id}/favorite")]
+    public async Task<IActionResult> ToggleFavorite(int id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId().ToString();
+        var isFavorite = await _orderService.ToggleFavoriteOrderAsync(userId, id, cancellationToken);
+
+        return Ok(new
+        {
+            Message = isFavorite ? "Order added to favorites." : "Order removed from favorites.",
+            IsFavorite = isFavorite
+        });
+    }
+
+    [HttpGet("favorites")]
+    public async Task<IActionResult> GetFavoriteOrders(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId().ToString();
+        var result = await _orderService.GetFavoriteOrdersAsync(userId, cancellationToken);
+        return Ok(result);
     }
 }

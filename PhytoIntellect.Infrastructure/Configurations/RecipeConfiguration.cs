@@ -15,6 +15,9 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
         builder.Property(r => r.IsActive).HasDefaultValue(true);
         builder.Property(r => r.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
 
+        builder.Property(x => x.Price)
+               .HasPrecision(18, 2);
+
         builder.HasOne(r => r.Herbalist)
                .WithMany(h => h.Recipes)
                .HasForeignKey(r => r.HerbalistId)

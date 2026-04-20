@@ -10,7 +10,6 @@ namespace PhytoIntellect.Infrastructure.UOW;
 public class UnitOfWork(
     ApplicationDbContext context,
     IRepository<User> userRepository,
-    //IRepository<Patient> patientRepository,
     IPatientRepository patientRepository,
     IRepository<Herbalist> herbalistRepository,
     IRepository<RefreshToken> refreshTokenRepository,
@@ -24,11 +23,12 @@ public class UnitOfWork(
     IRepository<ReviewRecipe> reviewRecipeRepository,
     IRepository<Order> orderRepository,
     IRepository<SubOrder> subOrderRepository,
-    IRepository<AiRecipe> aiRecipeRepository
+    IRepository<AiRecipe> aiRecipeRepository,
+    IRepository<HerbalistAiRecipe> herbalistAiRecipeRepository,
+    IRepository<OrderAiRecipe> orderAiRecipeRepository
     ) : IUnitOfWork
-{
+{ 
     public IRepository<User> UserRepository { get; } = userRepository;
-    //public IRepository<Patient> PatientRepository { get; } = patientRepository;
     public IPatientRepository PatientRepository { get; } = patientRepository;
     public IRepository<Herbalist> HerbalistRepository { get; } = herbalistRepository;
     public IRepository<RefreshToken> RefreshTokenRepository { get; } = refreshTokenRepository;
@@ -43,6 +43,9 @@ public class UnitOfWork(
     public IRepository<Order> OrderRepository { get; } = orderRepository;
     public IRepository<SubOrder> SubOrderRepository { get; } = subOrderRepository;
     public IRepository<AiRecipe> AiRecipeRepository { get; } = aiRecipeRepository;
+    public IRepository<HerbalistAiRecipe> HerbalistAiRecipeRepository { get; } = herbalistAiRecipeRepository;
+
+    public IRepository<OrderAiRecipe> OrderAiRecipeRepository { get; } = orderAiRecipeRepository;
 
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

@@ -16,7 +16,6 @@ public class UpdateSubOrderStatusRequestValidator : AbstractValidator<UpdateSubO
     {
         if (string.IsNullOrWhiteSpace(status)) return false;
 
-        // 🎯 استخدمنا الـ Enum مباشرة عشان لو غيرنا اسمه بعدين الكود ميضربش
         var allowedStatuses = new[]
         {
             SubOrderStatus.Preparing.ToString(),
@@ -25,7 +24,6 @@ public class UpdateSubOrderStatusRequestValidator : AbstractValidator<UpdateSubO
             SubOrderStatus.Cancelled.ToString()
         };
 
-        // StringComparer.OrdinalIgnoreCase عشان لو بعتها حروف سمول تعدي عادي
         return allowedStatuses.Contains(status.Trim(), StringComparer.OrdinalIgnoreCase);
     }
 }

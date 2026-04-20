@@ -36,22 +36,22 @@ public class AiRecipe
     public List<string> Symptoms { get; set; } = [];
 
 
-    public string RecommendedRecipeName { get; set; } = string.Empty;// "Feverfew Tea & Lavender Massage"
-    public string Condition { get; set; } = string.Empty; // "Migraine"
-    public double ConfidenceScore { get; set; } // 92.6
+    public string RecommendedRecipeName { get; set; } = string.Empty;
+    public string Condition { get; set; } = string.Empty;
+    public double ConfidenceScore { get; set; }
 
     public List<string> PreparationInstructions { get; set; } = [];
-    public string CautionWarning { get; set; } = string.Empty; // "Do not use feverfew if pregnant..."
+    public string CautionWarning { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
 
-    public float PatientAverageRating { get; set; } = 0;
-    public int PatientTotalRatings { get; set; } = 0;
+    public float? Rating { get; set; }
 
     public float HerbalistAverageRating { get; set; } = 0;
     public int HerbalistTotalRatings { get; set; } = 0;
 
-    // Navigation Properties للعلاقات الجديدة
-    public ICollection<ReviewRecipe> HerbalistReviews { get; set; } = [];
+    // Navigation Properties 
     public ICollection<Feedback> Feedbacks { get; set; } = [];
+    public ICollection<ReviewRecipe> HerbalistReviews { get; set; } = [];
+    public ICollection<HerbalistAiRecipe> HerbalistInventories { get; set; } = [];
 }

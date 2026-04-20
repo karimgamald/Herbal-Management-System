@@ -7,4 +7,5 @@ public record CreateOrderRequest
 
     public List<OrderRecipeRequest> Recipes { get; init; } = [];
     public List<OrderHerbRequest> Herbs { get; init; } = [];
+    public List<OrderAiRecipeRequest> AiRecipes { get; init; } = [];
 }

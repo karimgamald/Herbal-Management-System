@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260419214449_UpdatedNamedAiModels")]
+    partial class UpdatedNamedAiModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,15 +90,18 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<bool>("IsSmoker")
                         .HasColumnType("bit");
 
+                    b.Property<float>("PatientAverageRating")
+                        .HasColumnType("real");
+
                     b.Property<int>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PatientTotalRatings")
                         .HasColumnType("int");
 
                     b.Property<string>("PreparationInstructions")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<float?>("Rating")
-                        .HasColumnType("real");
 
                     b.Property<string>("RecommendedRecipeName")
                         .IsRequired()
@@ -441,9 +447,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("IsFavorite")
-                        .HasColumnType("bit");
-
                     b.Property<decimal>("ItemsTotal")
                         .HasColumnType("decimal(10,2)");
 
@@ -635,7 +638,6 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<decimal>("Price")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("TotalRatings")

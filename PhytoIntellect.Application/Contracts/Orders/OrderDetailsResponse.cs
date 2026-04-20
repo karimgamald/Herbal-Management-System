@@ -14,9 +14,10 @@ public record OrderDetailsResponse
     public string ShippingAddress { get; init; } = string.Empty;
     public string PaymentMethod { get; init; } = string.Empty;
     public string PaymentStatus { get; init; } = string.Empty;
-    public string? TransactionId { get; init; } // ExternalPaymentId
+    public string? TransactionId { get; init; }
     public string OrderStatus { get; init; } = string.Empty;
     public DateTime OrderDate { get; init; }
+    public bool IsFavorite { get; init; }
 
     public List<SubOrderDetailsResponse> SubOrders { get; init; } = new();
 }

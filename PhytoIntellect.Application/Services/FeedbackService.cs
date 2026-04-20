@@ -94,14 +94,16 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
     }
 
     // (AiRecipeId)
-
     public async Task<FeedbackResponse> SubmitAiRecipeFeedbackAsync(int userId, int aiRecipeId, SubmitFeedbackRequest request, CancellationToken cancellationToken = default)
     {
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
-        if (patientId == 0) throw new Exception("Patient not found.");
+        if (patientId == 0) throw new UnauthorizedAccessException("Patient not found.");
 
         var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: true, cancellationToken: cancellationToken);
-        if (aiRecipe == null) throw new Exception("AI Recipe not found.");
+        if (aiRecipe == null) throw new KeyNotFoundException("AI Recipe not found.");
+
+        if (aiRecipe.PatientId != patientId)
+            throw new UnauthorizedAccessException("You are not authorized to evaluate an AI prescription for another patient.");
 
         var existingFeedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.AiRecipeId == aiRecipeId && f.PatientId == patientId, tracked: true, cancellationToken: cancellationToken);
 
@@ -110,21 +112,18 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         if (existingFeedback != null)
         {
-            float oldRating = existingFeedback.RatingValue;
             existingFeedback.RatingValue = cleanRating;
             existingFeedback.Comment = request.Comment;
             existingFeedback.RatingDate = DateTime.UtcNow;
 
-            // 👈 بنعدل عواميد المريض في جدول الـ AI
-            var calc = ((aiRecipe.PatientAverageRating * aiRecipe.PatientTotalRatings) - oldRating + cleanRating) / aiRecipe.PatientTotalRatings;
-            aiRecipe.PatientAverageRating = (float)Math.Round(calc, 1);
+            aiRecipe.Rating = cleanRating;
             feedbackEntity = existingFeedback;
         }
         else
         {
             feedbackEntity = new Feedback
             {
-                RecipeId = null, // 👈 الجوكر شغال في الناحية التانية
+                RecipeId = null,
                 AiRecipeId = aiRecipeId,
                 PatientId = patientId,
                 RatingValue = cleanRating,
@@ -133,9 +132,7 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
             };
             await unitOfWork.FeedbackRepository.CreateAsync(feedbackEntity, cancellationToken);
 
-            var calc = ((aiRecipe.PatientAverageRating * aiRecipe.PatientTotalRatings) + cleanRating) / (aiRecipe.PatientTotalRatings + 1);
-            aiRecipe.PatientAverageRating = (float)Math.Round(calc, 1);
-            aiRecipe.PatientTotalRatings += 1;
+            aiRecipe.Rating = cleanRating;
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -158,25 +155,30 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
     public async Task<bool> DeleteMyAiRecipeFeedbackAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)
     {
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
-        var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.AiRecipeId == aiRecipeId && f.PatientId == patientId, tracked: true, cancellationToken: cancellationToken);
+        if (patientId == 0) throw new UnauthorizedAccessException("Patient not found.");
+
+        var feedback = await unitOfWork.FeedbackRepository.GetAsync(
+            f => f.AiRecipeId == aiRecipeId && f.PatientId == patientId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
         if (feedback == null) return false;
 
-        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: true, cancellationToken: cancellationToken);
+        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(
+            r => r.Id == aiRecipeId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
         if (aiRecipe != null)
         {
-            if (aiRecipe.PatientTotalRatings == 1) { aiRecipe.PatientAverageRating = 0; aiRecipe.PatientTotalRatings = 0; }
-            else
-            {
-                var calc = ((aiRecipe.PatientAverageRating * aiRecipe.PatientTotalRatings) - feedback.RatingValue) / (aiRecipe.PatientTotalRatings - 1);
-                aiRecipe.PatientAverageRating = (float)Math.Round(calc, 1);
-                aiRecipe.PatientTotalRatings -= 1;
-            }
+            aiRecipe.Rating = null;
         }
+
         unitOfWork.FeedbackRepository.Remove(feedback);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
         return true;
     }
-
 
     public async Task<IEnumerable<FeedbackResponse>> GetMyFeedbacksAsync(int userId, CancellationToken cancellationToken = default)
     {
