@@ -10,7 +10,6 @@ namespace PhytoIntellect.API.Controllers;
 [Route("api/[controller]")]
 public class InventoryController(IInventoryService inventoryService) : ControllerBase
 {
-    // 🎯 دالة مساعدة (Helper Method) عشان نمنع تكرار كود الـ UserId
     private int GetHerbalistId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -32,7 +31,7 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
-    [HttpGet("{id}/get-id")] // 👈 مسار أنضف
+    [HttpGet("{id}/get-id")] 
     public async Task<IActionResult> GetAllByHerbalistId([FromRoute] int id, CancellationToken cancellationToken)
     {
         try
@@ -58,28 +57,28 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
-    [HttpPut("{herbId}/update")] // 👈 مسار أنضف و RESTful بجد
+    [HttpPut("{id}/update")] 
     [Authorize(Roles = AppRoles.Herbalist)]
-    public async Task<IActionResult> Update(int herbId, UpdateInventoryRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(int id, UpdateInventoryRequest request, CancellationToken cancellationToken)
     {
         try
         {
             var herbalistId = GetHerbalistId();
-            await inventoryService.UpdateInventoryAsync(herbalistId, herbId, request, cancellationToken);
+            await inventoryService.UpdateInventoryAsync(herbalistId, id, request, cancellationToken);
             return Ok(new { message = "Inventory updated successfully." });
         }
         catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
-    [HttpDelete("{herbId}/delete")] // 👈 مسار أنضف
+    [HttpDelete("{id}/delete")]
     [Authorize(Roles = AppRoles.Herbalist)]
-    public async Task<IActionResult> Delete(int herbId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         try
         {
             var herbalistId = GetHerbalistId();
-            await inventoryService.RemoveHerbAsync(herbalistId, herbId, cancellationToken);
+            await inventoryService.RemoveHerbAsync(herbalistId, id, cancellationToken);
             return Ok(new { message = "Herb removed from inventory successfully." });
         }
         catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }

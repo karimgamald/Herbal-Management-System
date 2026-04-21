@@ -32,7 +32,7 @@ public class DiseasesController(IDiseaseService diseaseService) : ControllerBase
         try
         {
             var result = await diseaseService.CreateDiseaseAsync(request, cancellationToken);
-            return Ok(result); // بيرجعلك الـ 200 OK ومعاها بيانات المرض بالـ ID الجديد
+            return Ok(result); 
         }
         catch (Exception ex)
         {

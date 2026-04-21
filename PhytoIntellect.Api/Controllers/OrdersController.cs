@@ -23,15 +23,15 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         return Ok(orders);
     }
 
-    [HttpGet("{orderId}/get-id")]
-    public async Task<IActionResult> GetOrderById(int orderId, CancellationToken cancellationToken)
+    [HttpGet("{id}/get-id")]
+    public async Task<IActionResult> GetOrderById(int id, CancellationToken cancellationToken)
     {
         try
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized(new { Message = "User is not logged in." });
 
-            var orderDetails = await orderService.GetOrderDetailsForPatientAsync(orderId, userId, cancellationToken);
+            var orderDetails = await orderService.GetOrderDetailsForPatientAsync(id, userId, cancellationToken);
 
             if (orderDetails == null)
             {
@@ -69,14 +69,14 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         }
     }
 
-    [HttpPut("{orderId}/cancel")]
-    public async Task<IActionResult> CancelOrder(int orderId, CancellationToken cancellationToken)
+    [HttpPut("{id}/cancel")]
+    public async Task<IActionResult> CancelOrder(int id, CancellationToken cancellationToken)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         try
         {
-            await _orderService.CancelOrderAsync(orderId, userId!, cancellationToken);
+            await _orderService.CancelOrderAsync(id, userId!, cancellationToken);
             return Ok(new { Message = "Order cancelled successfully." });
         }
         catch (Exception ex)
@@ -85,15 +85,15 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         }
     }
 
-    [HttpPut("{orderId}/simulate-payment")]
-    public async Task<IActionResult> SimulatePayment(int orderId, CancellationToken cancellationToken)
+    [HttpPut("{id}/simulate-payment")]
+    public async Task<IActionResult> SimulatePayment(int id, CancellationToken cancellationToken)
     {
         try
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized(new { Message = "User is not logged in." });
 
-            var transactionId = await orderService.SimulatePaymentAsync(orderId, userId, cancellationToken);
+            var transactionId = await orderService.SimulatePaymentAsync(id, userId, cancellationToken);
 
             return Ok(new
             {

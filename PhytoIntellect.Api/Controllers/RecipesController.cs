@@ -29,10 +29,10 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         return Ok(recipe);
     }
 
-    [HttpGet("herbalist/{herbalistId}")]
-    public async Task<IActionResult> GetRecipesByHerbalist([FromRoute] int herbalistId, [FromQuery] bool? isActive, CancellationToken cancellationToken)
+    [HttpGet("herbalist/{id}")]
+    public async Task<IActionResult> GetRecipesByHerbalist([FromRoute] int id, [FromQuery] bool? isActive, CancellationToken cancellationToken)
     {
-        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(herbalistId, isActive, cancellationToken);
+        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(id, isActive, cancellationToken);
 
         return Ok(recipes);
     }
@@ -56,7 +56,7 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         }
     }
 
-    [Authorize(Roles = "Herbalist")]
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpPut("{id}/update")]
     public async Task<IActionResult> UpdateRecipe(int id, [FromBody] UpdateRecipeRequest request, CancellationToken cancellationToken)
     {
@@ -80,18 +80,26 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
     }
 
     [Authorize(Roles = "Herbalist")]
-    [HttpPut("{id}/deactivate")] 
-    public async Task<IActionResult> DeactivateRecipe(int id, CancellationToken cancellationToken)
+    [HttpPatch("{id}/toggle-availability")]
+    public async Task<IActionResult> ToggleRecipeAvailability(int id, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdStr, out int userId))
             return Unauthorized();
 
-        var success = await recipeService.UpdateRecipeAvailabilityAsync(userId, id, cancellationToken);
+        var newState = await recipeService.ToggleRecipeAvailabilityAsync(userId, id, cancellationToken);
 
-        if (!success)
-            return BadRequest(new { Message = "Failed to deactivate recipe. It may not exist or you don't have permission to modify it." });
+        if (newState == null)
+            return BadRequest(new { Message = "Failed to update recipe. It may not exist or you don't have permission to modify it." });
 
-        return Ok(new { Message = "Recipe deactivated successfully. It is no longer visible to patients." });
+        string responseMessage = newState == true
+            ? "Recipe activated successfully. It is now visible to patients."
+            : "Recipe deactivated successfully. It is no longer visible to patients.";
+
+        return Ok(new
+        {
+            Message = responseMessage,
+            IsActive = newState
+        });
     }
-}
+} 

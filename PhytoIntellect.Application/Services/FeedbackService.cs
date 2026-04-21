@@ -54,6 +54,43 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
             recipe.TotalRatings += 1;
         }
 
+        #region
+
+        var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
+         filter: h => h.HerbalistId == recipe.HerbalistId,
+         tracked: true,
+         cancellationToken: cancellationToken);
+
+        if (herbalist != null)
+        {
+            // التريكة هنا: بنجيب كل الوصفات "ما عدا" الوصفة اللي بنقيمها دلوقتي
+            var otherRecipes = await unitOfWork.RecipeRepository.GetAllAsync(
+                filter: r => r.HerbalistId == recipe.HerbalistId && r.RecipeId != recipeId && r.TotalRatings > 0,
+                tracked: false,
+                cancellationToken: cancellationToken);
+
+            // نحسب نقط باقي الوصفات
+            float otherPoints = otherRecipes.Sum(r => r.AverageRating * r.TotalRatings);
+            int otherVotes = otherRecipes.Sum(r => r.TotalRatings);
+
+            // نجمع عليهم نقط الوصفة الحالية اللي اتعدلت فوق
+            float totalPoints = otherPoints + (recipe.AverageRating * recipe.TotalRatings);
+            int totalVotes = otherVotes + recipe.TotalRatings;
+
+            if (totalVotes > 0)
+            {
+                var calc = totalPoints / totalVotes;
+                herbalist.AverageRating = (float)Math.Round(calc, 1);
+            }
+            else
+            {
+                herbalist.AverageRating = 0;
+            }
+        }
+
+        #endregion
+
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return mapper.Map<FeedbackResponse>(feedbackEntity);
     }

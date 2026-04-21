@@ -29,9 +29,8 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
             tracked: false,
             cancellationToken: cancellationToken);
 
-        // 🔥 التحقق من الهوية الأساسية فقط (بدون Price و Description)
         var isSameRecipe = existingRecipes.Any(r =>
-            r.Instructions.Trim().ToLower() == normalizedInstructions &&
+            r.Instructions!.Trim().ToLower() == normalizedInstructions &&
 
             r.RecipeHerbs.Count == request.Herbs.Count &&
             r.RecipeHerbs.All(h =>
@@ -48,13 +47,11 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
             )
         );
 
-        // ❌ لو نفس الريسيبي (الهوية الأساسية متطابقة)
         if (isSameRecipe)
         {
             throw new Exception("Recipe already exists. or you can make update for price or description.");
         }
 
-        // ➕ Create New Recipe
         var recipe = mapper.Map<Recipe>(request);
 
         recipe.HerbalistId = herbalist.HerbalistId;
@@ -153,26 +150,27 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
         return await GetRecipeByIdAsync(recipe.RecipeId, cancellationToken);
     }
 
-    public async Task<bool> UpdateRecipeAvailabilityAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
+    public async Task<bool?> ToggleRecipeAvailabilityAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
             filter: h => h.UserId == userId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null) return false;
+        if (herbalist == null) return null;
 
         var recipe = await unitOfWork.RecipeRepository.GetAsync(
             filter: r => r.RecipeId == recipeId,
             tracked: true,
             cancellationToken: cancellationToken);
 
-        if (recipe == null || recipe.HerbalistId != herbalist.HerbalistId) return false;
+        if (recipe == null || recipe.HerbalistId != herbalist.HerbalistId) return null;
 
-        recipe.IsActive = false;
+        recipe.IsActive = !recipe.IsActive;
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return true;
+        return recipe.IsActive;
     }
 
     public async Task<IEnumerable<RecipeResponse>> GetRecipesByHerbalistIdAsync(int herbalistId, bool? isActive = null, CancellationToken cancellationToken = default)

@@ -27,10 +27,10 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
     }
 
     [Authorize(Roles = AppRoles.Herbalist)]
-    [HttpGet("patient/{patientId}")]
-    public async Task<IActionResult> GetPatientMedicalHistory(int patientId, CancellationToken cancellationToken)
+    [HttpGet("patient/{id}")]
+    public async Task<IActionResult> GetPatientMedicalHistory(int id, CancellationToken cancellationToken)
     {
-        var history = await medicalHistoryService.GetPatientMedicalHistoryByPatientIdAsync(patientId, cancellationToken);
+        var history = await medicalHistoryService.GetPatientMedicalHistoryByPatientIdAsync(id, cancellationToken);
 
         if (history == null) return NotFound(new { Message = "This patient has not provided a medical history yet." });
 
