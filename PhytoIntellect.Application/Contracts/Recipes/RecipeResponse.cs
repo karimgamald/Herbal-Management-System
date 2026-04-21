@@ -9,7 +9,7 @@ public record RecipeResponse
     public int RecipeId { get; init; }
     public string Description { get; init; } = string.Empty;
     public string Instructions { get; init; } = string.Empty;
-    public bool CreatedByAI { get; init; }
+    //public bool CreatedByAI { get; init; }
     public DateTime CreatedDate { get; init; }
 
     public bool IsActive { get; init; }

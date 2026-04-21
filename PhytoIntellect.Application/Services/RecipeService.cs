@@ -8,8 +8,10 @@ namespace PhytoIntellect.Application.Services;
 
 public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeService
 {
-    public async Task<RecipeResponse?> AddRecipeAsync(int userId, CreateRecipeRequest request,
-        CancellationToken cancellationToken = default)
+    public async Task<RecipeResponse?> AddRecipeAsync(
+    int userId,
+    CreateRecipeRequest request,
+    CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
             filter: h => h.UserId == userId,
@@ -19,6 +21,40 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
         if (herbalist == null)
             throw new Exception("Herbalist profile not found.");
 
+        var normalizedInstructions = request.Instructions.Trim().ToLower();
+
+        var existingRecipes = await unitOfWork.RecipeRepository.GetAllAsync(
+            filter: r => r.HerbalistId == herbalist.HerbalistId,
+            includeProperties: "RecipeHerbs,RecipeDiseases",
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        // 🔥 التحقق من الهوية الأساسية فقط (بدون Price و Description)
+        var isSameRecipe = existingRecipes.Any(r =>
+            r.Instructions.Trim().ToLower() == normalizedInstructions &&
+
+            r.RecipeHerbs.Count == request.Herbs.Count &&
+            r.RecipeHerbs.All(h =>
+                request.Herbs.Any(req =>
+                    req.HerbId == h.HerbId &&
+                    req.Quantity == h.Quantity)) &&
+
+            (
+                (r.RecipeDiseases == null && request.DiseaseIds == null) ||
+                (r.RecipeDiseases != null && request.DiseaseIds != null &&
+                 r.RecipeDiseases.Count == request.DiseaseIds.Count &&
+                 r.RecipeDiseases.All(d =>
+                     request.DiseaseIds.Contains(d.DiseaseId)))
+            )
+        );
+
+        // ❌ لو نفس الريسيبي (الهوية الأساسية متطابقة)
+        if (isSameRecipe)
+        {
+            throw new Exception("Recipe already exists. or you can make update for price or description.");
+        }
+
+        // ➕ Create New Recipe
         var recipe = mapper.Map<Recipe>(request);
 
         recipe.HerbalistId = herbalist.HerbalistId;
@@ -38,6 +74,7 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
                 DiseaseId = id
             }).ToList();
         }
+
         await unitOfWork.RecipeRepository.CreateAsync(recipe, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -49,7 +86,6 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
 
         return mapper.Map<RecipeResponse>(createdRecipe);
     }
-
     public async Task<IEnumerable<RecipeResponse>> GetAllActiveRecipesAsync(CancellationToken cancellationToken = default)
     {
         var recipes = await unitOfWork.RecipeRepository.GetAllAsync(
