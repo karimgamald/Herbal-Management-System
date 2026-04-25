@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Google.Apis.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Services;
+using PhytoIntellect.Infrastructure.Identities;
 
 
 namespace PhytoIntellect.Api.Controllers;
@@ -90,5 +92,20 @@ public class AccountsController(IAuthService authService) : ControllerBase
         var result = await authService.LogoutAsync(model.RefreshToken, cancellationToken);
         if (!result.Success) return BadRequest(new { result.Message });
         return Ok(new { result.Message });
+    }
+
+   
+    [HttpPost("google-login")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    {
+        try
+        {
+            var result = await authService.GoogleLoginAsync(request);
+            return Ok(result);
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized(new { Message = "Invalid Google Token" });
+        }
     }
 }

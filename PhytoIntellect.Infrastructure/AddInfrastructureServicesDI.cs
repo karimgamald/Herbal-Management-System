@@ -5,10 +5,12 @@ using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Services;
 using PhytoIntellect.Core.Interfaces;
 using PhytoIntellect.Infrastructure.ExternalApi;
+using PhytoIntellect.Infrastructure.Identities;
 using PhytoIntellect.Infrastructure.Presistence;
 using PhytoIntellect.Infrastructure.Repository;
 using PhytoIntellect.Infrastructure.UOW;
 using Refit;
+using TokenService = PhytoIntellect.Infrastructure.Identities.TokenService;
 
 namespace PhytoIntellect.Infrastructure;
 
@@ -19,6 +21,7 @@ public static class AddInfrastructureServicesDI
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPatientRepository, PatientRepository>();
         services.AddScoped<IRecipeService, RecipeService>();
@@ -52,7 +55,7 @@ public static class AddInfrastructureServicesDI
     {
         var aiBaseUrl = configuration["AiSettings:BaseUrl"];
 
-        services.AddRefitClient<IAiFlaskClient>()//<IAiPredictionService>()
+        services.AddRefitClient<IAiFlaskClient>()
                 .ConfigureHttpClient(c => c.BaseAddress = new Uri(aiBaseUrl!));
 
         return services;

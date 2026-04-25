@@ -17,7 +17,6 @@ public static class AddApplicationServicesDI
     public static IServiceCollection AddApplicationServices(this IServiceCollection services,IConfiguration configuration)
     {
         services.AddScoped<IUserService, UserService>();
-        services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<IMedicalHistoryService, MedicalHistoryService>();
         services.AddScoped<IHerbalistService, HerbalistService>();

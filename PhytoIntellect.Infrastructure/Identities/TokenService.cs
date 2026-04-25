@@ -7,7 +7,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace PhytoIntellect.Application.Services;
+namespace PhytoIntellect.Infrastructure.Identities;
 
 public class TokenService(IConfiguration config) : ITokenService
 {

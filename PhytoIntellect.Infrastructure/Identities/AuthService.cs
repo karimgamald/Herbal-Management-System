@@ -1,19 +1,20 @@
 ﻿using AutoMapper;
-using Microsoft.Extensions.Configuration; // ضيف دي عشان الـ Configuration
+using Google.Apis.Auth;
+using Microsoft.Extensions.Configuration;
 using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Enums;
 
-namespace PhytoIntellect.Application.Services;
+namespace PhytoIntellect.Infrastructure.Identities;
 
 public class AuthService(
     IUnitOfWork unitOfWork,
     ITokenService tokenService,
     IMapper mapper,
     IConfiguration _config,
-    IEmailService emailService) : IAuthService // ضفنا الـ Configuration هنا
+    IEmailService emailService) : IAuthService 
 {
     public async Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model, 
         CancellationToken cancellationToken = default)
@@ -304,4 +305,107 @@ public class AuthService(
 
         return new RegisterUserAuthResponse { Success = true, Message = "Logged out successfully." };
     }
+
+
+public async Task<RegisterUserAuthResponse> GoogleLoginAsync(GoogleLoginRequest model, CancellationToken cancellationToken = default)
+{
+    GoogleJsonWebSignature.Payload payload;
+    try
+    {
+        // 1. التحقق من صحة التوكن اللي جاي من جوجل
+        var settings = new GoogleJsonWebSignature.ValidationSettings()
+        {
+            Audience = new List<string>() { _config["Google:ClientId"]! } // استخدمت config زي ما عملنا في الـ Primary Constructor
+        };
+        payload = await GoogleJsonWebSignature.ValidateAsync(model.IdToken, settings);
+    }
+    catch (InvalidJwtException)
+    {
+        return new RegisterUserAuthResponse { Success = false, Message = "Invalid Google IdToken." };
+    }
+
+    // 2. البحث عن اليوزر في الداتابيز
+    var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == payload.Email, tracked: false, cancellationToken: cancellationToken);
+
+    // 3. لو اليوزر مش موجود (أول مرة يسجل بجوجل) -> هنعمله Registration
+    if (user == null)
+    {
+        // التحقق من الـ Role المبعوت في الريكويست (لأن جوجل مش هتبعت Role، الفرونت هو اللي بيبعته مع الـ Token)
+        if (string.IsNullOrEmpty(model.Role) || !AppRoles.IsValidRole(model.Role))
+        {
+            return new RegisterUserAuthResponse { Success = false, Message = $"Role is required for new Google accounts. Valid roles are '{AppRoles.Patient}' or '{AppRoles.Herbalist}'." };
+        }
+
+        user = new User
+        {
+            Email = payload.Email,
+            FullName = payload.Name,
+            Role = model.Role,
+            // بنحط باسورد عشوائي معقد جداً مش هيستخدمه، لأن دخوله دايماً هيكون بجوجل
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString() + "Google@P@ssw0rd!"),
+        };
+
+        if (user.Role == AppRoles.Patient)
+        {
+            var newPatient = new Patient { User = user, Gender = Gender.Unknown };
+            await unitOfWork.PatientRepository.CreateAsync(newPatient, cancellationToken);
+        }
+        else if (user.Role == AppRoles.Herbalist)
+        {
+            var newHerbalist = new Herbalist
+            {
+                User = user,
+                AverageRating = 0,
+                Bio = null!,
+                AvailableFrom = TimeSpan.Zero,
+                AvailableTo = TimeSpan.Zero,
+                LicenseNumber = "HL-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper()
+            };
+            await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);
+        }
+
+        // إرسال إيميل الترحيب (Optional)
+        var message = $"Welcome to Herbal System 🌿\n\nHello {user.FullName},\n\nYour account has been successfully created via Google Login.";
+        await emailService.SendEmailAsync(user.Email, "Welcome to Herbal System", message);
+    }
+    // 4. لو اليوزر موجود بس مسجل رول مختلف عن اللي الفرونت باعتها (حماية إضافية)
+    else if (!string.IsNullOrEmpty(model.Role) && user.Role != model.Role)
+    {
+        return new RegisterUserAuthResponse { Success = false, Message = "This Google account is already registered with a different role." };
+    }
+
+    await unitOfWork.SaveChangesAsync(cancellationToken);
+
+    var accessToken = tokenService.CreateAccessToken(user);
+    var refreshToken = tokenService.CreateRefreshToken();
+
+    var refreshDuration = double.Parse(_config["JwtSettings:RefreshTokenDurationInDays"] ?? "7");
+
+    var tokenEntity = new RefreshToken
+    {
+        UserId = user.Id,
+        TokenHash = TokenHasher.HashToken(refreshToken),
+        ExpiresAt = DateTime.UtcNow.AddDays(refreshDuration),
+        IsRevoked = false
+    };
+
+    await unitOfWork.RefreshTokenRepository.CreateAsync(tokenEntity, cancellationToken);
+    await unitOfWork.SaveChangesAsync(cancellationToken); // حفظ الـ Refresh Token
+
+    return new RegisterUserAuthResponse
+    {
+        Success = true,
+        Message = "Login successful via Google.",
+        Data = new
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            Role = user.Role,
+            FullName = user.FullName,
+            ProfilePicture = payload.Picture // إضافة لطيفة للفرونت
+        }
+    };
+}
+
+
 }
