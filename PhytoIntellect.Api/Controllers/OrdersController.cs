@@ -18,7 +18,7 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     [HttpGet("all-my-orders")]
     public async Task<IActionResult> GetMyOrders(CancellationToken cancellationToken)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = User.GetUserId().ToString();
         var orders = await _orderService.GetPatientOrdersAsync(userId!, cancellationToken);
         return Ok(orders);
     }
@@ -28,7 +28,7 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     {
         try
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId().ToString();
             if (userId == null) return Unauthorized(new { Message = "User is not logged in." });
 
             var orderDetails = await orderService.GetOrderDetailsForPatientAsync(id, userId, cancellationToken);
@@ -49,7 +49,7 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     [HttpPost("create")]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken cancellationToken)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = User.GetUserId().ToString();
 
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
@@ -72,7 +72,7 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     [HttpPut("{id}/cancel")]
     public async Task<IActionResult> CancelOrder(int id, CancellationToken cancellationToken)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = User.GetUserId().ToString();
 
         try
         {
@@ -90,14 +90,14 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     {
         try
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId().ToString();
             if (userId == null) return Unauthorized(new { Message = "User is not logged in." });
 
             var transactionId = await orderService.SimulatePaymentAsync(id, userId, cancellationToken);
 
             return Ok(new
             {
-                Message = "Payment simulated successfully. Order is now pending.",
+                Message = "Payment simulated successfully. Order is now pending.", 
                 TransactionId = transactionId
             });
         }

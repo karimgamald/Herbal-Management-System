@@ -27,6 +27,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<AiRecipe> AiRecipes { get; set; }
     public DbSet<HerbalistAiRecipe> HerbalistAiRecipes { get; set; }
     public DbSet<OrderAiRecipe> OrderAiRecipes { get; set; }
+    public DbSet<UserFavorite> UserFavorites { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -30,6 +30,7 @@ public static class AddApplicationServicesDI
         services.AddScoped<ISubOrderService, SubOrderService>();
         services.AddScoped<IAiRecipeService, AiRecipeService>();
         services.AddScoped<IHerbalistAiRecipeService, HerbalistAiRecipeService>();
+        services.AddScoped<IFavoriteService, FavoriteService>();
 
         //for Email
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
