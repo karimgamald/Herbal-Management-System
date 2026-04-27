@@ -11,19 +11,6 @@ namespace PhytoIntellect.Api.Controllers;
 [Route("api/[controller]")]
 public class FavoritesController(IFavoriteService favoriteService) : ControllerBase
 {
-    [HttpPost("toggle")]
-    public async Task<IActionResult> Toggle([FromBody] ToggleFavoriteRequest request)
-    {
-        var result = await favoriteService.ToggleFavoriteAsync(User.GetUserId(), request);
-
-        if (result == "Target not found.")
-        {
-            return NotFound(new { Message = $"The specified {request.Type} does not exist in the system." });
-        }
-
-        return Ok(new { Message = result });
-    }
-
     [HttpGet("my-herbs")]
     public async Task<IActionResult> GetHerbs()
     {
@@ -51,4 +38,18 @@ public class FavoritesController(IFavoriteService favoriteService) : ControllerB
         var herbalists = await favoriteService.GetMyFavoriteHerbalistsAsync(User.GetUserId());
         return Ok(herbalists);
     }
+    [HttpPost("toggle")]
+    public async Task<IActionResult> Toggle([FromBody] ToggleFavoriteRequest request)
+    {
+        var result = await favoriteService.ToggleFavoriteAsync(User.GetUserId(), request);
+
+        if (result == "Target not found.")
+        {
+            return NotFound(new { Message = $"The specified {request.Type} does not exist in the system." });
+        }
+
+        return Ok(new { Message = result });
+    }
+
+    
 }

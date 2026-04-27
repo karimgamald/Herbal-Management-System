@@ -32,6 +32,14 @@ public class AccountsController(IAuthService authService) : ControllerBase
     }
 
     [AllowAnonymous]
+    [HttpGet("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail(string email, string token)
+    {
+        var result = await authService.ConfirmEmailAsync(email, token);
+        return Ok(result);
+    }
+
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginAccountRequest model, CancellationToken cancellationToken)
     {

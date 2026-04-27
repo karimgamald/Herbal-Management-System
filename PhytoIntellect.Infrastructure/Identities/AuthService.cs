@@ -48,6 +48,12 @@ public class AuthService(
         var user = mapper.Map<User>(model);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
+        // Email Confirmation Fields
+        var token = Guid.NewGuid().ToString();
+        user.EmailConfirmationToken = token;
+        user.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddHours(24);
+        user.IsEmailConfirmed = false;
+
         // 4. الربط الذكي (Navigation Property)
         // بعد كده أنشئ البروفايل حسب الدور
         if (user.Role == AppRoles.Patient)
@@ -83,6 +89,10 @@ public class AuthService(
         // السطر ده هيبعت لـ SQL: الـ User أولاً، ياخد الـ ID، يحطه في الـ Patient، يبعت الـ Patient
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // 📧 Send Confirmation Email
+        var confirmationLink =
+            $"{_config["App:BaseUrl"]}/api/auth/confirm-email?email={user.Email}&token={token}";
+
         //EmailMessage
         var message =
             $"""
@@ -102,20 +112,64 @@ public class AuthService(
              Herbal System Team
              """;
 
-        await emailService.SendEmailAsync(
-            user.Email,
-            "Welcome to Herbal System",
-            message);
+        await emailService.SendEmailAsync(user.Email, "Confirm Your Email", message);
 
-        return new RegisterUserAuthResponse { Success = true, Message = "User registered successfully with profile." };
+        return new RegisterUserAuthResponse
+        {
+            Success = true,
+            Message = "User registered successfully. Please confirm your email."
+        };
     }
+
+    public async Task<RegisterUserAuthResponse> ConfirmEmailAsync(string email, string token)
+    {
+        var user = await unitOfWork.UserRepository.GetAsync(
+            u => u.Email == email,
+            tracked: true);
+
+        if (user == null)
+            return new RegisterUserAuthResponse { Success = false, Message = "User not found." };
+
+        if (user.IsEmailConfirmed)
+            return new RegisterUserAuthResponse { Success = true, Message = "Email already confirmed." };
+
+        if (user.EmailConfirmationToken != token ||
+            user.EmailConfirmationTokenExpiry < DateTime.UtcNow)
+        {
+            return new RegisterUserAuthResponse
+            { Success = false, Message = "Invalid or expired token." };
+        }
+
+        user.IsEmailConfirmed = true;
+        user.EmailConfirmationToken = null;
+        user.EmailConfirmationTokenExpiry = null;
+
+        unitOfWork.UserRepository.Update(user);
+        await unitOfWork.SaveChangesAsync();
+
+        return new RegisterUserAuthResponse
+        {
+            Success = true,
+            Message = "Email confirmed successfully."
+        };
+    }
+
     public async Task<RegisterUserAuthResponse> LoginAsync(LoginAccountRequest model, 
         CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email, tracked: false,
             cancellationToken: cancellationToken);
+
         if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
             return new RegisterUserAuthResponse { Success = false, Message = "Invalid Email or password." };
+
+        // ❗ منع الدخول قبل التفعيل
+        if (!user.IsEmailConfirmed)
+            return new RegisterUserAuthResponse
+            {
+                Success = false,
+                Message = "Please confirm your email before logging in."
+            };
 
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();
@@ -137,6 +191,98 @@ public class AuthService(
         return new RegisterUserAuthResponse
         { Success = true, Data = new { AccessToken = accessToken, 
             RefreshToken = refreshToken, Role = user.Role } };
+    }
+
+    public async Task<RegisterUserAuthResponse> GoogleLoginAsync(GoogleLoginRequest model,
+        CancellationToken cancellationToken = default)
+    {
+        GoogleJsonWebSignature.Payload payload;
+
+        try
+        {
+            var settings = new GoogleJsonWebSignature.ValidationSettings()
+            {
+                Audience = new List<string>() { _config["Google:ClientId"]! }
+            };
+
+            payload = await GoogleJsonWebSignature.ValidateAsync(model.IdToken, settings);
+        }
+        catch
+        {
+            return new RegisterUserAuthResponse
+            { Success = false, Message = "Invalid Google IdToken." };
+        }
+
+        var user = await unitOfWork.UserRepository.GetAsync(
+            u => u.Email == payload.Email,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (user == null)
+        {
+            if (string.IsNullOrEmpty(model.Role) || !AppRoles.IsValidRole(model.Role))
+                return new RegisterUserAuthResponse
+                {
+                    Success = false,
+                    Message = "Role is required for new Google accounts, Valid roles are Patient or Herbalist"
+                };
+
+            user = new User
+            {
+                Email = payload.Email,
+                FullName = payload.Name,
+                Role = model.Role,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+
+                // ✅ Google users are auto-confirmed
+                IsEmailConfirmed = true
+            };
+
+            if (user.Role == AppRoles.Patient)
+            {
+                await unitOfWork.PatientRepository.CreateAsync(
+                    new Patient { User = user, Gender = Gender.Unknown },
+                    cancellationToken);
+            }
+            else
+            {
+                await unitOfWork.HerbalistRepository.CreateAsync(
+                    new Herbalist
+                    {
+                        User = user,
+                        LicenseNumber = "HL-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper()
+                    },
+                    cancellationToken);
+            }
+
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        var accessToken = tokenService.CreateAccessToken(user);
+        var refreshToken = tokenService.CreateRefreshToken();
+
+        var refreshDuration = double.Parse(_config["JwtSettings:RefreshTokenDurationInDays"] ?? "7");
+
+        await unitOfWork.RefreshTokenRepository.CreateAsync(new RefreshToken
+        {
+            UserId = user.Id,
+            TokenHash = TokenHasher.HashToken(refreshToken),
+            ExpiresAt = DateTime.UtcNow.AddDays(refreshDuration)
+        }, cancellationToken);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new RegisterUserAuthResponse
+        {
+            Success = true,
+            Message = "Login successful via Google.",
+            Data = new
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                Role = user.Role
+            }
+        };
     }
 
     public async Task<RegisterUserAuthResponse> ResetPasswordAsync(ResetPasswordAccountRequest model,
@@ -305,107 +451,4 @@ public class AuthService(
 
         return new RegisterUserAuthResponse { Success = true, Message = "Logged out successfully." };
     }
-
-
-public async Task<RegisterUserAuthResponse> GoogleLoginAsync(GoogleLoginRequest model, CancellationToken cancellationToken = default)
-{
-    GoogleJsonWebSignature.Payload payload;
-    try
-    {
-        // 1. التحقق من صحة التوكن اللي جاي من جوجل
-        var settings = new GoogleJsonWebSignature.ValidationSettings()
-        {
-            Audience = new List<string>() { _config["Google:ClientId"]! } // استخدمت config زي ما عملنا في الـ Primary Constructor
-        };
-        payload = await GoogleJsonWebSignature.ValidateAsync(model.IdToken, settings);
-    }
-    catch (InvalidJwtException)
-    {
-        return new RegisterUserAuthResponse { Success = false, Message = "Invalid Google IdToken." };
-    }
-
-    // 2. البحث عن اليوزر في الداتابيز
-    var user = await unitOfWork.UserRepository.GetAsync(u => u.Email == payload.Email, tracked: false, cancellationToken: cancellationToken);
-
-    // 3. لو اليوزر مش موجود (أول مرة يسجل بجوجل) -> هنعمله Registration
-    if (user == null)
-    {
-        // التحقق من الـ Role المبعوت في الريكويست (لأن جوجل مش هتبعت Role، الفرونت هو اللي بيبعته مع الـ Token)
-        if (string.IsNullOrEmpty(model.Role) || !AppRoles.IsValidRole(model.Role))
-        {
-            return new RegisterUserAuthResponse { Success = false, Message = $"Role is required for new Google accounts. Valid roles are '{AppRoles.Patient}' or '{AppRoles.Herbalist}'." };
-        }
-
-        user = new User
-        {
-            Email = payload.Email,
-            FullName = payload.Name,
-            Role = model.Role,
-            // بنحط باسورد عشوائي معقد جداً مش هيستخدمه، لأن دخوله دايماً هيكون بجوجل
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString() + "Google@P@ssw0rd!"),
-        };
-
-        if (user.Role == AppRoles.Patient)
-        {
-            var newPatient = new Patient { User = user, Gender = Gender.Unknown };
-            await unitOfWork.PatientRepository.CreateAsync(newPatient, cancellationToken);
-        }
-        else if (user.Role == AppRoles.Herbalist)
-        {
-            var newHerbalist = new Herbalist
-            {
-                User = user,
-                AverageRating = 0,
-                Bio = null!,
-                AvailableFrom = TimeSpan.Zero,
-                AvailableTo = TimeSpan.Zero,
-                LicenseNumber = "HL-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper()
-            };
-            await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);
-        }
-
-        // إرسال إيميل الترحيب (Optional)
-        var message = $"Welcome to Herbal System 🌿\n\nHello {user.FullName},\n\nYour account has been successfully created via Google Login.";
-        await emailService.SendEmailAsync(user.Email, "Welcome to Herbal System", message);
-    }
-    // 4. لو اليوزر موجود بس مسجل رول مختلف عن اللي الفرونت باعتها (حماية إضافية)
-    else if (!string.IsNullOrEmpty(model.Role) && user.Role != model.Role)
-    {
-        return new RegisterUserAuthResponse { Success = false, Message = "This Google account is already registered with a different role." };
-    }
-
-    await unitOfWork.SaveChangesAsync(cancellationToken);
-
-    var accessToken = tokenService.CreateAccessToken(user);
-    var refreshToken = tokenService.CreateRefreshToken();
-
-    var refreshDuration = double.Parse(_config["JwtSettings:RefreshTokenDurationInDays"] ?? "7");
-
-    var tokenEntity = new RefreshToken
-    {
-        UserId = user.Id,
-        TokenHash = TokenHasher.HashToken(refreshToken),
-        ExpiresAt = DateTime.UtcNow.AddDays(refreshDuration),
-        IsRevoked = false
-    };
-
-    await unitOfWork.RefreshTokenRepository.CreateAsync(tokenEntity, cancellationToken);
-    await unitOfWork.SaveChangesAsync(cancellationToken); // حفظ الـ Refresh Token
-
-    return new RegisterUserAuthResponse
-    {
-        Success = true,
-        Message = "Login successful via Google.",
-        Data = new
-        {
-            AccessToken = accessToken,
-            RefreshToken = refreshToken,
-            Role = user.Role,
-            FullName = user.FullName,
-            ProfilePicture = payload.Picture // إضافة لطيفة للفرونت
-        }
-    };
-}
-
-
 }

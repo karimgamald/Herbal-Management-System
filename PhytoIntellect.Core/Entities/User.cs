@@ -8,6 +8,10 @@
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
+        public bool IsEmailConfirmed { get; set; } = false;
+
+        public string? EmailConfirmationToken { get; set; }
+        public DateTime? EmailConfirmationTokenExpiry { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string Phone { get; set; } = string.Empty;
         public string? Governorate { get; set; }

@@ -21,7 +21,9 @@ namespace PhytoIntellect.Application.Contracts.Accounts
 
             RuleFor(x => x.Password)
                 .NotEmpty().WithMessage("Password is required.")
-                .MinimumLength(6).WithMessage("Password must be at least 6 characters.");
+                .MinimumLength(6).WithMessage("Password must be at least 6 characters.")
+                .Matches(@"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]+$")
+                .WithMessage("Password must contain at least one letter and one number.");
 
             RuleFor(x => x.ConfirmPassword)
                 .NotEmpty().WithMessage("Confirm password is required.")
