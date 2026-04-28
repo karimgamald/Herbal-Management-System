@@ -38,6 +38,7 @@ public class FavoritesController(IFavoriteService favoriteService) : ControllerB
         var herbalists = await favoriteService.GetMyFavoriteHerbalistsAsync(User.GetUserId());
         return Ok(herbalists);
     }
+
     [HttpPost("toggle")]
     public async Task<IActionResult> Toggle([FromBody] ToggleFavoriteRequest request)
     {
@@ -50,6 +51,4 @@ public class FavoritesController(IFavoriteService favoriteService) : ControllerB
 
         return Ok(new { Message = result });
     }
-
-    
 }

@@ -49,7 +49,7 @@ public class AuthService(
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
         // Email Confirmation Fields
-        var token = Guid.NewGuid().ToString();
+        var token = Guid.NewGuid().ToString("N");
         user.EmailConfirmationToken = token;
         user.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddHours(24);
         user.IsEmailConfirmed = false;
@@ -90,34 +90,46 @@ public class AuthService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // 📧 Send Confirmation Email
+        // baseUrl => contain published link
         var confirmationLink =
-            $"{_config["App:BaseUrl"]}/api/auth/confirm-email?email={user.Email}&token={token}";
+            $"{_config["App:BaseUrl"]}/api/accounts/confirm-email?email={user.Email}&token={token}";
 
         //EmailMessage
-        var message =
-            $"""
-             Welcome to Herbal System 🌿
-             
-             Hello {user.FullName},
-             
-             Your account has been successfully created.
-             
-             You can now login and start using the Herbal System platform.
-             
-             Account Email: {user.Email}
-             
-             If you did not create this account, please contact our support team.
-             
-             Best regards,
-             Herbal System Team
-             """;
+        var message = $@"
+        <html>
+         <body style='font-family: Arial; text-align: center;'>
+         
+             <h2>Welcome to Herbal System 🌿</h2>
+         
+             <p>Hello {user.FullName},</p>
+         
+             <p>Please confirm your email by clicking the button below:</p>
+         
+             <a href='{confirmationLink}' 
+                style='display:inline-block;
+                       padding:12px 25px;
+                       background-color:#28a745;
+                       color:white;
+                       text-decoration:none;
+                       border-radius:5px;
+                       font-size:16px;'>
+                 Confirm Email
+             </a>
+         
+             <p style='margin-top:20px;'>This link expires in 24 hours.</p>
+         
+         </body>
+        </html>
+         ";
 
         await emailService.SendEmailAsync(user.Email, "Confirm Your Email", message);
 
         return new RegisterUserAuthResponse
         {
             Success = true,
-            Message = "User registered successfully. Please confirm your email."
+            // Send the confirmation link in response to test locally
+            Message = $"User registered successfully. Please confirm your email."
+
         };
     }
 
