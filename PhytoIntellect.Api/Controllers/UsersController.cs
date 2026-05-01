@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Users;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Application.Services;
 using System.Security.Claims;
 using System.Threading;
@@ -11,13 +12,13 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-// [Authorize(Roles = "Admin")] 
+// [Authorize(Roles = "Admin")]  
 public class UsersController(IUserService userService) : ControllerBase
 {
     [HttpGet("get-all")]
-    public async Task<IActionResult> GetAllUsers(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllUsers([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var users = await userService.GetAllUsersAsync(cancellationToken);
+        var users = await userService.GetAllUsersAsync(filters, cancellationToken);
         return Ok(users);
     }
 

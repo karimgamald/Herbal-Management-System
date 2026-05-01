@@ -176,12 +176,12 @@ public class AuthService(
             return new RegisterUserAuthResponse { Success = false, Message = "Invalid Email or password." };
 
         // ❗ منع الدخول قبل التفعيل
-        if (!user.IsEmailConfirmed)
-            return new RegisterUserAuthResponse
-            {
-                Success = false,
-                Message = "Please confirm your email before logging in."
-            };
+        //if (!user.IsEmailConfirmed)
+        //    return new RegisterUserAuthResponse
+        //    {
+        //        Success = false,
+        //        Message = "Please confirm your email before logging in."
+        //    };
 
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();

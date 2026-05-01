@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application.Contracts.SubOrders;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Constants;
@@ -59,5 +60,15 @@ public class SubOrdersController(ISubOrderService subOrderService) : ControllerB
         {
             return StatusCode(500, new { Message = "An unexpected error occurred.", Details = ex.Message });
         }
+    }
+
+    [HttpGet("my-financials")]
+    public async Task<IActionResult> GetFinancialDashboard(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId().ToString();
+
+        var dashboardData = await subOrderService.GetHerbalistFinancialsAsync(userId, cancellationToken);
+
+        return Ok(dashboardData);
     }
 }

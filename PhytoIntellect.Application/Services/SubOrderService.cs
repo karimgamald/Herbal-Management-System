@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using PhytoIntellect.Application.Contracts.Financials;
 using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Contracts.SubOrders;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Enums;
 
 namespace PhytoIntellect.Application.Services;
@@ -159,6 +161,86 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         if (subStatuses.Any(s => s == SubOrderStatus.Preparing.ToString() || s == SubOrderStatus.Shipped.ToString()))
             return OrderStatus.Processing.ToString();
 
-        return OrderStatus.Pending.ToString();
+        return OrderStatus.Pending.ToString(); 
+    }
+
+    public async Task<HerbalistFinancialDashboardResponse> GetHerbalistFinancialsAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        // 1. التأكد من اليوزر والعطار
+        if (!int.TryParse(userId, out int parsedUserId))
+            return new HerbalistFinancialDashboardResponse();
+
+        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(
+            h => h.UserId == parsedUserId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (herbalist == null)
+            return new HerbalistFinancialDashboardResponse();
+
+        // 2. نجيب كل الطلبات مع كل الجداول المرتبطة (عشان نعرف نجيب الأسماء والتاريخ)
+        var subOrders = await _unitOfWork.SubOrderRepository.GetAllAsync(
+            filter: s => s.HerbalistId == herbalist.HerbalistId,
+            includeProperties: "Order,OrderHerbs.Herb,OrderRecipes.Recipe,OrderAiRecipes.AiRecipe", // 👈 ضفنا الـ AI Recipe هنا
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (!subOrders.Any())
+            return new HerbalistFinancialDashboardResponse();
+
+        // 3. الحسابات الوقتية (Derived State)
+        string cancelledStatus = SubOrderStatus.Cancelled.ToString();
+
+        return new HerbalistFinancialDashboardResponse
+        {
+            // الرصيد: أي حاجة مش ملغية
+            CurrentBalance = subOrders
+                .Where(s => s.Status != cancelledStatus)
+                .Sum(s => s.SubTotal),
+
+            // المخصوم: الحاجات الملغية بس
+            CancelledDeductions = subOrders
+                .Where(s => s.Status == cancelledStatus)
+                .Sum(s => s.SubTotal),
+
+            // كشف الحساب
+            TasksHistory = subOrders.Select(s => new TaskHistoryResponse
+            {
+                TaskId = s.SubOrderId,
+                ProductName = DetermineProductName(s), // 👈 بننده على الدالة المساعدة
+                Amount = s.SubTotal,
+                Status = s.Status,
+                Date = s.Order?.OrderDate
+            }).OrderByDescending(t => t.Date) // ترتيب من الأحدث للأقدم
+        };
+    }
+
+    // Helper Method عشان نجيب اسم المنتج أياً كان نوعه
+    private string DetermineProductName(SubOrder subOrder)
+    {
+        string productName = "Unknown Product";
+
+        // 1. تحديد الاسم بناءً على نوع المنتج
+        if (subOrder.OrderHerbs != null && subOrder.OrderHerbs.Any())
+        {
+            productName = subOrder.OrderHerbs.First().Herb?.HerbName ?? "Medicinal Herb";
+        }
+        else if (subOrder.OrderRecipes != null && subOrder.OrderRecipes.Any())
+        {
+            productName = subOrder.OrderRecipes.First().Recipe?.Description ?? "Herbal Recipe";
+        }
+        else if (subOrder.OrderAiRecipes != null && subOrder.OrderAiRecipes.Any())
+        {
+            productName = subOrder.OrderAiRecipes.First().AiRecipe?.RecommendedRecipeName ?? "AI Generated Recipe";
+        }
+
+        // 2. قص النص لو طويل بزيادة (الثلاث نقط الشيك)
+        int maxLength = 35;
+        if (productName.Length > maxLength)
+        {
+            productName = productName.Substring(0, maxLength) + "...";
+        }
+
+        return productName;
     }
 }

@@ -13,4 +13,9 @@ public class UserRepository(ApplicationDbContext context) : Repository<User>(con
     // مثلا:
     // public async Task<bool> EmailExistsAsync(string email) 
     //     => await _dbSet.AnyAsync(u => u.Email == email);
+
+    public IQueryable<User> GetQueryable(bool tracked = false)
+    {
+        return tracked ? context.Users : context.Users.AsNoTracking();
+    }
 }

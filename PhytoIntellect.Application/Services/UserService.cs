@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Contracts.Users;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Interfaces;
@@ -13,10 +15,44 @@ namespace PhytoIntellect.Application.Services;
 
 public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
 {
-    public async Task<IEnumerable<UserResponse>> GetAllUsersAsync(CancellationToken cancellationToken = default)
+ 
+    public async Task<PaginatedList<UserResponse>> GetAllUsersAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        var users = await unitOfWork.UserRepository.GetAllAsync(tracked: false, cancellationToken: cancellationToken);
-        return mapper.Map<IEnumerable<UserResponse>>(users);
+        var query = unitOfWork.UserRepository.GetQueryable(tracked: false);
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(u => u.FullName.ToLower().Contains(search) ||
+                                     u.UserName.ToLower().Contains(search) ||
+                                     u.Email.ToLower().Contains(search));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() 
+            switch
+            {
+                "fullname" => isDesc ? query.OrderByDescending(u => u.FullName) : query.OrderBy(u => u.FullName),
+                "email" => isDesc ? query.OrderByDescending(u => u.Email) : query.OrderBy(u => u.Email),
+                _ => query.OrderBy(u => u.Id)
+            };
+        }
+        else
+        {
+            query = query.OrderBy(u => u.Id);
+        }
+
+        var projectedQuery = query.ProjectTo<UserResponse>(mapper.ConfigurationProvider);
+
+        var paginatedUsers = await PaginatedList<UserResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return paginatedUsers;
     }
 
     public async Task<UserResponse?> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)

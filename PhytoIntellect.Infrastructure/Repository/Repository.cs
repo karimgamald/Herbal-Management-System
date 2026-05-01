@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using PhytoIntellect.Core.Entities;
+using PhytoIntellect.Infrastructure.Presistence;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using PhytoIntellect.Infrastructure.Presistence;
 
 namespace PhytoIntellect.Infrastructure.Repository;
 
@@ -70,5 +71,10 @@ public class Repository<T>(ApplicationDbContext context) : IRepository<T> where 
     public void Remove(T entity)
     {
         _dbSet.Remove(entity);
+    }
+
+    public IQueryable<User> GetQueryable(bool tracked = false)
+    {
+        return tracked ? context.Users : context.Users.AsNoTracking();
     }
 }

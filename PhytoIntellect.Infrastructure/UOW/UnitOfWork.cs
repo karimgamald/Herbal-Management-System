@@ -10,6 +10,7 @@ namespace PhytoIntellect.Infrastructure.UOW;
 public class UnitOfWork(
     ApplicationDbContext context,
     IRepository<User> userRepository,
+    //IUserRepository userRepository,
     IPatientRepository patientRepository,
     IRepository<Herbalist> herbalistRepository,
     IRepository<RefreshToken> refreshTokenRepository,
@@ -30,6 +31,7 @@ public class UnitOfWork(
     ) : IUnitOfWork
 { 
     public IRepository<User> UserRepository { get; } = userRepository;
+    //public IUserRepository UserRepository { get; } = userRepository;
     public IPatientRepository PatientRepository { get; } = patientRepository;
     public IRepository<Herbalist> HerbalistRepository { get; } = herbalistRepository;
     public IRepository<RefreshToken> RefreshTokenRepository { get; } = refreshTokenRepository;
