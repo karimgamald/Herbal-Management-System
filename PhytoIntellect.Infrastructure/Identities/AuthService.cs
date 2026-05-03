@@ -142,8 +142,8 @@ public class AuthService(
         if (user == null)
             return new RegisterUserAuthResponse { Success = false, Message = "User not found." };
 
-        if (user.IsEmailConfirmed)
-            return new RegisterUserAuthResponse { Success = true, Message = "Email already confirmed." };
+        //if (user.IsEmailConfirmed)
+        //    return new RegisterUserAuthResponse { Success = true, Message = "Email already confirmed." };
 
         if (user.EmailConfirmationToken != token ||
             user.EmailConfirmationTokenExpiry < DateTime.UtcNow)

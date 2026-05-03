@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Enums;
 
@@ -62,19 +64,76 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             : "Order created successfully and sent to herbalists!";
     }
 
-    public async Task<IEnumerable<OrderSummaryResponse>> GetPatientOrdersAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<OrderSummaryResponse>> GetPatientOrdersAsync(string userId,RequestFilters filters,CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) return Enumerable.Empty<OrderSummaryResponse>();
+        if (!int.TryParse(userId, out int parsedUserId))
+            return new PaginatedList<OrderSummaryResponse>(
+                new List<OrderSummaryResponse>(),
+                0,
+                filters.PageNumber,
+                filters.PageSize);
 
-        var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (patient == null) return Enumerable.Empty<OrderSummaryResponse>();
-
-        var orders = await _unitOfWork.OrderRepository.GetAllAsync(
-            filter: o => o.PatientId == patient.PatientId,
+        var patient = await unitOfWork.PatientRepository.GetAsync(
+            p => p.UserId == parsedUserId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        return _mapper.Map<IEnumerable<OrderSummaryResponse>>(orders);
+        if (patient == null)
+            return new PaginatedList<OrderSummaryResponse>(
+                new List<OrderSummaryResponse>(),
+                0,
+                filters.PageNumber,
+                filters.PageSize);
+
+        // 🔥 Query
+        var query = unitOfWork.OrderRepository
+            .GetQueryable(tracked: false)
+            .Where(o => o.PatientId == patient.PatientId);
+
+        // 🔍 Search
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+
+            query = query.Where(o =>
+                o.OrderId.ToString().Contains(search));
+        }
+
+        // 🔃 Sorting
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "date" => isDesc
+                    ? query.OrderByDescending(o => o.OrderDate)
+                    : query.OrderBy(o => o.OrderDate),
+
+                "id" => isDesc
+                    ? query.OrderByDescending(o => o.OrderId)
+                    : query.OrderBy(o => o.OrderId),
+
+                _ => query.OrderBy(o => o.OrderId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(o => o.OrderDate);
+        }
+
+        // 🚀 Projection
+        var projectedQuery = query.ProjectTo<OrderSummaryResponse>(
+            mapper.ConfigurationProvider);
+
+        // 📄 Pagination
+        var result = await PaginatedList<OrderSummaryResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return result;
     }
 
     public async Task<OrderDetailsResponse?> GetOrderDetailsForPatientAsync(int orderId, string userId, CancellationToken cancellationToken = default)
@@ -183,19 +242,76 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         return order.IsFavorite;
     }
 
-    public async Task<IEnumerable<OrderSummaryResponse>> GetFavoriteOrdersAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<OrderSummaryResponse>> GetFavoriteOrdersAsync(string userId,RequestFilters filters,CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) return Enumerable.Empty<OrderSummaryResponse>();
+        if (!int.TryParse(userId, out int parsedUserId))
+            return new PaginatedList<OrderSummaryResponse>(
+                new List<OrderSummaryResponse>(),
+                0,
+                filters.PageNumber,
+                filters.PageSize);
 
-        var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (patient == null) return Enumerable.Empty<OrderSummaryResponse>();
-
-        var orders = await _unitOfWork.OrderRepository.GetAllAsync(
-            filter: o => o.PatientId == patient.PatientId && o.IsFavorite == true,
+        var patient = await unitOfWork.PatientRepository.GetAsync(
+            p => p.UserId == parsedUserId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        return _mapper.Map<IEnumerable<OrderSummaryResponse>>(orders);
+        if (patient == null)
+            return new PaginatedList<OrderSummaryResponse>(
+                new List<OrderSummaryResponse>(),
+                0,
+                filters.PageNumber,
+                filters.PageSize);
+
+        // 🔥 Query
+        var query = unitOfWork.OrderRepository
+            .GetQueryable(tracked: false)
+            .Where(o => o.PatientId == patient.PatientId && o.IsFavorite);
+
+        // 🔍 Search
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+
+            query = query.Where(o =>
+                o.OrderId.ToString().Contains(search));
+        }
+
+        // 🔃 Sorting
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "date" => isDesc
+                    ? query.OrderByDescending(o => o.OrderDate)
+                    : query.OrderBy(o => o.OrderDate),
+
+                "id" => isDesc
+                    ? query.OrderByDescending(o => o.OrderId)
+                    : query.OrderBy(o => o.OrderId),
+
+                _ => query.OrderBy(o => o.OrderId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(o => o.OrderDate);
+        }
+
+        // 🚀 Projection
+        var projectedQuery = query.ProjectTo<OrderSummaryResponse>(
+            mapper.ConfigurationProvider);
+
+        // 📄 Pagination
+        var result = await PaginatedList<OrderSummaryResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return result;
     }
 
 

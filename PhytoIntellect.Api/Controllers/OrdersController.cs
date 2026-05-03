@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 
@@ -16,10 +17,10 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     private readonly IOrderService _orderService = orderService;
 
     [HttpGet("all-my-orders")]
-    public async Task<IActionResult> GetMyOrders(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyOrders([FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
         var userId = User.GetUserId().ToString();
-        var orders = await _orderService.GetPatientOrdersAsync(userId!, cancellationToken);
+        var orders = await _orderService.GetPatientOrdersAsync(userId!, filters,cancellationToken);
         return Ok(orders);
     }
 
@@ -137,10 +138,10 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     }
 
     [HttpGet("favorites")]
-    public async Task<IActionResult> GetFavoriteOrders(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetFavoriteOrders([FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
         var userId = User.GetUserId().ToString();
-        var result = await _orderService.GetFavoriteOrdersAsync(userId, cancellationToken);
+        var result = await _orderService.GetFavoriteOrdersAsync(userId, filters,cancellationToken);
         return Ok(result);
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application.Contracts.SubOrders;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using System.Security.Claims;
@@ -15,10 +16,10 @@ public class SubOrdersController(ISubOrderService subOrderService) : ControllerB
     private readonly ISubOrderService _subOrderService = subOrderService;
 
     [HttpGet("my-tasks")]
-    public async Task<IActionResult> GetMyTasks(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyTasks([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var tasks = await _subOrderService.GetHerbalistSubOrdersAsync(userId!, cancellationToken);
+        var tasks = await _subOrderService.GetHerbalistSubOrdersAsync(userId!, filters,cancellationToken);
         return Ok(tasks);
     }
 

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Recipes;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using System.Security.Claims;
@@ -13,9 +14,9 @@ namespace PhytoIntellect.Api.Controllers;
 public class RecipesController(IRecipeService recipeService) : ControllerBase
 {
     [HttpGet("all")]
-    public async Task<IActionResult> GetAllRecipes(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllRecipes([FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
-        var recipes = await recipeService.GetAllActiveRecipesAsync(cancellationToken);
+        var recipes = await recipeService.GetAllActiveRecipesAsync(filters,cancellationToken);
         return Ok(recipes);
     }
 
@@ -30,9 +31,9 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
     }
 
     [HttpGet("herbalist/{id}")]
-    public async Task<IActionResult> GetRecipesByHerbalist([FromRoute] int id, [FromQuery] bool? isActive, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetRecipesByHerbalist([FromRoute] int id,[FromQuery] RequestFilters filters, [FromQuery] bool? isActive, CancellationToken cancellationToken)
     {
-        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(id, isActive, cancellationToken);
+        var recipes = await recipeService.GetRecipesByHerbalistIdAsync(id,filters, isActive, cancellationToken);
 
         return Ok(recipes);
     }

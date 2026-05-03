@@ -1,4 +1,5 @@
 ﻿using PhytoIntellect.Application.Contracts.Patients;
+using PhytoIntellect.Application.Paginations;
 
 namespace PhytoIntellect.Application.Interfaces;
 
@@ -8,5 +9,5 @@ public interface IPatientService
     Task<string> UpdateMyProfileAsync(int userId, UpdatePatientRequest request, CancellationToken cancellationToken = default);
 
     Task<PatientRequest?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default);
-    Task<IEnumerable<PatientRequest>> GetAllPatientsAsync(CancellationToken cancellationToken = default);
+    Task<PaginatedList<PatientRequest>> GetAllPatientsAsync(RequestFilters filters,CancellationToken cancellationToken = default);
 }

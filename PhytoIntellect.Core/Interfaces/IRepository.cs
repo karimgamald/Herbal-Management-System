@@ -12,5 +12,5 @@ public interface IRepository<T> where T : class
     Task CreateAsync(T entity, CancellationToken cancellationToken = default);
     void Update(T entity);
     void Remove(T entity);
-    IQueryable<User> GetQueryable(bool tracked = false);
+    IQueryable<T> GetQueryable(bool tracked = false);
 }

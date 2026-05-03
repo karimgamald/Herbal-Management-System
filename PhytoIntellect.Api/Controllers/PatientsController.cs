@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Patients;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 using System.Threading;
@@ -46,9 +47,9 @@ public class PatientsController(IPatientService patientService) : ControllerBase
 
     [Authorize]
     [HttpGet("all")]
-    public async Task<IActionResult> GetAllPatients(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllPatients([FromQuery] RequestFilters filters ,CancellationToken cancellationToken)
     {
-        var patients = await patientService.GetAllPatientsAsync(cancellationToken);
+        var patients = await patientService.GetAllPatientsAsync(filters,cancellationToken);
         return Ok(patients);
     }
 

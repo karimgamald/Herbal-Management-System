@@ -1,11 +1,13 @@
-﻿using System;
+﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using PhytoIntellect.Application.Contracts.Inventory;
+using PhytoIntellect.Application.Paginations;
+using PhytoIntellect.Core.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoMapper;
-using PhytoIntellect.Application.Contracts.Inventory;
-using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Services;
 
@@ -36,29 +38,70 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
         });
     }
 
-    public async Task<IEnumerable<InventoryResponse>> GetAllByHerbalistIdAsync(int herbalistId, CancellationToken cancellationToken)
+    public async Task<PaginatedList<InventoryResponse>> GetAllByHerbalistIdAsync(int herbalistId,RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
-        var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
-            filter: h => h.HerbalistId == herbalistId,
+        var herbalistExists = await unitOfWork.HerbalistRepository.GetAsync(
+            h => h.HerbalistId == herbalistId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        if (herbalist == null)
-            throw new KeyNotFoundException("Herbalist not found."); // 👈 تعديل
+        if (herbalistExists == null)
+            return new PaginatedList<InventoryResponse>(
+                new List<InventoryResponse>(),
+                0,
+                filters.PageNumber,
+                filters.PageSize);
 
-        var herbs = await unitOfWork.HerbalistHerbRepository.GetAllAsync(
-            filter: h => h.HerbalistId == herbalist.HerbalistId,
-            tracked: false,
-            includeProperties: "Herb",
-            cancellationToken: cancellationToken);
+        // 🔥 Query
+        var query = unitOfWork.HerbalistHerbRepository
+            .GetQueryable(tracked: false)
+            .Where(x => x.HerbalistId == herbalistId);
 
-        return herbs.Select(x => new InventoryResponse
+        // 🔍 Search
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
-            HerbId = x.HerbId,
-            HerbName = x.Herb.HerbName,
-            Price = x.Price,
-            IsActive = x.IsActive
-        });
+            var search = filters.SearchValue.ToLower();
+
+            query = query.Where(x =>
+                x.Herb.HerbName.ToLower().Contains(search));
+        }
+
+        // 🔃 Sorting
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "name" => isDesc
+                    ? query.OrderByDescending(x => x.Herb.HerbName)
+                    : query.OrderBy(x => x.Herb.HerbName),
+
+                "price" => isDesc
+                    ? query.OrderByDescending(x => x.Price)
+                    : query.OrderBy(x => x.Price),
+
+                _ => query.OrderBy(x => x.HerbId)
+            };
+        }
+        else
+        {
+            query = query.OrderBy(x => x.HerbId);
+        }
+
+        // 🚀 Projection (AutoMapper)
+        var projectedQuery = query.ProjectTo<InventoryResponse>(
+            mapper.ConfigurationProvider);
+
+        // 📄 Pagination
+        var result = await PaginatedList<InventoryResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return result;
     }
 
     public async Task<InventoryResponse?> AddHerbAsync(int userId, AddHerbToInventoryRequest request, CancellationToken cancellationToken)

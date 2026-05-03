@@ -2,9 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Reviews;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
-using System.Security.Claims;
 using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,9 +31,9 @@ public class ReviewRecipesController(IReviewRecipeService reviewService) : Contr
     }
 
     [HttpGet("all")]
-    public async Task<IActionResult> GetAiRecipeReviews(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAiRecipeReviews(int id, RequestFilters filters,CancellationToken cancellationToken)
     {
-        var reviews = await reviewService.GetAllRecipeReviewsAsync(id, cancellationToken);
+        var reviews = await reviewService.GetAllRecipeReviewsAsync(id, filters,cancellationToken);
         return Ok(reviews);
     }
 

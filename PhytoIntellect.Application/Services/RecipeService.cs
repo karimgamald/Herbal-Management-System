@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.Recipes;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 
 
@@ -83,15 +85,53 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
 
         return mapper.Map<RecipeResponse>(createdRecipe);
     }
-    public async Task<IEnumerable<RecipeResponse>> GetAllActiveRecipesAsync(CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<RecipeResponse>> GetAllActiveRecipesAsync(RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
-        var recipes = await unitOfWork.RecipeRepository.GetAllAsync(
-            filter: r => r.IsActive,
-            tracked: false,
-            includeProperties: "RecipeHerbs.Herb,RecipeDiseases.Disease",
-            cancellationToken: cancellationToken);
+        var query = unitOfWork.RecipeRepository
+            .GetQueryable(tracked: false)
+            .Where(r => r.IsActive);
 
-        return mapper.Map<IEnumerable<RecipeResponse>>(recipes);
+        // 🔍 Search
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+
+            query = query.Where(r =>
+                r.Description.ToLower().Contains(search));
+        }
+
+        // 🔃 Sorting
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "name" => isDesc
+                    ? query.OrderByDescending(r => r.Description)
+                    : query.OrderBy(r => r.Description),
+
+                _ => query.OrderBy(r => r.RecipeId)
+            };
+        }
+        else
+        {
+            query = query.OrderBy(r => r.RecipeId);
+        }
+
+        // 🚀 Projection
+        var projectedQuery = query.ProjectTo<RecipeResponse>(
+            mapper.ConfigurationProvider);
+
+        // 📄 Pagination
+        var result = await PaginatedList<RecipeResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return result;
     }
 
     public async Task<RecipeResponse?> GetRecipeByIdAsync(int recipeId, CancellationToken cancellationToken = default)
@@ -173,15 +213,58 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
         return recipe.IsActive;
     }
 
-    public async Task<IEnumerable<RecipeResponse>> GetRecipesByHerbalistIdAsync(int herbalistId, bool? isActive = null, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<RecipeResponse>> GetRecipesByHerbalistIdAsync(int herbalistId,RequestFilters filters,bool? isActive = null,CancellationToken cancellationToken = default)
     {
-        var recipes = await unitOfWork.RecipeRepository.GetAllAsync(
-            filter: r => r.HerbalistId == herbalistId && (!isActive.HasValue || r.IsActive == isActive.Value),
-            includeProperties: "RecipeHerbs.Herb,RecipeDiseases.Disease",
-            tracked: false,
-            cancellationToken: cancellationToken);
+        var query = unitOfWork.RecipeRepository
+            .GetQueryable(tracked: false)
+            .Where(r => r.HerbalistId == herbalistId);
 
-        return mapper.Map<IEnumerable<RecipeResponse>>(recipes);
+        // 🔥 optional filter
+        if (isActive.HasValue)
+        {
+            query = query.Where(r => r.IsActive == isActive.Value);
+        }
+
+        // 🔍 Search
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+
+            query = query.Where(r =>
+                r.Description.ToLower().Contains(search));
+        }
+
+        // 🔃 Sorting
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "name" => isDesc
+                    ? query.OrderByDescending(r => r.Description)
+                    : query.OrderBy(r => r.Description),
+
+                _ => query.OrderBy(r => r.RecipeId)
+            };
+        }
+        else
+        {
+            query = query.OrderBy(r => r.RecipeId);
+        }
+
+        // 🚀 Projection
+        var projectedQuery = query.ProjectTo<RecipeResponse>(
+            mapper.ConfigurationProvider);
+
+        // 📄 Pagination
+        var result = await PaginatedList<RecipeResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return result;
     }
 
 

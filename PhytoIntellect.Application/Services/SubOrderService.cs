@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.Financials;
 using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Contracts.SubOrders;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Enums;
 
@@ -13,22 +15,79 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IMapper _mapper = mapper;
 
-    public async Task<IEnumerable<SubOrderSummaryResponse>> GetHerbalistSubOrdersAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<SubOrderSummaryResponse>> GetHerbalistSubOrdersAsync(
+    string userId,
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) 
-            return Enumerable.Empty<SubOrderSummaryResponse>();
+        if (!int.TryParse(userId, out int parsedUserId))
+            return new PaginatedList<SubOrderSummaryResponse>(
+                new List<SubOrderSummaryResponse>(),
+                0,
+                filters.PageNumber,
+                filters.PageSize);
 
-        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (herbalist == null) 
-            return Enumerable.Empty<SubOrderSummaryResponse>();
-
-        var subOrders = await _unitOfWork.SubOrderRepository.GetAllAsync(
-            filter: s => s.HerbalistId == herbalist.HerbalistId,
-            includeProperties: "Herbalist.User",
+        var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
+            h => h.UserId == parsedUserId,
             tracked: false,
             cancellationToken: cancellationToken);
 
-        return _mapper.Map<IEnumerable<SubOrderSummaryResponse>>(subOrders);
+        if (herbalist == null)
+            return new PaginatedList<SubOrderSummaryResponse>(
+                new List<SubOrderSummaryResponse>(),
+                0,
+                filters.PageNumber,
+                filters.PageSize);
+
+        // 🔥 Query
+        var query = unitOfWork.SubOrderRepository
+            .GetQueryable(tracked: false)
+            .Where(s => s.HerbalistId == herbalist.HerbalistId);
+
+        // 🔍 Search
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+
+            query = query.Where(s =>
+                s.Herbalist.User.FullName.ToLower().Contains(search));
+        }
+
+        // 🔃 Sorting
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "name" => isDesc
+                    ? query.OrderByDescending(s => s.Herbalist.User.FullName)
+                    : query.OrderBy(s => s.Herbalist.User.FullName),
+
+                "date" => isDesc
+                    ? query.OrderByDescending(s => s.Order.OrderDate)
+                    : query.OrderBy(s => s.Order.OrderDate),
+
+                _ => query.OrderBy(s => s.SubOrderId)
+            };
+        }
+        else
+        {
+            query = query.OrderBy(s => s.SubOrderId);
+        }
+
+        // 🚀 Projection
+        var projectedQuery = query.ProjectTo<SubOrderSummaryResponse>(
+            mapper.ConfigurationProvider);
+
+        // 📄 Pagination
+        var paginatedResult = await PaginatedList<SubOrderSummaryResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return paginatedResult;
     }
 
     public async Task<SubOrderDetailsResponse?> GetSubOrderDetailsAsync(int subOrderId, string userId, CancellationToken cancellationToken = default)

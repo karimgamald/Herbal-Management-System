@@ -1,6 +1,9 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Application.Contracts.Reviews;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Services;
@@ -72,20 +75,75 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         return response with { HerbalistName = herbalist.User?.FullName ?? "Unknown Herbalist" };
     }
 
-    public async Task<IEnumerable<ReviewResponse>> GetAllRecipeReviewsAsync(int aiRecipeId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<ReviewResponse>> GetAllRecipeReviewsAsync(
+    int aiRecipeId,
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
-        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: false, cancellationToken: cancellationToken);
-
-        if (aiRecipe == null) return new List<ReviewResponse>();
-
-        var reviews = await unitOfWork.ReviewRecipeRepository.GetAllAsync(
-            filter: r => r.AiRecipeId == aiRecipeId, // 👈 فلترة بـ AiRecipeId
-            tracked: false,
-            includeProperties: "Herbalist.User",
+        var aiRecipeExists = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: false,
             cancellationToken: cancellationToken);
 
-        var mappedReviews = mapper.Map<IEnumerable<ReviewResponse>>(reviews);
-        return mappedReviews.OrderByDescending(r => r.RatingDate).ToList();
+        if (aiRecipeExists == null)
+            return new PaginatedList<ReviewResponse>(
+                new List<ReviewResponse>(),
+                0,
+                filters.PageNumber,
+                filters.PageSize);
+
+        // 🔥 Query + Filter by Recipe (مهم جدًا)
+        var query = unitOfWork.ReviewRecipeRepository
+            .GetQueryable(tracked: false)
+            .Where(r => r.AiRecipeId == aiRecipeId);
+
+        // 🔍 Search
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue;
+
+            query = query.Where(r =>
+                (r.Comment != null && EF.Functions.Like(r.Comment, $"%{search}%")) ||
+                EF.Functions.Like(r.Herbalist.User.FullName, $"%{search}%"));
+        }
+
+        // 🔃 Sorting
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "rating" => isDesc
+                    ? query.OrderByDescending(r => r.RatingValue)   // ✅ fix
+                    : query.OrderBy(r => r.RatingValue),
+
+                "date" => isDesc
+                    ? query.OrderByDescending(r => r.RatingDate)
+                    : query.OrderBy(r => r.RatingDate),
+
+                "name" => isDesc
+                    ? query.OrderByDescending(r => r.Herbalist.User.FullName)
+                    : query.OrderBy(r => r.Herbalist.User.FullName),
+
+                _ => query.OrderBy(r => r.ReviewRecipeId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.RatingDate);
+        }
+
+        // 🚀 Projection
+        var projectedQuery = query.ProjectTo<ReviewResponse>(
+            mapper.ConfigurationProvider);
+
+        // 📄 Pagination
+        var result = await PaginatedList<ReviewResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return result;
     }
 
     public async Task<ReviewResponse?> GetMyReviewAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)

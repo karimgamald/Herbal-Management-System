@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Inventory;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 
@@ -32,11 +33,11 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
     }
 
     [HttpGet("{id}/get-id")] 
-    public async Task<IActionResult> GetAllByHerbalistId([FromRoute] int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllByHerbalistId([FromRoute] int id,[FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await inventoryService.GetAllByHerbalistIdAsync(id, cancellationToken);
+            var result = await inventoryService.GetAllByHerbalistIdAsync(id, filters, cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }

@@ -73,8 +73,10 @@ public class Repository<T>(ApplicationDbContext context) : IRepository<T> where 
         _dbSet.Remove(entity);
     }
 
-    public IQueryable<User> GetQueryable(bool tracked = false)
+    public IQueryable<T> GetQueryable(bool tracked = false)
     {
-        return tracked ? context.Users : context.Users.AsNoTracking();
+        var query = _dbSet;
+
+        return tracked ? query : query.AsNoTracking();
     }
 }
