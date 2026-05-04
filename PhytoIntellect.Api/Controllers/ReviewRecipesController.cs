@@ -31,7 +31,7 @@ public class ReviewRecipesController(IReviewRecipeService reviewService) : Contr
     }
 
     [HttpGet("all")]
-    public async Task<IActionResult> GetAiRecipeReviews(int id, RequestFilters filters,CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAiRecipeReviews(int id, [FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
         var reviews = await reviewService.GetAllRecipeReviewsAsync(id, filters,cancellationToken);
         return Ok(reviews);

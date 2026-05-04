@@ -13,29 +13,78 @@ namespace PhytoIntellect.Application.Services;
 
 public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInventoryService
 {
-    public async Task<IEnumerable<InventoryResponse>> GetMyInventoryAsync(int userId, CancellationToken cancellationToken)
+    public async Task<PaginatedList<InventoryResponse>> GetMyInventoryAsync(int userId,RequestFilters filters,
+     CancellationToken cancellationToken)
     {
+        // 🔹 1. Get Herbalist
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
-            filter: h => h.UserId == userId,
+            h => h.UserId == userId,
             tracked: false,
             cancellationToken: cancellationToken);
 
         if (herbalist == null)
-            throw new KeyNotFoundException("Herbalist not found."); // 👈 تعديل
+            throw new KeyNotFoundException("Herbalist not found.");
 
-        var herbs = await unitOfWork.HerbalistHerbRepository.GetAllAsync(
-            filter: h => h.HerbalistId == herbalist.HerbalistId,
-            tracked: false,
-            includeProperties: "Herb",
-            cancellationToken: cancellationToken);
+        // 🔥 2. IQueryable (بدون GetAllAsync)
+        var query = unitOfWork.HerbalistHerbRepository
+            .GetQueryable(tracked: false)
+            .Where(h => h.HerbalistId == herbalist.HerbalistId)
+            .Select(h => new
+            {
+                h.HerbId,
+                HerbName = h.Herb.HerbName,
+                h.Price,
+                h.IsActive
+            });
 
-        return herbs.Select(x => new InventoryResponse
+        // 🔍 3. Searching
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(x =>
+                x.HerbName.ToLower().Contains(search));
+        }
+
+        // 🔽 4. Sorting
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "herbname" => isDesc
+                    ? query.OrderByDescending(x => x.HerbName)
+                    : query.OrderBy(x => x.HerbName),
+
+                "price" => isDesc
+                    ? query.OrderByDescending(x => x.Price)
+                    : query.OrderBy(x => x.Price),
+
+                _ => query.OrderBy(x => x.HerbId)
+            };
+        }
+        else
+        {
+            query = query.OrderBy(x => x.HerbId);
+        }
+
+        // 🔄 5. Mapping (manual projection بدل AutoMapper هنا لأننا already Select)
+        var projectedQuery = query.Select(x => new InventoryResponse
         {
             HerbId = x.HerbId,
-            HerbName = x.Herb.HerbName,
+            HerbName = x.HerbName,
             Price = x.Price,
             IsActive = x.IsActive
         });
+
+        // 📄 6. Pagination
+        var result = await PaginatedList<InventoryResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return result;
     }
 
     public async Task<PaginatedList<InventoryResponse>> GetAllByHerbalistIdAsync(int herbalistId,RequestFilters filters,

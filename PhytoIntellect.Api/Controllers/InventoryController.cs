@@ -20,12 +20,12 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
 
     [HttpGet("me")]
     [Authorize(Roles = AppRoles.Herbalist)]
-    public async Task<IActionResult> GetMyInventory(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyInventory([FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
         try
         {
             var herbalistId = GetHerbalistId();
-            var result = await inventoryService.GetMyInventoryAsync(herbalistId, cancellationToken);
+            var result = await inventoryService.GetMyInventoryAsync(herbalistId, filters,cancellationToken);
             return Ok(result);
         }
         catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
