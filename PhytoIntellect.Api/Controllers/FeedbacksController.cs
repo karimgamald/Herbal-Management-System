@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using PhytoIntellect.Application.Paginations;
 
 namespace PhytoIntellect.Api.Controllers;
 
@@ -16,9 +17,9 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
 {
     // (Regular Recipes)
     [HttpGet("recipe/{id}/all")]
-    public async Task<IActionResult> GetRecipeFeedbacks(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetRecipeFeedbacks(int id, [FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var feedbacks = await feedbackService.GetRecipeFeedbacksAsync(id, cancellationToken);
+        var feedbacks = await feedbackService.GetRecipeFeedbacksAsync(id, filters, cancellationToken);
         return Ok(feedbacks);
     }
 
@@ -73,9 +74,9 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
     //  (AI Recipes)
 
     [HttpGet("ai-recipe/{id}/all")]
-    public async Task<IActionResult> GetAiRecipeFeedbacks(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAiRecipeFeedbacks(int id, [FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var feedbacks = await feedbackService.GetAiRecipeFeedbacksAsync(id, cancellationToken);
+        var feedbacks = await feedbackService.GetAiRecipeFeedbacksAsync(id, filters, cancellationToken);
         return Ok(feedbacks);
     }
 
@@ -131,13 +132,13 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
 
     [HttpGet("my-history")]
     [Authorize(Roles = AppRoles.Patient)]
-    public async Task<IActionResult> GetAllMyFeedbacks(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllMyFeedbacks([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdStr, out int userId)) 
             return Unauthorized();
 
-        var result = await feedbackService.GetMyFeedbacksAsync(userId, cancellationToken);
+        var result = await feedbackService.GetMyFeedbacksAsync(userId, filters, cancellationToken);
         return Ok(result);
     }
 }

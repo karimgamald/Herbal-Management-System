@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.HerbalistAiRecipes;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 using System;
 using System.Collections.Generic;
@@ -10,8 +12,12 @@ namespace PhytoIntellect.Application.Services;
 
 public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbalistAiRecipeService
 {
-    public async Task<IEnumerable<HerbalistAiRecipeResponse>> GetMyInventoryAsync(int userId, CancellationToken cancellationToken)
+    public async Task<PaginatedList<HerbalistAiRecipeResponse>> GetMyInventoryAsync(
+     int userId,
+     RequestFilters filters,
+     CancellationToken cancellationToken)
     {
+        // 1. نتأكد إن العشاب ده موجود أصلاً
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
             filter: h => h.UserId == userId,
             tracked: false,
@@ -19,13 +25,48 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : 
 
         if (herbalist == null) throw new KeyNotFoundException("Herbalist not found.");
 
-        var aiRecipes = await unitOfWork.HerbalistAiRecipeRepository.GetAllAsync(
-            filter: h => h.HerbalistId == herbalist.HerbalistId,
-            tracked: false,
-            includeProperties: "AiRecipe", 
-            cancellationToken: cancellationToken);
+        // 2. نجيب الـ IQueryable بتاع الـ Inventory
+        var query = unitOfWork.HerbalistAiRecipeRepository.GetQueryable(tracked: false);
 
-        return mapper.Map<IEnumerable<HerbalistAiRecipeResponse>>(aiRecipes);
+        // 3. الفلتر الأساسي: نجيب وصفات العشاب ده بس
+        query = query.Where(h => h.HerbalistId == herbalist.HerbalistId);
+
+        // 4. البحث (Searching) - لاحظ إننا بنبحث جوه الـ AiRecipe
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            // غير Title لـ Name أو للعمود اللي شايل اسم الوصفة عندك
+            query = query.Where(h => h.AiRecipe.RecommendedRecipeName.ToLower().Contains(search));
+        }
+
+        // 5. الترتيب (Sorting) - برضه هنرتب باسم الوصفة أو بتاريخ إضافتها
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "recommendedRecipeName" => isDesc ? query.OrderByDescending(h => h.AiRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiRecipe.RecommendedRecipeName),
+                // لو عندك تاريخ مثلاً
+                // "date" => isDesc ? query.OrderByDescending(h => h.CreatedAt) : query.OrderBy(h => h.CreatedAt),
+                _ => query.OrderByDescending(h => h.AiRecipeId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(h => h.AiRecipeId);
+        }
+
+        // 6. المابينج السحري (مش محتاجين Include لأن ProjectTo بتعملها لوحدها)
+        var projectedQuery = query.ProjectTo<HerbalistAiRecipeResponse>(mapper.ConfigurationProvider);
+
+        // 7. الـ Pagination
+        var paginatedInventory = await PaginatedList<HerbalistAiRecipeResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return paginatedInventory;
     }
 
     public async Task<HerbalistAiRecipeResponse?> AddAiRecipeAsync(int userId, AddAiRecipeToInventoryRequest request, CancellationToken cancellationToken)

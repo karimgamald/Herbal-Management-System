@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.AiRecipes;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Infrastructure.UOW;
 using System.Security.Claims;
@@ -20,12 +21,12 @@ public class AiConsultationsController(
 {
     [HttpGet("catalog")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAllPublicRecipes(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllPublicRecipes([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
         try
         {
-            var recipes = await aiRecipeService.GetAllPublicAsync(cancellationToken);
-            if (recipes == null || !recipes.Any())
+            var recipes = await aiRecipeService.GetAllPublicAsync(filters, cancellationToken);
+            if (recipes == null || !recipes.Items.Any())
             {
                 return BadRequest(new
                 {
@@ -67,7 +68,7 @@ public class AiConsultationsController(
 
     [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("myConsultations")]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
         try
         {
@@ -76,11 +77,11 @@ public class AiConsultationsController(
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userIdInt))
                 return Unauthorized(new { Message = "Invalid or missing authentication token." });
 
-            var result = await aiRecipeService.GetAllAsync(userIdInt, cancellationToken);
+            var result = await aiRecipeService.GetAllAsync(userIdInt, filters, cancellationToken);
 
-            if (result == null || !result.Any())
+            if (result == null || !result.Items.Any())
             {
-                return Ok(new List<AiRecipeResponse>());
+                return Ok(result);
             }
 
             return Ok(result);

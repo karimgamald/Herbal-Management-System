@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Diseases;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using System;
@@ -13,16 +15,50 @@ namespace PhytoIntellect.Application.Services;
 
 public class DiseaseService(IUnitOfWork unitOfWork, IMapper mapper) : IDiseaseService
 {
-    public async Task<IEnumerable<DiseaseResponse>> GetAllDiseasesAsync(CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<DiseaseResponse>> GetAllDiseasesAsync(
+     RequestFilters filters,
+     CancellationToken cancellationToken = default)
     {
-        var diseases = await unitOfWork.DiseaseRepository.GetAllAsync(
-            tracked: false,
-            cancellationToken: cancellationToken);
+        // 1. نجيب الـ IQueryable
+        var query = unitOfWork.DiseaseRepository.GetQueryable(tracked: false);
 
-        var mappedDiseases = mapper.Map<IEnumerable<DiseaseResponse>>(diseases); 
+        // 2. البحث (Searching) - هيبحث باسم المرض
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            // لو في عمود للوصف Description ممكن تزوده هنا
+            query = query.Where(d => d.DiseaseName.ToLower().Contains(search));
+        }
 
-        // رتبناهم أبجدياً عشان يظهروا في الـ Dropdown بشكل منظم
-        return mappedDiseases.OrderBy(d => d.DiseaseName).ToList();
+        // 3. الترتيب (Sorting)
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "diseaseName" => isDesc ? query.OrderByDescending(d => d.DiseaseName) : query.OrderBy(d => d.DiseaseName),
+                // لو عندك تاريخ إضافة للمرض
+                // "date" => isDesc ? query.OrderByDescending(d => d.CreatedAt) : query.OrderBy(d => d.CreatedAt),
+                _ => query.OrderBy(d => d.DiseaseName) // الديفولت لو بعت عمود غلط (ترتيب أبجدي)
+            };
+        }
+        else
+        {
+            // الديفولت لو مبعتش ترتيب خالص (ترتيب أبجدي زي ما كنت عامل)
+            query = query.OrderBy(d => d.DiseaseName);
+        }
+
+        // 4. المابينج باستخدام AutoMapper
+        var projectedQuery = query.ProjectTo<DiseaseResponse>(mapper.ConfigurationProvider);
+
+        // 5. تطبيق الـ Pagination الجاهز
+        var paginatedDiseases = await PaginatedList<DiseaseResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+
+        return paginatedDiseases;
     }
 
     public async Task<IEnumerable<DiseaseNamesResponse>> GetDiseasesNameAsync(CancellationToken cancellationToken = default)

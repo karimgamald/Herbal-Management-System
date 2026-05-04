@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.Feedbacks;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 using System;
 using System.Collections.Generic;
@@ -95,10 +97,43 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         return mapper.Map<FeedbackResponse>(feedbackEntity);
     }
 
-    public async Task<IEnumerable<FeedbackResponse>> GetRecipeFeedbacksAsync(int recipeId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<FeedbackResponse>> GetRecipeFeedbacksAsync(
+     int recipeId,
+     RequestFilters filters,
+     CancellationToken cancellationToken = default)
     {
-        var feedbacks = await unitOfWork.FeedbackRepository.GetAllAsync(filter: f => f.RecipeId == recipeId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
-        return mapper.Map<IEnumerable<FeedbackResponse>>(feedbacks).OrderByDescending(f => f.RatingDate);
+        var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
+
+        // الفلتر الأساسي
+        query = query.Where(f => f.RecipeId == recipeId);
+
+        // البحث (مثلاً هيبحث في كلام التقييم)
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            // غير Comment لاسم العمود اللي شايل نص التقييم عندك
+            query = query.Where(f => f.Comment.ToLower().Contains(search));
+        }
+
+        // الترتيب (الديفولت هو RatingDate زي ما إنت كنت عامل بالظبط)
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "ratingValue" => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue),
+                "date" => isDesc ? query.OrderByDescending(f => f.RatingDate) : query.OrderBy(f => f.RatingDate),
+                _ => query.OrderByDescending(f => f.RatingDate)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(f => f.RatingDate);
+        }
+
+        var projectedQuery = query.ProjectTo<FeedbackResponse>(mapper.ConfigurationProvider);
+
+        return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
     public async Task<FeedbackResponse?> GetMyRecipeFeedbackAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
@@ -176,10 +211,42 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         return mapper.Map<FeedbackResponse>(feedbackEntity);
     }
 
-    public async Task<IEnumerable<FeedbackResponse>> GetAiRecipeFeedbacksAsync(int aiRecipeId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<FeedbackResponse>> GetAiRecipeFeedbacksAsync(
+    int aiRecipeId,
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
-        var feedbacks = await unitOfWork.FeedbackRepository.GetAllAsync(filter: f => f.AiRecipeId == aiRecipeId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
-        return mapper.Map<IEnumerable<FeedbackResponse>>(feedbacks).OrderByDescending(f => f.RatingDate);
+        var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
+
+        // الفلتر الأساسي
+        query = query.Where(f => f.AiRecipeId == aiRecipeId);
+
+        // البحث
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(f => f.Comment.ToLower().Contains(search));
+        }
+
+        // الترتيب
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "ratingValue" => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue),
+                "date" => isDesc ? query.OrderByDescending(f => f.RatingDate) : query.OrderBy(f => f.RatingDate),
+                _ => query.OrderByDescending(f => f.RatingDate)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(f => f.RatingDate);
+        }
+
+        var projectedQuery = query.ProjectTo<FeedbackResponse>(mapper.ConfigurationProvider);
+
+        return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
     public async Task<FeedbackResponse?> GetMyAiRecipeFeedbackAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)
@@ -217,20 +284,51 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         return true;
     }
 
-    public async Task<IEnumerable<FeedbackResponse>> GetMyFeedbacksAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<FeedbackResponse>> GetMyFeedbacksAsync(
+    int userId,
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
         // 1. نجيب رقم المريض
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
-        if (patientId == 0) return new List<FeedbackResponse>();
 
-        // 2. نجيب كل تقييماته سواء كانت لوصفات AI أو وصفات عطارين
-        var feedbacks = await unitOfWork.FeedbackRepository.GetAllAsync(
-            filter: f => f.PatientId == patientId,
-            tracked: false,
-            includeProperties: "Patient.User",
-            cancellationToken: cancellationToken);
+        // لو المريض مش موجود بنرجع كرتونة Pagination فاضية
+        if (patientId == 0)
+            return new PaginatedList<FeedbackResponse>(new List<FeedbackResponse>(), filters.PageNumber, 0, filters.PageSize);
 
-        // 3. نحولها لـ DTO ونرتبها من الأحدث للأقدم
-        return mapper.Map<IEnumerable<FeedbackResponse>>(feedbacks).OrderByDescending(f => f.RatingDate).ToList();
+        // 2. نجيب الـ IQueryable
+        var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
+
+        // الفلتر الأساسي (كل التقييمات بتاعة المريض ده)
+        query = query.Where(f => f.PatientId == patientId);
+
+        // 3. البحث
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(f => f.Comment.ToLower().Contains(search));
+        }
+
+        // 4. الترتيب
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "ratingValue" => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue),
+                "date" => isDesc ? query.OrderByDescending(f => f.RatingDate) : query.OrderBy(f => f.RatingDate),
+                _ => query.OrderByDescending(f => f.RatingDate)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(f => f.RatingDate);
+        }
+
+        // 5. المابينج
+        var projectedQuery = query.ProjectTo<FeedbackResponse>(mapper.ConfigurationProvider);
+
+        // 6. الـ Pagination
+        return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 }

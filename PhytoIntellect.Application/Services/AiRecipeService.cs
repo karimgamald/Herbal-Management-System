@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.AiRecipes;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Services;
@@ -14,21 +16,44 @@ public class AiRecipeService(
     private readonly IAiPredictionService _aiPredictionService = aiPredictionService;
     private readonly IMapper _mapper = mapper;
     // Get all AI recipes in the system
-    public async Task<IEnumerable<AiRecipeResponse>> GetAllPublicAsync(CancellationToken cancellationToken = default)
+
+    public async Task<PaginatedList<AiRecipeResponse>> GetAllPublicAsync(
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
-        var recipes = await _unitOfWork.AiRecipeRepository.GetAllAsync(
-            tracked: false,
-            cancellationToken: cancellationToken
-        );
+        var query = _unitOfWork.AiRecipeRepository.GetQueryable(tracked: false);
 
-        // ترتيب بالأحدث
-        recipes = await _unitOfWork.AiRecipeRepository.GetAllAsync(tracked: false,cancellationToken:cancellationToken);
+        // لو عندك عمود اسمه IsPublic مثلاً بيحدد إن الوصفة عامة مش خاصة بمريض، تقدر تفلتر بيه هنا
+        // query = query.Where(r => r.IsPublic == true); 
 
-        var orderedRecipes = recipes
-            .OrderByDescending(r => r.CreatedAt)
-            .ToList();
+        // البحث (Searching)
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(r => r.RecommendedRecipeName.ToLower().Contains(search));
+        }
 
-        return _mapper.Map<IEnumerable<AiRecipeResponse>>(recipes);
+        // الترتيب (Sorting)
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "recommendedRecipeName" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
+                "date" => isDesc ? query.OrderByDescending(r => r.CreatedAt) : query.OrderBy(r => r.CreatedAt),
+                _ => query.OrderByDescending(r => r.CreatedAt) // الديفولت
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.CreatedAt); // ترتيب ديفولت بالأحدث
+        }
+
+        // المابينج السحري
+        var projectedQuery = query.ProjectTo<AiRecipeResponse>(_mapper.ConfigurationProvider);
+
+        // تطبيق الـ Pagination
+        return await PaginatedList<AiRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
     public async Task<AiRecipeResponse> GetPublicByIdAsync(int recipeId,
     CancellationToken cancellationToken = default)
@@ -46,21 +71,51 @@ public class AiRecipeService(
     }
 
     // Get all recipes added by the patient 
-    public async Task<IEnumerable<AiRecipeResponse>> GetAllAsync(int userId,CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<AiRecipeResponse>> GetAllAsync(
+    int userId,
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
-        int patientId = await _unitOfWork.PatientRepository
-            .GetIdByUserIdAsync(userId.ToString());
+        // 1. نجيب رقم المريض
+        int patientId = await _unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
 
         if (patientId == 0)
             throw new UnauthorizedAccessException("Patient profile not found.");
 
-        var recipes = await _unitOfWork.AiRecipeRepository.GetAllAsync(
-            filter: r => r.PatientId == patientId,
-            tracked: false,
-            cancellationToken: cancellationToken
-        );
+        // 2. نبدأ الكويري
+        var query = _unitOfWork.AiRecipeRepository.GetQueryable(tracked: false);
 
-        return _mapper.Map<IEnumerable<AiRecipeResponse>>(recipes);
+        // الفلتر الأساسي (وصفات المريض ده بس)
+        query = query.Where(r => r.PatientId == patientId);
+
+        // 3. البحث
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(r => r.RecommendedRecipeName.ToLower().Contains(search));
+        }
+
+        // 4. الترتيب
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "recommendedRecipeName" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
+                "date" => isDesc ? query.OrderByDescending(r => r.CreatedAt) : query.OrderBy(r => r.CreatedAt),
+                _ => query.OrderByDescending(r => r.CreatedAt)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.CreatedAt);
+        }
+
+        // 5. المابينج
+        var projectedQuery = query.ProjectTo<AiRecipeResponse>(_mapper.ConfigurationProvider);
+
+        // 6. الـ Pagination
+        return await PaginatedList<AiRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
     // Get the 
     public async Task<AiRecipeResponse> GetByIdAsync(int userId,int recipeId,CancellationToken cancellationToken = default)

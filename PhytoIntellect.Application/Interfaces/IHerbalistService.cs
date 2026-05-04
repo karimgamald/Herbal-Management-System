@@ -1,4 +1,5 @@
 ﻿using PhytoIntellect.Application.Contracts.Herbalists;
+using PhytoIntellect.Application.Paginations;
 
 namespace PhytoIntellect.Application.Interfaces;
 
@@ -12,5 +13,5 @@ public interface IHerbalistService
 
     Task<HerbalistResponse?> GetHerbalistByIdAsync(int id, CancellationToken cancellationToken);
 
-    Task<IEnumerable<HerbalistResponse>> GetAllHerbalistsAsync(CancellationToken cancellationToken);
+    Task<PaginatedList<HerbalistResponse>> GetAllHerbalistsAsync(RequestFilters filters, CancellationToken cancellationToken = default);
 }

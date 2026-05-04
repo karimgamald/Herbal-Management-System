@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Herbalists;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 
@@ -11,9 +12,6 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class HerbalistsController(IHerbalistService herbalistService) : ControllerBase
 {
-    // ===============================
-    // Endpoints خاصة بالعشاب نفسه
-    // ===============================
     [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
     [HttpGet("get-profile/me")]
     public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
@@ -48,9 +46,9 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
 
     [Authorize(Roles = $"{AppRoles.Patient}")]
     [HttpGet("get-all")]
-    public async Task<IActionResult> GetAllHerbalists(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllHerbalists([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var herbalists = await herbalistService.GetAllHerbalistsAsync(cancellationToken);
+        var herbalists = await herbalistService.GetAllHerbalistsAsync(filters, cancellationToken);
         return Ok(herbalists);
     }
 

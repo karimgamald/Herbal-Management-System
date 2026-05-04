@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.AiRecipes;
 using PhytoIntellect.Application.Contracts.Herbalists;
 using PhytoIntellect.Application.Contracts.Herbs;
 using PhytoIntellect.Application.Contracts.Recipes;
 using PhytoIntellect.Application.Contracts.UserFavorites;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Enums;
 using System;
@@ -49,48 +51,154 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return "Added to favorites successfully.";
     }
 
-    public async Task<IEnumerable<FavoriteResponse>> GetMyFavoriteHerbsAsync(int userId)
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteHerbsAsync(
+    int userId,
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.Herb);
-        if (!ids.Any()) return new List<FavoriteResponse>();
 
-        var items = await unitOfWork.HerbRepository.GetAllAsync(h => ids.Contains(h.HerbId), tracked: false);
-        return mapper.Map<IEnumerable<FavoriteResponse>>(items);
+        // لو مفيش مفضلات، نرجع PaginatedList فاضية
+        if (!ids.Any())
+            return new PaginatedList<FavoriteResponse>(new List<FavoriteResponse>(), filters.PageNumber, 0, filters.PageSize);
+
+        var query = unitOfWork.HerbRepository.GetQueryable(tracked: false)
+            .Where(h => ids.Contains(h.HerbId));
+
+        // البحث
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(h => h.HerbName.ToLower().Contains(search)); // افترضت إن العمود اسمه Name
+        }
+
+        // الترتيب
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "herbName" => isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName),
+                _ => query.OrderByDescending(h => h.HerbId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(h => h.HerbId);
+        }
+
+        var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<IEnumerable<FavoriteResponse>> GetMyFavoriteRecipesAsync(int userId)
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteRecipesAsync(
+     int userId,
+     RequestFilters filters,
+     CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.Recipe);
-        if (!ids.Any()) return new List<FavoriteResponse>();
+        if (!ids.Any())
+            return new PaginatedList<FavoriteResponse>(new List<FavoriteResponse>(), filters.PageNumber, 0, filters.PageSize);
 
-        var items = await unitOfWork.RecipeRepository.GetAllAsync(
-            filter: r => ids.Contains(r.RecipeId),
-            includeProperties: "RecipeHerbs.Herb,RecipeDiseases.Disease",
-            tracked: false);
+        // شيلنا الـ Include لأن AutoMapper هيعملها
+        var query = unitOfWork.RecipeRepository.GetQueryable(tracked: false)
+            .Where(r => ids.Contains(r.RecipeId));
 
-        return mapper.Map<IEnumerable<FavoriteResponse>>(items);
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(r => r.Description!.ToLower().Contains(search)); // افترضت إن العمود اسمه Title
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "description" => isDesc ? query.OrderByDescending(r => r.Description) : query.OrderBy(r => r.Description),
+                _ => query.OrderByDescending(r => r.RecipeId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.RecipeId);
+        }
+
+        var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<IEnumerable<FavoriteResponse>> GetMyFavoriteAiRecipesAsync(int userId)
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteAiRecipesAsync(
+     int userId,
+     RequestFilters filters,
+     CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.AiRecipe);
-        if (!ids.Any()) return new List<FavoriteResponse>();
+        if (!ids.Any())
+            return new PaginatedList<FavoriteResponse>(new List<FavoriteResponse>(), filters.PageNumber, 0, filters.PageSize);
 
-        var items = await unitOfWork.AiRecipeRepository.GetAllAsync(r => ids.Contains(r.Id), tracked: false);
-        return mapper.Map<IEnumerable<FavoriteResponse>>(items);
+        var query = unitOfWork.AiRecipeRepository.GetQueryable(tracked: false)
+            .Where(r => ids.Contains(r.Id));
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(r => r.RecommendedRecipeName.ToLower().Contains(search));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "recommendedRecipeName" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
+                _ => query.OrderByDescending(r => r.Id)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.Id);
+        }
+
+        var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<IEnumerable<FavoriteResponse>> GetMyFavoriteHerbalistsAsync(int userId)
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteHerbalistsAsync(
+    int userId,
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.Herbalist);
-        if (!ids.Any()) return new List<FavoriteResponse>();
+        if (!ids.Any())
+            return new PaginatedList<FavoriteResponse>(new List<FavoriteResponse>(), filters.PageNumber, 0, filters.PageSize);
 
-        var items = await unitOfWork.HerbalistRepository.GetAllAsync(
-            filter: h => ids.Contains(h.HerbalistId),
-            includeProperties: "User",
-            tracked: false);
+        // شيلنا IncludeProperties: "User"
+        var query = unitOfWork.HerbalistRepository.GetQueryable(tracked: false)
+            .Where(h => ids.Contains(h.HerbalistId));
 
-        return mapper.Map<IEnumerable<FavoriteResponse>>(items);
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(h => h.User!.FullName.ToLower().Contains(search));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "fullname" => isDesc ? query.OrderByDescending(h => h.User!.FullName) : query.OrderBy(h => h.User!.FullName),
+                _ => query.OrderByDescending(h => h.HerbalistId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(h => h.HerbalistId);
+        }
+
+        var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
     // Helper Method 1: Get IDs
