@@ -20,7 +20,7 @@ public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInvento
     {
         // 1. نتأكد إن العشاب موجود
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
-            filter: h => h.UserId == userId,
+            h => h.UserId == userId,
             tracked: false,
             cancellationToken: cancellationToken);
 
