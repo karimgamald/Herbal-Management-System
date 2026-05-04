@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PhytoIntellect.Core.Entities;
 
-public class MedicalHistory
+public class MedicalHistory : LocalizedEntity
 {
     public int MedicalHistoryId { get; set; }
     public int PatientId { get; set; }

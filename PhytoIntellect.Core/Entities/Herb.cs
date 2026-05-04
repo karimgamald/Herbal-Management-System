@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PhytoIntellect.Core.Entities;
 
-public class Herb
+public class Herb : LocalizedEntity
 {
     public int HerbId { get; set; }
     public string HerbName { get; set; } = string.Empty;

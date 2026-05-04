@@ -21,6 +21,7 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 var app = builder.Build();
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<LanguageMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

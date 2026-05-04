@@ -2,7 +2,7 @@
 
 namespace PhytoIntellect.Core.Entities;
 
-public class Feedback
+public class Feedback: LocalizedEntity
 {
     public int FeedbackId { get; set; }
 

@@ -1,11 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Core.Entities;
 using System.Reflection;
 
 
 namespace PhytoIntellect.Infrastructure.Presistence;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentLanguageService languageService) : DbContext(options)
 {
     public DbSet<User> Users { get; set; }
     public DbSet<Patient> Patients { get; set; }
@@ -34,5 +35,36 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        modelBuilder.Entity<Recipe>().HasQueryFilter(e => e.LanguageCode == languageService.LanguageCode);
+        modelBuilder.Entity<AiRecipe>().HasQueryFilter(e => e.LanguageCode == languageService.LanguageCode);
+        modelBuilder.Entity<Herb>().HasQueryFilter(e => e.LanguageCode == languageService.LanguageCode);
+        modelBuilder.Entity<Disease>().HasQueryFilter(e => e.LanguageCode == languageService.LanguageCode);
+        modelBuilder.Entity<Feedback>().HasQueryFilter(e => e.LanguageCode == languageService.LanguageCode);
+        modelBuilder.Entity<MedicalHistory>().HasQueryFilter(e => e.LanguageCode == languageService.LanguageCode);
+        modelBuilder.Entity<ReviewRecipe>().HasQueryFilter(e => e.LanguageCode == languageService.LanguageCode);
+    }
+
+
+    public override int SaveChanges()
+    {
+        SetLanguageCodeForNewEntities();
+        return base.SaveChanges();
+    }
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        SetLanguageCodeForNewEntities();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void SetLanguageCodeForNewEntities()
+    {
+        var entries = ChangeTracker.Entries<LocalizedEntity>()
+            .Where(e => e.State == EntityState.Added);
+
+        foreach (var entry in entries)
+        {
+            entry.Entity.LanguageCode = languageService.LanguageCode;
+        }
     }
 }

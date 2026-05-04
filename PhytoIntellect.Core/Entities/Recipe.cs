@@ -5,7 +5,7 @@ using System.Text;
 
 namespace PhytoIntellect.Core.Entities;
 
-public class Recipe
+public class Recipe : LocalizedEntity
 {
     public int RecipeId { get; set; }
     public int? HerbalistId { get; set; }

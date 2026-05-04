@@ -21,7 +21,10 @@ public class RecipeProfile : Profile
 
         CreateMap<Recipe, RecipeResponse>()
             .ForMember(dest => dest.Herbs, opt => opt.MapFrom(src => src.RecipeHerbs))
-            .ForMember(dest => dest.TargetedDiseases, opt => opt.MapFrom(src => src.RecipeDiseases));
+            .ForMember(dest => dest.TargetedDiseases, opt => opt.MapFrom(src => src.RecipeDiseases))
+            .ForMember(dest => dest.HerbalistAverageRating, opt =>
+        opt.MapFrom(src => src.Herbalist!.Recipes.SelectMany(r => r.Feedbacks).Any()
+                ? (float)src.Herbalist.Recipes.SelectMany(r => r.Feedbacks).Average(f => f.RatingValue) : 0.0f));
 
         CreateMap<RecipeHerb, RecipeHerbResponse>()
             .ForMember(dest => dest.HerbName, opt => opt.MapFrom(src => src.Herb.HerbName));

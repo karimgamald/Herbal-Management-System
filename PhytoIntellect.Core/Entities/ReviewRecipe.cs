@@ -2,7 +2,7 @@
 
 namespace PhytoIntellect.Core.Entities;
 
-public class ReviewRecipe
+public class ReviewRecipe : LocalizedEntity
 {
     public int ReviewRecipeId { get; set; }
 

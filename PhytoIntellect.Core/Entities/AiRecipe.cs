@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PhytoIntellect.Core.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -6,7 +7,7 @@ using System.Text;
 
 namespace PhytoIntellect.Core.Entities;
 
-public class AiRecipe
+public class AiRecipe: LocalizedEntity
 {
     [Key]
     public int Id { get; set; }
