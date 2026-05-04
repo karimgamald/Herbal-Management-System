@@ -6,7 +6,7 @@ using System.Text;
 
 public interface IInventoryService
 {
-    Task<PaginatedList<InventoryResponse>> GetMyInventoryAsync(int userId, RequestFilters filters,
+    Task<IEnumerable<InventoryResponse>> GetMyInventoryAsync(int userId,
      CancellationToken cancellationToken);
     Task<PaginatedList<InventoryResponse>> GetAllByHerbalistIdAsync(int herbalistId, RequestFilters filters,
     CancellationToken cancellationToken = default);
