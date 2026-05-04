@@ -13,29 +13,62 @@ namespace PhytoIntellect.Application.Services;
 
 public class InventoryService(IUnitOfWork unitOfWork, IMapper mapper) : IInventoryService
 {
-    public async Task<IEnumerable<InventoryResponse>> GetMyInventoryAsync(int userId, CancellationToken cancellationToken)
+    public async Task<PaginatedList<InventoryResponse>> GetMyInventoryAsync(
+    int userId,
+    RequestFilters filters,
+    CancellationToken cancellationToken = default)
     {
+        // 1. نتأكد إن العشاب موجود
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
             h => h.UserId == userId,
             tracked: false,
             cancellationToken: cancellationToken);
 
         if (herbalist == null)
-            throw new KeyNotFoundException("Herbalist not found."); // 👈 تعديل
+            throw new KeyNotFoundException("Herbalist not found.");
 
-        var herbs = await unitOfWork.HerbalistHerbRepository.GetAllAsync(
-            filter: h => h.HerbalistId == herbalist.HerbalistId,
-            tracked: false,
-            includeProperties: "Herb",
-            cancellationToken: cancellationToken);
+        // 2. نجيب الـ IQueryable (مخزون العشاب ده بس)
+        var query = unitOfWork.HerbalistHerbRepository.GetQueryable(tracked: false)
+            .Where(h => h.HerbalistId == herbalist.HerbalistId);
 
-        return herbs.Select(x => new InventoryResponse
+        // 3. البحث (هيبحث في اسم العشبة اللي جوه جدول الـ Herb)
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(h => h.Herb.HerbName.ToLower().Contains(search));
+        }
+
+        // 4. الترتيب (رتبنا بالاسم أو السعر)
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            query = filters.SortColumn.ToLower() switch
+            {
+                "name" => isDesc ? query.OrderByDescending(h => h.Herb.HerbName) : query.OrderBy(h => h.Herb.HerbName),
+                "price" => isDesc ? query.OrderByDescending(h => h.Price) : query.OrderBy(h => h.Price),
+                _ => query.OrderByDescending(h => h.HerbId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(h => h.HerbId);
+        }
+
+        // 5. المابينج اليدوي بتاعك (ممتاز جداً مع EF Core)
+        var projectedQuery = query.Select(x => new InventoryResponse
         {
             HerbId = x.HerbId,
             HerbName = x.Herb.HerbName,
             Price = x.Price,
             IsActive = x.IsActive
         });
+
+        // 6. تطبيق الـ Pagination
+        return await PaginatedList<InventoryResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
     }
 
     public async Task<PaginatedList<InventoryResponse>> GetAllByHerbalistIdAsync(int herbalistId,RequestFilters filters,

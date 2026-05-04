@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Herbs;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Application.Services;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
@@ -10,9 +11,9 @@ using System.Security.Claims;
 public class HerbsController(IHerbService herbService) : ControllerBase
 {
     [HttpGet("all")]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var herbs = await herbService.GetApprovedHerbsAsync(cancellationToken);
+        var herbs = await herbService.GetApprovedHerbsAsync(filters, cancellationToken);
         return Ok(herbs);
     }
 

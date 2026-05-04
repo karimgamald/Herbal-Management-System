@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Diseases;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 
 namespace PhytoIntellect.Api.Controllers;
@@ -12,9 +13,9 @@ namespace PhytoIntellect.Api.Controllers;
 public class DiseasesController(IDiseaseService diseaseService) : ControllerBase
 {
     [HttpGet("all")] 
-    public async Task<IActionResult> GetAllDiseases(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllDiseases([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var diseases = await diseaseService.GetAllDiseasesAsync(cancellationToken);
+        var diseases = await diseaseService.GetAllDiseasesAsync(filters, cancellationToken);
         return Ok(diseases);
     }
 

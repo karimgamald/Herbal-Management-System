@@ -2,12 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.HerbalistHerb;
 using PhytoIntellect.Application.Contracts.Herbs;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Application.Services;
 
 public interface IHerbService
 {
     // 1️⃣ عرض كل الأعشاب المعتمدة
-    Task<IEnumerable<HerbResponse>> GetApprovedHerbsAsync(CancellationToken cancellationToken = default);
+    Task<PaginatedList<HerbResponse>> GetApprovedHerbsAsync(RequestFilters filters, CancellationToken cancellationToken = default);
 
     // 2️⃣ عرض تفاصيل عشبة
     Task<HerbResponse?> GetHerbByIdAsync(int herbId,CancellationToken cancellationToken = default);

@@ -20,7 +20,7 @@ public class InventoryController(IInventoryService inventoryService) : Controlle
 
     [HttpGet("me")]
     [Authorize(Roles = AppRoles.Herbalist)]
-    public async Task<IActionResult> GetMyInventory([FromQuery] RequestFilters filters,CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyInventory([FromQuery] RequestFilters filters ,CancellationToken cancellationToken)
     {
         try
         {

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.UserFavorites;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Api.Extensions;
+using PhytoIntellect.Application.Paginations;
 namespace PhytoIntellect.Api.Controllers;
 
 [Authorize]
@@ -12,30 +13,30 @@ namespace PhytoIntellect.Api.Controllers;
 public class FavoritesController(IFavoriteService favoriteService) : ControllerBase
 {
     [HttpGet("my-herbs")]
-    public async Task<IActionResult> GetHerbs()
+    public async Task<IActionResult> GetHerbs([FromQuery] RequestFilters filters)
     {
-        var herbs = await favoriteService.GetMyFavoriteHerbsAsync(User.GetUserId());
+        var herbs = await favoriteService.GetMyFavoriteHerbsAsync(User.GetUserId(), filters);
         return Ok(herbs);
     }
 
     [HttpGet("my-recipes")]
-    public async Task<IActionResult> GetRecipes()
+    public async Task<IActionResult> GetRecipes([FromQuery] RequestFilters filters)
     {
-        var recipes = await favoriteService.GetMyFavoriteRecipesAsync(User.GetUserId());
+        var recipes = await favoriteService.GetMyFavoriteRecipesAsync(User.GetUserId(), filters);
         return Ok(recipes);
     }
 
     [HttpGet("my-ai-recipes")]
-    public async Task<IActionResult> GetAiRecipes()
+    public async Task<IActionResult> GetAiRecipes([FromQuery] RequestFilters filters)
     {
-        var aiRecipes = await favoriteService.GetMyFavoriteAiRecipesAsync(User.GetUserId());
+        var aiRecipes = await favoriteService.GetMyFavoriteAiRecipesAsync(User.GetUserId(), filters);
         return Ok(aiRecipes);
     }
 
     [HttpGet("my-herbalists")]
-    public async Task<IActionResult> GetHerbalists()
+    public async Task<IActionResult> GetHerbalists([FromQuery] RequestFilters filters)
     {
-        var herbalists = await favoriteService.GetMyFavoriteHerbalistsAsync(User.GetUserId());
+        var herbalists = await favoriteService.GetMyFavoriteHerbalistsAsync(User.GetUserId(), filters);
         return Ok(herbalists);
     }
 

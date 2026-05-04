@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application.Contracts.HerbalistAiRecipes;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Constants;
 
 namespace PhytoIntellect.Api.Controllers;
@@ -13,10 +14,10 @@ namespace PhytoIntellect.Api.Controllers;
 public class InventoryAiRecipesController(IHerbalistAiRecipeService inventoryService) : ControllerBase
 {
     [HttpGet("my-inventory")]
-    public async Task<IActionResult> GetMyInventory(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyInventory([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
-        var result = await inventoryService.GetMyInventoryAsync(userId, cancellationToken);
+        var result = await inventoryService.GetMyInventoryAsync(userId, filters, cancellationToken);
         return Ok(result);
     }
 
