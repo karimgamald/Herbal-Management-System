@@ -50,6 +50,7 @@ public class AuthService(
 
         // Email Confirmation Fields
         var token = Guid.NewGuid().ToString("N");
+
         user.EmailConfirmationToken = token;
         user.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddHours(24);
         user.IsEmailConfirmed = false;
@@ -89,10 +90,16 @@ public class AuthService(
         // السطر ده هيبعت لـ SQL: الـ User أولاً، ياخد الـ ID، يحطه في الـ Patient، يبعت الـ Patient
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // 📧 Send Confirmation Email
+        // Base URL from config (Production / Dev automatically)
+        var baseUrl = _config["App:BaseUrl"];
+
+        // Send Confirmation Email
         // baseUrl => contain published link
+        // SAFE URL (IMPORTANT)
         var confirmationLink =
-            $"{_config["App:BaseUrl"]}/api/accounts/confirm-email?email={user.Email}&token={token}";
+            $"{baseUrl}/api/auth/confirm-email" +
+            $"?email={Uri.EscapeDataString(user.Email)}" +
+            $"&token={Uri.EscapeDataString(token)}";
 
         //EmailMessage
         var message = $@"
