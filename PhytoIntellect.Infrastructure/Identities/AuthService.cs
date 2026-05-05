@@ -19,7 +19,6 @@ public class AuthService(
     public async Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model, 
         CancellationToken cancellationToken = default)
     {
-        // 1. التحقق من الـ Role
         if (!AppRoles.IsValidRole(model.Role))
             return new RegisterUserAuthResponse
             {
@@ -27,7 +26,6 @@ public class AuthService(
                 Message = $"Invalid Role. Role must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'."
             };
 
-        // 2. Validate Confirm Password
         if (model.Password != model.ConfirmPassword)
         {
             return new RegisterUserAuthResponse
@@ -37,25 +35,20 @@ public class AuthService(
             };
         }
 
-        // 2. التحقق من تكرار اليوزر
         var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.Email == model.Email,
             tracked: false, cancellationToken: cancellationToken);
 
         if (existingUser != null)
             return new RegisterUserAuthResponse { Success = false, Message = "Email already exists." };
 
-        // 3. تحويل الداتا وتشفير الباسورد
         var user = mapper.Map<User>(model);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
-        // Email Confirmation Fields
         var token = Guid.NewGuid().ToString("N");
         user.EmailConfirmationToken = token;
         user.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddHours(24);
         user.IsEmailConfirmed = false;
 
-        // 4. الربط الذكي (Navigation Property)
-        // بعد كده أنشئ البروفايل حسب الدور
         if (user.Role == AppRoles.Patient)
         {
             var newPatient = new Patient
@@ -73,28 +66,21 @@ public class AuthService(
             var newHerbalist = new Herbalist
             {
                 User = user,
-                //UserId = user.Id, // EF هيملأه تلقائياً بعد الحفظ لو مستخدم Navigation
                 AverageRating = 0,
                 Bio = null!,
                 AvailableFrom = TimeSpan.Zero,
                 AvailableTo = TimeSpan.Zero,
-                //LicenseNumber = ""
                 LicenseNumber = "HL-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper()
             };
             
             await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);
         }
 
-        // 5. حفظ الكل (Atomic Transaction)
-        // السطر ده هيبعت لـ SQL: الـ User أولاً، ياخد الـ ID، يحطه في الـ Patient، يبعت الـ Patient
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // 📧 Send Confirmation Email
-        // baseUrl => contain published link
         var confirmationLink =
             $"{_config["App:BaseUrl"]}/api/accounts/confirm-email?email={user.Email}&token={token}";
 
-        //EmailMessage
         var message = $@"
         <html>
          <body style='font-family: Arial; text-align: center;'>
@@ -127,42 +113,93 @@ public class AuthService(
         return new RegisterUserAuthResponse
         {
             Success = true,
-            // Send the confirmation link in response to test locally
             Message = $"User registered successfully. Please confirm your email."
 
         };
     }
 
-    public async Task<RegisterUserAuthResponse> ConfirmEmailAsync(string email, string token)
+    public async Task<RegisterUserAuthResponse> ConfirmEmailAsync(string email, string token, CancellationToken cancellationToken = default)
     {
+        // 1. Fail-Fast Validation
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
+            return new RegisterUserAuthResponse { Success = false, Message = "Email and token are required." };
+
+        // 2. Fetch User
         var user = await unitOfWork.UserRepository.GetAsync(
             u => u.Email == email,
-            tracked: true);
+            tracked: true,
+            cancellationToken: cancellationToken);
 
         if (user == null)
             return new RegisterUserAuthResponse { Success = false, Message = "User not found." };
 
-        //if (user.IsEmailConfirmed)
-        //    return new RegisterUserAuthResponse { Success = true, Message = "Email already confirmed." };
+        // 3. Check if already confirmed
+        if (user.IsEmailConfirmed)
+            return new RegisterUserAuthResponse { Success = true, Message = "Email already confirmed." };
 
-        if (user.EmailConfirmationToken != token ||
-            user.EmailConfirmationTokenExpiry < DateTime.UtcNow)
+        // 4. Validate Token & Expiry
+        if (user.EmailConfirmationToken != token || user.EmailConfirmationTokenExpiry < DateTime.UtcNow)
         {
-            return new RegisterUserAuthResponse
-            { Success = false, Message = "Invalid or expired token." };
+            return new RegisterUserAuthResponse { Success = false, Message = "Invalid or expired token." };
         }
 
+        // 5. Update User
         user.IsEmailConfirmed = true;
         user.EmailConfirmationToken = null;
         user.EmailConfirmationTokenExpiry = null;
 
         unitOfWork.UserRepository.Update(user);
-        await unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new RegisterUserAuthResponse { Success = true, Message = "Email confirmed successfully." };
+    }
+
+    public async Task<RegisterUserAuthResponse> ResendConfirmationEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        // 1. نتأكد إن اليوزر موجود
+        var user = await unitOfWork.UserRepository.GetAsync(
+            u => u.Email == email,
+            tracked: true, // لازم true عشان هنعدل عليه
+            cancellationToken: cancellationToken);
+
+        if (user == null)
+            return new RegisterUserAuthResponse { Success = false, Message = "User not found." };
+
+        // 2. لو اليوزر متفعل أصلاً، مفيش داعي نبعتله إيميل تاني
+        if (user.IsEmailConfirmed)
+            return new RegisterUserAuthResponse { Success = false, Message = "Account is already confirmed. You can login directly." };
+
+        // 3. نكريت توكن جديد بمدة جديدة (24 ساعة)
+        var newToken = Guid.NewGuid().ToString("N");
+        user.EmailConfirmationToken = newToken;
+        user.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddHours(24);
+
+        unitOfWork.UserRepository.Update(user);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // 4. نجهز اللينك ونبعت الإيميل أبو زرار أخضر
+        var confirmationLink = $"{_config["App:BaseUrl"]}/api/accounts/confirm-email?email={user.Email}&token={newToken}";
+
+        var message = $@"
+    <html>
+        <body style='font-family: Arial; text-align: center;'>
+            <h2>Welcome Back to Herbal System 🌿</h2>
+            <p>Hello {user.FullName},</p>
+            <p>You requested a new confirmation link. Please verify your email by clicking the button below:</p>
+            <a href='{confirmationLink}' 
+               style='display:inline-block; padding:12px 25px; background-color:#28a745; color:white; text-decoration:none; border-radius:5px; font-size:16px;'>
+                Verify Email
+            </a>
+            <p style='margin-top:20px;'>This link is valid for 24 hours.</p>
+        </body>
+    </html>";
+
+        await emailService.SendEmailAsync(user.Email, "New Confirmation Link - Herbal System", message);
 
         return new RegisterUserAuthResponse
         {
             Success = true,
-            Message = "Email confirmed successfully."
+            Message = "A new confirmation email has been sent successfully. Please check your inbox."
         };
     }
 
@@ -176,12 +213,12 @@ public class AuthService(
             return new RegisterUserAuthResponse { Success = false, Message = "Invalid Email or password." };
 
         // ❗ منع الدخول قبل التفعيل
-        //if (!user.IsEmailConfirmed)
-        //    return new RegisterUserAuthResponse
-        //    {
-        //        Success = false,
-        //        Message = "Please confirm your email before logging in."
-        //    };
+        if (!user.IsEmailConfirmed)
+            return new RegisterUserAuthResponse
+            {
+                Success = false,
+                Message = "Please confirm your email before logging in."
+            };
 
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();

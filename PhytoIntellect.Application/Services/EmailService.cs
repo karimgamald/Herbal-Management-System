@@ -14,7 +14,7 @@ public class EmailService(IOptions<EmailSettings> settings) : IEmailService
 
         email.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
         email.To.Add(MailboxAddress.Parse(to));
-        email.Subject = subject;
+        email.Subject = subject; 
 
         email.Body = new TextPart("html")
         {

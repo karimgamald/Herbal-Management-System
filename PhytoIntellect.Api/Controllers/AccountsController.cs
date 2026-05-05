@@ -1,17 +1,15 @@
 ﻿using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Interfaces;
-using PhytoIntellect.Application.Services;
-using PhytoIntellect.Infrastructure.Identities;
+using ResendConfirmationEmailRequest = PhytoIntellect.Application.Contracts.Accounts.ResendConfirmationEmailRequest;
 
 
 namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
-[ApiController] //kari
+[ApiController]
 public class AccountsController(IAuthService authService) : ControllerBase
 {
     [AllowAnonymous]
@@ -22,7 +20,6 @@ public class AccountsController(IAuthService authService) : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        // Register user using AuthService (which will hash password internally)
         var result = await authService.RegisterAsync(model, cancellationToken);
 
         if (!result.Success)
@@ -33,10 +30,66 @@ public class AccountsController(IAuthService authService) : ControllerBase
 
     [AllowAnonymous]
     [HttpGet("confirm-email")]
-    public async Task<IActionResult> ConfirmEmail(string email, string token)
+    public async Task<IActionResult> ConfirmEmail([FromQuery] string email, [FromQuery] string token, CancellationToken cancellationToken)
     {
-        var result = await authService.ConfirmEmailAsync(email, token);
-        return Ok(result);
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
+            return BadRequest("Invalid request parameters.");
+
+        var result = await authService.ConfirmEmailAsync(email, token, cancellationToken);
+
+        if (result.Success)
+        {
+            var successHtml = """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Email Confirmed</title>
+            </head>
+            <body style="text-align:center; padding-top:100px; font-family:Arial, sans-serif; background-color:#f9f9f9;">
+                <h1 style="color:#28a745;">✅ Email Confirmed Successfully!</h1>
+                <p style="font-size:18px; color:#555;">Your account has been verified. You can now close this window and return to the app to log in.</p>
+            </body>
+            </html>
+            """;
+
+            return Content(successHtml, "text/html");
+        }
+        else
+        {
+            var errorHtml = $"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Confirmation Failed</title>
+            </head>
+            <body style="text-align:center; padding-top:100px; font-family:Arial, sans-serif; background-color:#f9f9f9;">
+                <h1 style="color:#dc3545;">❌ Email Confirmation Failed</h1>
+                <p style="font-size:18px; color:#555;">{result.Message}</p>
+            </body>
+            </html>
+            """;
+
+            return Content(errorHtml, "text/html");
+        }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("resend-confirmation-email")]
+    public async Task<IActionResult> ResendConfirmationEmail([FromBody] ResendConfirmationEmailRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { Message = "Email is required." });
+
+        var result = await authService.ResendConfirmationEmailAsync(request.Email);
+
+        if (result.Success)
+            return Ok(result);
+
+        return BadRequest(result);
     }
 
     [AllowAnonymous]
@@ -51,7 +104,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
         if (!result.Success)
             return Unauthorized(new { result.Message });
 
-        return Ok(result.Data); // Contains accessToken + refreshToken
+        return Ok(result.Data); 
     }
 
     [HttpPost("reset-password")]
@@ -81,7 +134,6 @@ public class AccountsController(IAuthService authService) : ControllerBase
         return Ok(result);
     }
 
-
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest model, 
         CancellationToken cancellationToken)
@@ -102,7 +154,6 @@ public class AccountsController(IAuthService authService) : ControllerBase
         return Ok(new { result.Message });
     }
 
-   
     [HttpPost("google-login")]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
     {
