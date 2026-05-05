@@ -45,6 +45,7 @@ public class AuthService(
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
         var token = Guid.NewGuid().ToString("N");
+
         user.EmailConfirmationToken = token;
         user.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddHours(24);
         user.IsEmailConfirmed = false;
@@ -78,8 +79,12 @@ public class AuthService(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        var baseUrl = _config["App:BaseUrl"];
+
         var confirmationLink =
-            $"{_config["App:BaseUrl"]}/api/accounts/confirm-email?email={user.Email}&token={token}";
+            $"{baseUrl}/api/auth/confirm-email" +
+            $"?email={Uri.EscapeDataString(user.Email)}" +
+            $"&token={Uri.EscapeDataString(token)}";
 
         var message = $@"
         <html>
