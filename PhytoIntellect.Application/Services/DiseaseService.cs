@@ -19,39 +19,31 @@ public class DiseaseService(IUnitOfWork unitOfWork, IMapper mapper) : IDiseaseSe
      RequestFilters filters,
      CancellationToken cancellationToken = default)
     {
-        // 1. نجيب الـ IQueryable
         var query = unitOfWork.DiseaseRepository.GetQueryable(tracked: false);
 
-        // 2. البحث (Searching) - هيبحث باسم المرض
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-            // لو في عمود للوصف Description ممكن تزوده هنا
             query = query.Where(d => d.DiseaseName.ToLower().Contains(search));
         }
 
-        // 3. الترتيب (Sorting)
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "diseaseName" => isDesc ? query.OrderByDescending(d => d.DiseaseName) : query.OrderBy(d => d.DiseaseName),
-                // لو عندك تاريخ إضافة للمرض
-                // "date" => isDesc ? query.OrderByDescending(d => d.CreatedAt) : query.OrderBy(d => d.CreatedAt),
-                _ => query.OrderBy(d => d.DiseaseName) // الديفولت لو بعت عمود غلط (ترتيب أبجدي)
+                "diseasename" => isDesc ? query.OrderByDescending(d => d.DiseaseName) : query.OrderBy(d => d.DiseaseName),
+                "diseasetype" => isDesc ? query.OrderByDescending(d => d.DiseaseType) : query.OrderBy(d => d.DiseaseType),
+                _ => isDesc ? query.OrderByDescending(d => d.DiseaseName) : query.OrderBy(d => d.DiseaseName)
             };
         }
         else
         {
-            // الديفولت لو مبعتش ترتيب خالص (ترتيب أبجدي زي ما كنت عامل)
-            query = query.OrderBy(d => d.DiseaseName);
+            query = isDesc ? query.OrderByDescending(d => d.DiseaseName) : query.OrderBy(d => d.DiseaseName);
         }
 
-        // 4. المابينج باستخدام AutoMapper
         var projectedQuery = query.ProjectTo<DiseaseResponse>(mapper.ConfigurationProvider);
 
-        // 5. تطبيق الـ Pagination الجاهز
         var paginatedDiseases = await PaginatedList<DiseaseResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,

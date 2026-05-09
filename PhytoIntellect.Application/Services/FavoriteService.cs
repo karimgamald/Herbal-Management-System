@@ -58,33 +58,31 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.Herb);
 
-        // لو مفيش مفضلات، نرجع PaginatedList فاضية
         if (!ids.Any())
             return new PaginatedList<FavoriteResponse>(new List<FavoriteResponse>(), filters.PageNumber, 0, filters.PageSize);
 
         var query = unitOfWork.HerbRepository.GetQueryable(tracked: false)
             .Where(h => ids.Contains(h.HerbId));
 
-        // البحث
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-            query = query.Where(h => h.HerbName.ToLower().Contains(search)); // افترضت إن العمود اسمه Name
+            query = query.Where(h => h.HerbName.ToLower().Contains(search)); 
         }
 
-        // الترتيب
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "herbName" => isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName),
-                _ => query.OrderByDescending(h => h.HerbId)
+                "herbname" => isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName),
+                "scientificname" => isDesc ? query.OrderByDescending(h => h.ScientificName) : query.OrderBy(h => h.ScientificName),
+                _ => isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName)
             };
         }
         else
         {
-            query = query.OrderByDescending(h => h.HerbId);
+            query = isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName);
         }
 
         var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);
@@ -100,28 +98,30 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         if (!ids.Any())
             return new PaginatedList<FavoriteResponse>(new List<FavoriteResponse>(), filters.PageNumber, 0, filters.PageSize);
 
-        // شيلنا الـ Include لأن AutoMapper هيعملها
         var query = unitOfWork.RecipeRepository.GetQueryable(tracked: false)
             .Where(r => ids.Contains(r.RecipeId));
 
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-            query = query.Where(r => r.Description!.ToLower().Contains(search)); // افترضت إن العمود اسمه Title
+            query = query.Where(r => r.RecipeDiseases.Any(rd => rd.Disease.DiseaseName.ToLower().Contains(search)));
         }
+
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
 
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "description" => isDesc ? query.OrderByDescending(r => r.Description) : query.OrderBy(r => r.Description),
-                _ => query.OrderByDescending(r => r.RecipeId)
+                "averagerating" => isDesc ? query.OrderByDescending(r => r.AverageRating) : query.OrderBy(r => r.AverageRating),
+                "createddate" => isDesc ? query.OrderByDescending(r => r.CreatedDate) : query.OrderBy(r => r.CreatedDate),
+                "price" => isDesc ? query.OrderByDescending(r => r.Price) : query.OrderBy(r => r.Price),
+                _ => isDesc ? query.OrderByDescending(r => r.AverageRating) : query.OrderBy(r => r.AverageRating)
             };
         }
         else
         {
-            query = query.OrderByDescending(r => r.RecipeId);
+            query = isDesc ? query.OrderByDescending(r => r.AverageRating) : query.OrderBy(r => r.AverageRating);
         }
 
         var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);
@@ -146,18 +146,19 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
             query = query.Where(r => r.RecommendedRecipeName.ToLower().Contains(search));
         }
 
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "recommendedRecipeName" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
-                _ => query.OrderByDescending(r => r.Id)
+                "recommendedrecipename" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
+                "confidencescore" => isDesc ? query.OrderByDescending(r => r.ConfidenceScore) : query.OrderBy(r => r.ConfidenceScore),
+                _ => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName)
             };
         }
         else
         {
-            query = query.OrderByDescending(r => r.Id);
+            query = isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName);
         }
 
         var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);
@@ -173,7 +174,6 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         if (!ids.Any())
             return new PaginatedList<FavoriteResponse>(new List<FavoriteResponse>(), filters.PageNumber, 0, filters.PageSize);
 
-        // شيلنا IncludeProperties: "User"
         var query = unitOfWork.HerbalistRepository.GetQueryable(tracked: false)
             .Where(h => ids.Contains(h.HerbalistId));
 
@@ -183,18 +183,20 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
             query = query.Where(h => h.User!.FullName.ToLower().Contains(search));
         }
 
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
                 "fullname" => isDesc ? query.OrderByDescending(h => h.User!.FullName) : query.OrderBy(h => h.User!.FullName),
-                _ => query.OrderByDescending(h => h.HerbalistId)
+                "licensenumber" => isDesc ? query.OrderByDescending(h => h.LicenseNumber) : query.OrderBy(h => h.LicenseNumber),
+                "averagerating" => isDesc ? query.OrderByDescending(h => h.AverageRating) : query.OrderBy(h => h.AverageRating),
+                _ => isDesc ? query.OrderByDescending(h => h.User!.FullName) : query.OrderBy(h => h.User!.FullName)
             };
         }
         else
         {
-            query = query.OrderByDescending(h => h.HerbalistId);
+            query = isDesc ? query.OrderByDescending(h => h.User!.FullName) : query.OrderBy(h => h.User!.FullName);
         }
 
         var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);

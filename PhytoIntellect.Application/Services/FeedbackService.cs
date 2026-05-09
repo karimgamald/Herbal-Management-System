@@ -104,31 +104,28 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
     {
         var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
 
-        // الفلتر الأساسي
         query = query.Where(f => f.RecipeId == recipeId);
 
-        // البحث (مثلاً هيبحث في كلام التقييم)
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-            // غير Comment لاسم العمود اللي شايل نص التقييم عندك
-            query = query.Where(f => f.Comment.ToLower().Contains(search));
+            query = query.Where(f => f.Patient!.User!.FullName.ToLower().Contains(search));
         }
 
-        // الترتيب (الديفولت هو RatingDate زي ما إنت كنت عامل بالظبط)
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "ratingValue" => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue),
+                "ratingvalue" => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue),
                 "date" => isDesc ? query.OrderByDescending(f => f.RatingDate) : query.OrderBy(f => f.RatingDate),
-                _ => query.OrderByDescending(f => f.RatingDate)
+                "patientname" => isDesc ? query.OrderByDescending(f => f.Patient!.User!.FullName) : query.OrderBy(f => f.Patient!.User!.FullName),
+                _ => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue)
             };
         }
         else
         {
-            query = query.OrderByDescending(f => f.RatingDate);
+            query = isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue);
         }
 
         var projectedQuery = query.ProjectTo<FeedbackResponse>(mapper.ConfigurationProvider);
@@ -218,30 +215,28 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
     {
         var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
 
-        // الفلتر الأساسي
         query = query.Where(f => f.AiRecipeId == aiRecipeId);
 
-        // البحث
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-            query = query.Where(f => f.Comment.ToLower().Contains(search));
+            query = query.Where(f => f.Patient!.User!.FullName.ToLower().Contains(search));
         }
 
-        // الترتيب
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "ratingValue" => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue),
+                "ratingvalue" => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue),
                 "date" => isDesc ? query.OrderByDescending(f => f.RatingDate) : query.OrderBy(f => f.RatingDate),
-                _ => query.OrderByDescending(f => f.RatingDate)
+                "patientname" => isDesc ? query.OrderByDescending(f => f.Patient!.User!.FullName) : query.OrderBy(f => f.Patient!.User!.FullName),
+                _ => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue)
             };
         }
         else
         {
-            query = query.OrderByDescending(f => f.RatingDate);
+            query = isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue);
         }
 
         var projectedQuery = query.ProjectTo<FeedbackResponse>(mapper.ConfigurationProvider);

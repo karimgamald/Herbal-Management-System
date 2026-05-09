@@ -32,37 +32,32 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
     // 5️⃣ عرض كل العشابين
     public async Task<PaginatedList<HerbalistResponse>> GetAllHerbalistsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        // 1. نجيب الـ IQueryable
         var query = unitOfWork.HerbalistRepository.GetQueryable(tracked: false);
 
-        // 2. البحث (Searching)
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-            // تقدر تزود أي عمود تاني زي التخصص (Specialty) مثلاً
             query = query.Where(h => h.User!.FullName.ToLower().Contains(search));
         }
 
-        // 3. الترتيب (Sorting)
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
                 "fullname" => isDesc ? query.OrderByDescending(h => h.User!.FullName) : query.OrderBy(h => h.User!.FullName),
-                // "specialty" => isDesc ? query.OrderByDescending(h => h.Specialty) : query.OrderBy(h => h.Specialty),
-                _ => query.OrderByDescending(h => h.HerbalistId) // الديفولت لو بعت عمود غلط
+                "licensenumber" => isDesc ? query.OrderByDescending(h => h.LicenseNumber) : query.OrderBy(h => h.LicenseNumber),
+                "averagerating" => isDesc ? query.OrderByDescending(h => h.AverageRating) : query.OrderBy(h => h.AverageRating),
+                _ => isDesc ? query.OrderByDescending(h => h.User!.FullName) : query.OrderBy(h => h.User!.FullName)
             };
         }
         else
         {
-            query = query.OrderByDescending(h => h.HerbalistId); // الديفولت لو مفيش ترتيب مبعوت
+            query = isDesc ? query.OrderByDescending(h => h.User!.FullName) : query.OrderBy(h => h.User!.FullName);
         }
 
-        // 4. المابينج باستخدام AutoMapper
         var projectedQuery = query.ProjectTo<HerbalistResponse>(mapper.ConfigurationProvider);
 
-        // 5. تطبيق الـ Pagination
         var paginatedHerbalists = await PaginatedList<HerbalistResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,

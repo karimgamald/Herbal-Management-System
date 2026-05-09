@@ -13,43 +13,33 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
     // 1️⃣ Get All Approved Herbs
     public async Task<PaginatedList<HerbResponse>> GetApprovedHerbsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        // 1. نجيب الـ IQueryable
         var query = unitOfWork.HerbRepository.GetQueryable(tracked: false);
 
-        // 2. الفلتر الأساسي (الأعشاب المتوافق عليها بس)
-        // ده بيعوض الـ filter اللي كان مبعوت في الـ GetAllAsync القديمة
         query = query.Where(h => h.IsApproved);
 
-        // 3. البحث (Searching)
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-            // تقدر تزود هنا أي عواميد تانية حابب اليوزر يبحث فيها زي ScientificName مثلاً
-            query = query.Where(h => h.HerbName.ToLower().Contains(search) ||
-                                     h.Description!.ToLower().Contains(search));
+            query = query.Where(h => h.HerbName.ToLower().Contains(search)); 
         }
 
-        // 4. الترتيب (Sorting)
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "herbName" => isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName),
-                // لو عندك تاريخ إضافة العشبة مثلاً:
-                // "date" => isDesc ? query.OrderByDescending(h => h.CreatedAt) : query.OrderBy(h => h.CreatedAt),
-                _ => query.OrderByDescending(h => h.HerbId) // الديفولت لو بعت عمود غلط
+                "herbname" => isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName),
+                "scientificname" => isDesc ? query.OrderByDescending(h => h.ScientificName) : query.OrderBy(h => h.ScientificName),
+                _ => isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName)
             };
         }
         else
         {
-            query = query.OrderByDescending(h => h.HerbId); // الديفولت لو مفيش ترتيب مبعوت
+            query = isDesc ? query.OrderByDescending(h => h.HerbName) : query.OrderBy(h => h.HerbName);
         }
 
-        // 5. المابينج باستخدام AutoMapper (تأكد إنك عامل using AutoMapper.QueryableExtensions;)
         var projectedQuery = query.ProjectTo<HerbResponse>(mapper.ConfigurationProvider);
 
-        // 6. تطبيق الـ Pagination الجاهز
         var paginatedHerbs = await PaginatedList<HerbResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,

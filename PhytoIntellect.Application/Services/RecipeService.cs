@@ -92,39 +92,31 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
             .GetQueryable(tracked: false)
             .Where(r => r.IsActive);
 
-        // 🔍 Search
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-
-            query = query.Where(r =>
-                r.Description.ToLower().Contains(search));
+            query = query.Where(r => r.RecipeDiseases.Any(rd => rd.Disease.DiseaseName.ToLower().Contains(search)));
         }
 
-        // 🔃 Sorting
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
-
             query = filters.SortColumn.ToLower() switch
             {
-                "name" => isDesc
-                    ? query.OrderByDescending(r => r.Description)
-                    : query.OrderBy(r => r.Description),
-
-                _ => query.OrderBy(r => r.RecipeId)
+                "averagerating" => isDesc ? query.OrderByDescending(r => r.AverageRating) : query.OrderBy(r => r.AverageRating),
+                "createddate" => isDesc ? query.OrderByDescending(r => r.CreatedDate) : query.OrderBy(r => r.CreatedDate),
+                "price" => isDesc ? query.OrderByDescending(r => r.Price) : query.OrderBy(r => r.Price),
+                _ => isDesc ? query.OrderByDescending(r => r.AverageRating) : query.OrderBy(r => r.AverageRating)
             };
         }
         else
         {
-            query = query.OrderBy(r => r.RecipeId);
+            query = isDesc ? query.OrderByDescending(r => r.AverageRating) : query.OrderBy(r => r.AverageRating);
         }
 
-        // 🚀 Projection
-        var projectedQuery = query.ProjectTo<RecipeResponse>(
-            mapper.ConfigurationProvider);
+        var projectedQuery = query.ProjectTo<RecipeResponse>(mapper.ConfigurationProvider);
 
-        // 📄 Pagination
         var result = await PaginatedList<RecipeResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,

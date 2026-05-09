@@ -17,7 +17,6 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : 
      RequestFilters filters,
      CancellationToken cancellationToken)
     {
-        // 1. نتأكد إن العشاب ده موجود أصلاً
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
             filter: h => h.UserId == userId,
             tracked: false,
@@ -25,41 +24,33 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : 
 
         if (herbalist == null) throw new KeyNotFoundException("Herbalist not found.");
 
-        // 2. نجيب الـ IQueryable بتاع الـ Inventory
         var query = unitOfWork.HerbalistAiRecipeRepository.GetQueryable(tracked: false);
 
-        // 3. الفلتر الأساسي: نجيب وصفات العشاب ده بس
         query = query.Where(h => h.HerbalistId == herbalist.HerbalistId);
 
-        // 4. البحث (Searching) - لاحظ إننا بنبحث جوه الـ AiRecipe
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
-            // غير Title لـ Name أو للعمود اللي شايل اسم الوصفة عندك
             query = query.Where(h => h.AiRecipe.RecommendedRecipeName.ToLower().Contains(search));
         }
 
-        // 5. الترتيب (Sorting) - برضه هنرتب باسم الوصفة أو بتاريخ إضافتها
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "recommendedRecipeName" => isDesc ? query.OrderByDescending(h => h.AiRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiRecipe.RecommendedRecipeName),
-                // لو عندك تاريخ مثلاً
-                // "date" => isDesc ? query.OrderByDescending(h => h.CreatedAt) : query.OrderBy(h => h.CreatedAt),
-                _ => query.OrderByDescending(h => h.AiRecipeId)
+                "recommendedrecipename" => isDesc ? query.OrderByDescending(h => h.AiRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiRecipe.RecommendedRecipeName),
+                "price" => isDesc ? query.OrderByDescending(h => h.Price) : query.OrderBy(h => h.Price),
+                _ => isDesc ? query.OrderByDescending(h => h.AiRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiRecipe.RecommendedRecipeName)
             };
         }
         else
         {
-            query = query.OrderByDescending(h => h.AiRecipeId);
+            query = isDesc ? query.OrderByDescending(h => h.AiRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiRecipe.RecommendedRecipeName);
         }
 
-        // 6. المابينج السحري (مش محتاجين Include لأن ProjectTo بتعملها لوحدها)
         var projectedQuery = query.ProjectTo<HerbalistAiRecipeResponse>(mapper.ConfigurationProvider);
 
-        // 7. الـ Pagination
         var paginatedInventory = await PaginatedList<HerbalistAiRecipeResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,

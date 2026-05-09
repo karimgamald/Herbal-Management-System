@@ -23,36 +23,29 @@ public class AiRecipeService(
     {
         var query = _unitOfWork.AiRecipeRepository.GetQueryable(tracked: false);
 
-        // لو عندك عمود اسمه IsPublic مثلاً بيحدد إن الوصفة عامة مش خاصة بمريض، تقدر تفلتر بيه هنا
-        // query = query.Where(r => r.IsPublic == true); 
-
-        // البحث (Searching)
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
             query = query.Where(r => r.RecommendedRecipeName.ToLower().Contains(search));
         }
 
-        // الترتيب (Sorting)
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "recommendedRecipeName" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
-                "date" => isDesc ? query.OrderByDescending(r => r.CreatedAt) : query.OrderBy(r => r.CreatedAt),
-                _ => query.OrderByDescending(r => r.CreatedAt) // الديفولت
+                "recommendedrecipename" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
+                "confidencescore" => isDesc ? query.OrderByDescending(r => r.ConfidenceScore) : query.OrderBy(r => r.ConfidenceScore),
+                _ => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName)
             };
         }
         else
         {
-            query = query.OrderByDescending(r => r.CreatedAt); // ترتيب ديفولت بالأحدث
+            query = isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName); 
         }
 
-        // المابينج السحري
         var projectedQuery = query.ProjectTo<AiRecipeResponse>(_mapper.ConfigurationProvider);
 
-        // تطبيق الـ Pagination
         return await PaginatedList<AiRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
     public async Task<AiRecipeResponse> GetPublicByIdAsync(int recipeId,
@@ -76,45 +69,38 @@ public class AiRecipeService(
     RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
-        // 1. نجيب رقم المريض
         int patientId = await _unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
 
         if (patientId == 0)
             throw new UnauthorizedAccessException("Patient profile not found.");
 
-        // 2. نبدأ الكويري
         var query = _unitOfWork.AiRecipeRepository.GetQueryable(tracked: false);
 
-        // الفلتر الأساسي (وصفات المريض ده بس)
         query = query.Where(r => r.PatientId == patientId);
 
-        // 3. البحث
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
             query = query.Where(r => r.RecommendedRecipeName.ToLower().Contains(search));
         }
 
-        // 4. الترتيب
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
             query = filters.SortColumn.ToLower() switch
             {
-                "recommendedRecipeName" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
-                "date" => isDesc ? query.OrderByDescending(r => r.CreatedAt) : query.OrderBy(r => r.CreatedAt),
-                _ => query.OrderByDescending(r => r.CreatedAt)
+                "recommendedrecipename" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
+                "confidencescore" => isDesc ? query.OrderByDescending(r => r.ConfidenceScore) : query.OrderBy(r => r.ConfidenceScore),
+                _ => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName)
             };
         }
         else
         {
-            query = query.OrderByDescending(r => r.CreatedAt);
+            query = isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName);
         }
 
-        // 5. المابينج
         var projectedQuery = query.ProjectTo<AiRecipeResponse>(_mapper.ConfigurationProvider);
 
-        // 6. الـ Pagination
         return await PaginatedList<AiRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
     // Get the 
