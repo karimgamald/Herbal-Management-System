@@ -12,6 +12,8 @@
 
         public string? EmailConfirmationToken { get; set; }
         public DateTime? EmailConfirmationTokenExpiry { get; set; }
+        public string? PasswordResetToken { get; set; }
+        public DateTime? PasswordResetTokenExpiry { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string Phone { get; set; } = string.Empty;
         public string? Governorate { get; set; }

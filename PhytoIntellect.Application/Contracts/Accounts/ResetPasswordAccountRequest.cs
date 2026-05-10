@@ -4,10 +4,14 @@ using System.Text;
 
 namespace PhytoIntellect.Application.Contracts.Accounts
 {
-    public record ResetPasswordAccountRequest
+    public class ResetPasswordAccountRequest
     {
-        public string Email { get; set; } = string.Empty;
-        public string? OldPassword { get; set; } // اختياري حسب السيستم
-        public string NewPassword { get; set; } = string.Empty;
+        public string Email { get; set; }
+
+        public string NewPassword { get; set; }
+
+        public string? OldPassword { get; set; }   // optional
+
+        public string? Token { get; set; }         // optional (forgot password flow)
     }
 }

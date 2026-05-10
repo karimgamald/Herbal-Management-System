@@ -11,6 +11,7 @@ public interface IAuthService
     Task<RegisterUserAuthResponse> GoogleLoginAsync(GoogleLoginRequest model, CancellationToken cancellationToken = default);
     Task<RegisterUserAuthResponse> ResetPasswordAsync(ResetPasswordAccountRequest model, CancellationToken cancellationToken = default);
     Task<RegisterUserAuthResponse> ForgotPasswordAsync(ForgetPasswordAccountRequest model, CancellationToken cancellationToken = default);
+    Task<RegisterUserAuthResponse> ValidateResetTokenAsync(string email, string token);
     Task<RegisterUserAuthResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
     Task<RegisterUserAuthResponse> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
 

@@ -99,26 +99,31 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
                 o.OrderId.ToString().Contains(search));
         }
 
-        // 🔃 Sorting
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            bool isDesc = string.Equals(
+                filters.SortDirection,
+                "DESC",
+                StringComparison.OrdinalIgnoreCase);
 
             query = filters.SortColumn.ToLower() switch
             {
-                "date" => isDesc
-                    ? query.OrderByDescending(o => o.OrderDate)
-                    : query.OrderBy(o => o.OrderDate),
-
                 "id" => isDesc
                     ? query.OrderByDescending(o => o.OrderId)
                     : query.OrderBy(o => o.OrderId),
 
-                _ => query.OrderBy(o => o.OrderId)
+                "date" => isDesc
+                    ? query.OrderByDescending(o => o.OrderDate)
+                    : query.OrderBy(o => o.OrderDate),
+
+                _ => isDesc
+                    ? query.OrderByDescending(o => o.OrderDate)
+                    : query.OrderBy(o => o.OrderDate)
             };
         }
         else
         {
+            // الافتراضي: الأحدث أولاً
             query = query.OrderByDescending(o => o.OrderDate);
         }
 

@@ -82,7 +82,7 @@ public class AuthService(
         var baseUrl = _config["App:BaseUrl"];
 
         var confirmationLink =
-            $"{baseUrl}/api/auth/confirm-email" +
+            $"{baseUrl}/api/accounts/confirm-email" +
             $"?email={Uri.EscapeDataString(user.Email)}" +
             $"&token={Uri.EscapeDataString(token)}";
 
@@ -218,12 +218,12 @@ public class AuthService(
             return new RegisterUserAuthResponse { Success = false, Message = "Invalid Email or password." };
 
         // ❗ منع الدخول قبل التفعيل
-        if (!user.IsEmailConfirmed)
-            return new RegisterUserAuthResponse
-            {
-                Success = false,
-                Message = "Please confirm your email before logging in."
-            };
+        //if (!user.IsEmailConfirmed)
+        //    return new RegisterUserAuthResponse
+        //    {
+        //        Success = false,
+        //        Message = "Please confirm your email before logging in."
+        //    };
 
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();
@@ -339,10 +339,10 @@ public class AuthService(
         };
     }
 
-    public async Task<RegisterUserAuthResponse> ResetPasswordAsync(ResetPasswordAccountRequest model,
+   public async Task<RegisterUserAuthResponse> ResetPasswordAsync(ResetPasswordAccountRequest model,
     CancellationToken cancellationToken = default)
     {
-        // 1️⃣ التأكد إن اليوزر موجود
+        // 1️⃣ Get user
         var user = await unitOfWork.UserRepository.GetAsync(
             u => u.Email == model.Email,
             tracked: true,
@@ -355,40 +355,79 @@ public class AuthService(
                 Message = "User not found."
             };
 
-        // 2️⃣ (اختياري لكن مهم جدًا) التحقق من الباسورد القديمة
-        if (!string.IsNullOrWhiteSpace(model.OldPassword))
+        // =========================================
+        // 🔐 CASE 1: Reset using TOKEN (Forgot Password Flow)
+        // =========================================
+        if (!string.IsNullOrWhiteSpace(model.Token))
         {
-            var isValidOldPassword = BCrypt.Net.BCrypt.Verify(model.OldPassword, user.PasswordHash);
+            if (user.PasswordResetToken == null ||
+                user.PasswordResetTokenExpiry == null ||
+                user.PasswordResetToken != model.Token ||
+                user.PasswordResetTokenExpiry < DateTime.UtcNow)
+            {
+                return new RegisterUserAuthResponse
+                {
+                    Success = false,
+                    Message = "Invalid or expired reset token."
+                };
+            }
+
+            // update password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+
+            // clear token after use
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+        }
+
+        // =========================================
+        // 🔐 CASE 2: Reset using OLD PASSWORD (Logged-in user)
+        // =========================================
+        else
+        {
+            if (string.IsNullOrWhiteSpace(model.OldPassword))
+            {
+                return new RegisterUserAuthResponse
+                {
+                    Success = false,
+                    Message = "Old password or reset token is required."
+                };
+            }
+
+            var isValidOldPassword = BCrypt.Net.BCrypt.Verify(
+                model.OldPassword,
+                user.PasswordHash);
+
             if (!isValidOldPassword)
+            {
                 return new RegisterUserAuthResponse
                 {
                     Success = false,
                     Message = "Old password is incorrect."
                 };
+            }
+
+            // update password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
         }
 
-        // 3️⃣ تشفير الباسورد الجديدة
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
-
-        // 4️⃣ تحديث اليوزر
+        // 3️⃣ Save changes
         unitOfWork.UserRepository.Update(user);
-
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        var message =
-            $"""
-            Password Changed Successfully
-            
-            Hello {user.FullName},
-            
-            Your password has been updated successfully.
-            
-            If you made this change, you can safely ignore this email.
-            
-            If you did NOT change your password, please contact support immediately.
-            
-            Best regards,
-            Herbal System Security Team
-            """;
+
+        // 4️⃣ Send notification email
+        var message = $"""
+    Password Changed Successfully
+    
+    Hello {user.FullName},
+    
+    Your password has been updated successfully.
+    
+    If this wasn't you, please contact support immediately.
+    
+    Best regards,
+    Herbal System Security Team
+    """;
 
         await emailService.SendEmailAsync(
             user.Email,
@@ -402,8 +441,7 @@ public class AuthService(
         };
     }
 
-    public async Task<RegisterUserAuthResponse> ForgotPasswordAsync(ForgetPasswordAccountRequest model,
-    CancellationToken cancellationToken = default)
+    public async Task<RegisterUserAuthResponse> ForgotPasswordAsync(ForgetPasswordAccountRequest model, CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(
             u => u.Email == model.Email,
@@ -417,40 +455,128 @@ public class AuthService(
                 Message = "User not found."
             };
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+        // ❌ invalidate old token (important)
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpiry = null;
+
+        // 🔐 generate new token
+        var token = Guid.NewGuid().ToString("N");
+
+        user.PasswordResetToken = token;
+        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
 
         unitOfWork.UserRepository.Update(user);
-
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var message =
-           $"""
-            Password Reset Notification
-            
-            Hello {user.FullName},
-            
-            Your password has been reset successfully.
-            
-            You can now login using your new password.
-            
-            If you did not request this change, please contact support immediately.
-            
-            Best regards,
-            Herbal System Security Team
-            """;
+        var baseUrl = _config["App:BaseUrl"];
 
-        await emailService.SendEmailAsync(
-            user.Email,
-            "Password Reset - Herbal System",
-            message);
+        var resetLink =
+     $"{_config["App:BaseUrl"]}/api/accounts/reset-password" +
+     $"?email={Uri.EscapeDataString(user.Email)}" +
+     $"&token={Uri.EscapeDataString(token)}";
+
+        var message = $@"
+    <html>
+     <body style='font-family: Arial; text-align: center;'>
+     
+         <h2>Reset Your Password 🔐</h2>
+     
+         <p>Hello {user.FullName},</p>
+     
+         <p>You requested to reset your password.</p>
+     
+         <p>Click the button below:</p>
+     
+         <a href='{resetLink}' 
+            style='display:inline-block;
+                   padding:12px 25px;
+                   background-color:#dc3545;
+                   color:white;
+                   text-decoration:none;
+                   border-radius:5px;
+                   font-size:16px;'>
+             Reset Password
+         </a>
+     
+         <p style='margin-top:20px;'>This link expires in 1 hour.</p>
+     
+     </body>
+    </html>
+    ";
+
+        await emailService.SendEmailAsync(user.Email, "Reset Your Password", message);
 
         return new RegisterUserAuthResponse
         {
             Success = true,
-            Message = "Password reset successfully."
+            Message = "Password reset link sent to your email."
         };
     }
 
+    public async Task<RegisterUserAuthResponse> ValidateResetTokenAsync(string email, string token)
+    {
+        // 1️⃣ Basic validation
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
+        {
+            return new RegisterUserAuthResponse
+            {
+                Success = false,
+                Message = "Email and token are required."
+            };
+        }
+
+        // 2️⃣ Get user
+        var user = await unitOfWork.UserRepository.GetAsync(
+            u => u.Email == email,
+            tracked: false);
+
+        if (user == null)
+        {
+            return new RegisterUserAuthResponse
+            {
+                Success = false,
+                Message = "User not found."
+            };
+        }
+
+        // 3️⃣ Check if token exists
+        if (string.IsNullOrWhiteSpace(user.PasswordResetToken) ||
+            user.PasswordResetTokenExpiry == null)
+        {
+            return new RegisterUserAuthResponse
+            {
+                Success = false,
+                Message = "Invalid reset request."
+            };
+        }
+
+        // 4️⃣ Validate token match
+        if (user.PasswordResetToken != token)
+        {
+            return new RegisterUserAuthResponse
+            {
+                Success = false,
+                Message = "Invalid token."
+            };
+        }
+
+        // 5️⃣ Check expiry
+        if (user.PasswordResetTokenExpiry < DateTime.UtcNow)
+        {
+            return new RegisterUserAuthResponse
+            {
+                Success = false,
+                Message = "Token expired. Please request a new password reset."
+            };
+        }
+
+        // 6️⃣ Success
+        return new RegisterUserAuthResponse
+        {
+            Success = true,
+            Message = "Token is valid."
+        };
+    }
     public async Task<RegisterUserAuthResponse> RefreshTokenAsync(string refreshToken, 
         CancellationToken cancellationToken = default)
     {

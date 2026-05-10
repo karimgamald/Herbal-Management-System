@@ -53,10 +53,12 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
                 p.User.FullName.ToLower().Contains(search));
         }
 
-        // 🔃 Sorting
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            bool isDesc = string.Equals(
+                filters.SortDirection,
+                "DESC",
+                StringComparison.OrdinalIgnoreCase);
 
             query = filters.SortColumn.ToLower() switch
             {
@@ -64,16 +66,23 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
                     ? query.OrderByDescending(p => p.User.FullName)
                     : query.OrderBy(p => p.User.FullName),
 
-                "date" => isDesc
+                "created date" => isDesc
                     ? query.OrderByDescending(p => p.User.CreatedAt)
                     : query.OrderBy(p => p.User.CreatedAt),
 
-                _ => query.OrderBy(p => p.PatientId)
+                "id" => isDesc
+                    ? query.OrderByDescending(p => p.PatientId)
+                    : query.OrderBy(p => p.PatientId),
+
+                _ => isDesc
+                    ? query.OrderByDescending(p => p.PatientId)
+                    : query.OrderBy(p => p.PatientId)
             };
         }
         else
         {
-            query = query.OrderBy(p => p.PatientId);
+            // الافتراضي: الأحدث أو حسب Name
+            query = query.OrderByDescending(p => p.User.FullName);
         }
 
         // 🚀 Projection

@@ -56,24 +56,31 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         // 🔃 Sorting
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            bool isDesc = string.Equals(
+                filters.SortDirection,
+                "DESC",
+                StringComparison.OrdinalIgnoreCase);
 
             query = filters.SortColumn.ToLower() switch
             {
-                "name" => isDesc
-                    ? query.OrderByDescending(s => s.Herbalist.User.FullName)
-                    : query.OrderBy(s => s.Herbalist.User.FullName),
+                "id" => isDesc
+                    ? query.OrderByDescending(s => s.SubOrderId)
+                    : query.OrderBy(s => s.SubOrderId),
+
 
                 "date" => isDesc
                     ? query.OrderByDescending(s => s.Order.OrderDate)
                     : query.OrderBy(s => s.Order.OrderDate),
 
-                _ => query.OrderBy(s => s.SubOrderId)
+                _ => isDesc
+                    ? query.OrderByDescending(s => s.SubOrderId)
+                    : query.OrderBy(s => s.SubOrderId)
             };
         }
         else
         {
-            query = query.OrderBy(s => s.SubOrderId);
+            // الافتراضي: الأحدث أولاً
+            query = query.OrderByDescending(s => s.Order.OrderDate);
         }
 
         // 🚀 Projection

@@ -108,28 +108,34 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         // 🔃 Sorting
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
-            bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+            bool isDesc = string.Equals(
+                filters.SortDirection,
+                "DESC",
+                StringComparison.OrdinalIgnoreCase);
 
             query = filters.SortColumn.ToLower() switch
             {
                 "rating" => isDesc
-                    ? query.OrderByDescending(r => r.RatingValue)   // ✅ fix
+                    ? query.OrderByDescending(r => r.RatingValue)
                     : query.OrderBy(r => r.RatingValue),
 
                 "date" => isDesc
                     ? query.OrderByDescending(r => r.RatingDate)
                     : query.OrderBy(r => r.RatingDate),
 
-                "name" => isDesc
+                "herbalistname" => isDesc
                     ? query.OrderByDescending(r => r.Herbalist.User.FullName)
                     : query.OrderBy(r => r.Herbalist.User.FullName),
 
-                _ => query.OrderBy(r => r.ReviewRecipeId)
+                _ => isDesc
+                    ? query.OrderByDescending(r => r.ReviewRecipeId)
+                    : query.OrderBy(r => r.ReviewRecipeId)
             };
         }
         else
         {
-            query = query.OrderByDescending(r => r.RatingDate);
+            // ✅ Default sorting = top rated
+            query = query.OrderByDescending(r => r.RatingValue);
         }
 
         // 🚀 Projection
