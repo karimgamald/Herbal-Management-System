@@ -107,16 +107,103 @@ public class AccountsController(IAuthService authService) : ControllerBase
         return Ok(result.Data); 
     }
 
-    [HttpPost("reset-password")]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordAccountRequest model)
+    [AllowAnonymous]
+    [HttpGet("reset-password")]
+
+    public async Task<IActionResult> ResetPasswordPage([FromQuery] string email,[FromQuery] string token)
     {
-        // Reset password via UserService (it will hash the new password)
+        var result = await authService.ValidateResetTokenAsync(email, token);
+
+        if (!result.Success)
+        {
+            return Content($"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invalid Reset Link</title>
+</head>
+
+<body style='font-family:Arial;text-align:center;padding-top:50px;background:#f9f9f9'>
+
+    <h2 style='color:red'>❌ Invalid or expired link</h2>
+
+    <p>{result.Message}</p>
+
+</body>
+</html>
+""", "text/html");
+        }
+
+        var html = $"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password</title>
+</head>
+
+<body style='font-family:Arial;text-align:center;padding-top:50px;background:#f9f9f9'>
+
+    <h2>Reset Password 🔐</h2>
+
+    <form method='post' action='/api/accounts/reset-password'>
+
+        <input type='hidden' name='Email' value='{email}' />
+        <input type='hidden' name='Token' value='{token}' />
+
+        <div style='margin-bottom:15px'>
+            <input
+                type='password'
+                name='NewPassword'
+                placeholder='Enter new password'
+                required
+                style='padding:10px;width:250px;border:1px solid #ccc;border-radius:5px'/>
+        </div>
+
+        <button type='submit'
+                style='padding:10px 20px;background:#dc3545;color:white;border:none;border-radius:5px;cursor:pointer'>
+            Reset Password
+        </button>
+
+    </form>
+
+</body>
+</html>
+""";
+
+        return Content(html, "text/html");
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromForm] ResetPasswordAccountRequest model)
+    {
         var result = await authService.ResetPasswordAsync(model);
 
         if (!result.Success)
             return BadRequest(result.Message);
 
-        return Ok(result.Message);
+        return Content("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset Success</title>
+</head>
+
+<body style='font-family:Arial;text-align:center;padding-top:50px;background:#f9f9f9'>
+
+    <h2 style='color:green'>✅ Password reset successfully</h2>
+
+    <p>You can now login with your new password.</p>
+
+</body>
+</html>
+""", "text/html");
     }
 
     [HttpPost("forgot-password")]
