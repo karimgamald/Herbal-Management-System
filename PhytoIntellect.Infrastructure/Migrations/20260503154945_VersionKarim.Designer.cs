@@ -12,8 +12,8 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260428221909_Add_EmailConfirmationFields")]
-    partial class Add_EmailConfirmationFields
+    [Migration("20260503154945_VersionKarim")]
+    partial class VersionKarim
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

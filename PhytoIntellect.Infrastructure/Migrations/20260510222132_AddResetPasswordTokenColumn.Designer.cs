@@ -12,8 +12,8 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260426202745_AddUserFavoritesTable")]
-    partial class AddUserFavoritesTable
+    [Migration("20260510222132_AddResetPasswordTokenColumn")]
+    partial class AddResetPasswordTokenColumn
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -90,6 +90,10 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<bool>("IsSmoker")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
 
@@ -154,6 +158,10 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<bool>("IsSupportedByAi")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Symptoms")
                         .HasColumnType("nvarchar(max)");
 
@@ -169,6 +177,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             DiseaseName = "Insomnia",
                             DiseaseType = "Neurological",
                             IsSupportedByAi = false,
+                            LanguageCode = "en",
                             Symptoms = "Difficulty falling asleep, waking up often."
                         },
                         new
@@ -178,6 +187,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             DiseaseName = "Irritable Bowel Syndrome (IBS)",
                             DiseaseType = "Gastrointestinal",
                             IsSupportedByAi = false,
+                            LanguageCode = "en",
                             Symptoms = "Cramping, abdominal pain, bloating, gas."
                         },
                         new
@@ -187,6 +197,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             DiseaseName = "Common Cold",
                             DiseaseType = "Respiratory",
                             IsSupportedByAi = false,
+                            LanguageCode = "en",
                             Symptoms = "Runny nose, sore throat, cough, congestion."
                         },
                         new
@@ -196,6 +207,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             DiseaseName = "Anxiety",
                             DiseaseType = "Psychological",
                             IsSupportedByAi = false,
+                            LanguageCode = "en",
                             Symptoms = "Restlessness, rapid breathing, increased heart rate."
                         },
                         new
@@ -205,6 +217,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                             DiseaseName = "Indigestion",
                             DiseaseType = "Gastrointestinal",
                             IsSupportedByAi = false,
+                            LanguageCode = "en",
                             Symptoms = "Bloating, nausea, belching."
                         });
                 });
@@ -223,6 +236,10 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<string>("Comment")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
@@ -289,6 +306,10 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ScientificName")
                         .HasMaxLength(150)
@@ -405,6 +426,10 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.Property<bool>("KidneyDisease")
                         .HasColumnType("bit");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("LiverDisease")
                         .HasColumnType("bit");
@@ -637,6 +662,10 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -746,6 +775,10 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<int>("HerbalistId")
                         .HasColumnType("int");
 
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("RatingDate")
                         .HasColumnType("datetime2");
 
@@ -818,6 +851,12 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("EmailConfirmationToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EmailConfirmationTokenExpiry")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -825,9 +864,18 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<string>("Governorate")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsEmailConfirmed")
+                        .HasColumnType("bit");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordResetToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("PasswordResetTokenExpiry")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Phone")
                         .IsRequired()

@@ -10,35 +10,28 @@ namespace PhytoIntellect.Application.Contracts.Accounts
         public ResetPasswordAccountValidator()
         {
             RuleFor(x => x.Email)
-                .NotEmpty().WithMessage("Email is required.")
-                .EmailAddress().WithMessage("Invalid email format.");
+                .NotEmpty()
+                .EmailAddress();
 
             RuleFor(x => x.NewPassword)
-                .NotEmpty().WithMessage("New password is required.")
-                .MinimumLength(6).WithMessage("Password must be at least 6 characters.");
+                .NotEmpty()
+                .MinimumLength(6);
 
-            // 🔐 Optional Old Password (for logged-in change password)
-            When(x => !string.IsNullOrWhiteSpace(x.OldPassword), () =>
+            // ✅ if using old password flow
+            When(x => string.IsNullOrWhiteSpace(x.Token), () =>
             {
                 RuleFor(x => x.OldPassword)
-                    .MinimumLength(6)
-                    .WithMessage("Old password must be at least 6 characters.");
+                    .NotEmpty()
+                    .WithMessage("Old password is required when token is not provided.");
             });
 
-            // 🔐 Optional Token (for forgot password flow)
-            When(x => !string.IsNullOrWhiteSpace(x.Token), () =>
+            // ✅ if using token flow
+            When(x => string.IsNullOrWhiteSpace(x.OldPassword), () =>
             {
                 RuleFor(x => x.Token)
                     .NotEmpty()
-                    .WithMessage("Reset token is required.");
+                    .WithMessage("Reset token is required when old password is not provided.");
             });
-
-            // 🚨 MUST HAVE ONE OF THEM (important rule)
-            RuleFor(x => x)
-                .Must(x =>
-                    !string.IsNullOrWhiteSpace(x.OldPassword) ||
-                    !string.IsNullOrWhiteSpace(x.Token))
-                .WithMessage("Either OldPassword or Reset Token is required.");
         }
     }
 }
