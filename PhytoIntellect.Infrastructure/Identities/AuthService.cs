@@ -358,7 +358,7 @@ public class AuthService(
         // =========================================
         // 🔐 CASE 1: Reset using TOKEN (Forgot Password Flow)
         // =========================================
-        if (!string.IsNullOrWhiteSpace(model.Token))
+        if (!string.IsNullOrEmpty(model.Token))
         {
             if (user.PasswordResetToken == null ||
                 user.PasswordResetTokenExpiry == null ||
