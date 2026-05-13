@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 public interface IUnitOfWork : IDisposable
 {
     IRepository<User> UserRepository { get; }
-    //IUserRepository UserRepository { get; }
     IPatientRepository PatientRepository { get; }
     IRepository<Herbalist> HerbalistRepository { get; }
     IRepository<RefreshToken> RefreshTokenRepository { get; }
@@ -23,6 +22,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<Order> OrderRepository { get; }
     IRepository<SubOrder> SubOrderRepository { get; }
     IRepository<AiRecipe> AiRecipeRepository { get; }
+    IRepository<AiChatRecipe> AiChatRecipeRepository { get; }
     IRepository<HerbalistAiRecipe> HerbalistAiRecipeRepository { get; }
     IRepository<OrderAiRecipe> OrderAiRecipeRepository { get; }
     IRepository<UserFavorite> UserFavoriteRepository { get; }

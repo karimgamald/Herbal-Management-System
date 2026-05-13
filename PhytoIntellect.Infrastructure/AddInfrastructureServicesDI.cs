@@ -29,6 +29,7 @@ public static class AddInfrastructureServicesDI
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<ISubOrderRepository, SubOrderRepository>();
         services.AddScoped<IAiPredictionService, AiPredictionWrapperService>();
+        services.AddScoped<IChatAiPredictionService, ChatAiPredictionWrapperService>();
         services.AddScoped<IHerbalistAiRecipeRepository, HerbalistAiRecipeRepository>();
 
         services.AddExternalApiAiServices(configuration);
@@ -54,9 +55,13 @@ public static class AddInfrastructureServicesDI
     public static IServiceCollection AddExternalApiAiServices(this IServiceCollection services, IConfiguration configuration)
     {
         var aiBaseUrl = configuration["AiSettings:BaseUrl"];
+        var chatBaseUrl = configuration["AiSettings:ChatBaseUrl"];
 
         services.AddRefitClient<IAiFlaskClient>()
                 .ConfigureHttpClient(c => c.BaseAddress = new Uri(aiBaseUrl!));
+
+        services.AddRefitClient<IChatAiClient>()
+                .ConfigureHttpClient(c => c.BaseAddress = new Uri(chatBaseUrl!));
 
         return services;
     }

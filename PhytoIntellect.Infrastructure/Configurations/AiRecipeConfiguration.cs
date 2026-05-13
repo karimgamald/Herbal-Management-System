@@ -2,9 +2,6 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PhytoIntellect.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 
 namespace PhytoIntellect.Infrastructure.Configurations;
@@ -25,6 +22,7 @@ public class AiRecipeConfiguration : IEntityTypeConfiguration<AiRecipe>
         builder.Property(x => x.RecommendedRecipeName).HasMaxLength(250);
         builder.Property(x => x.CautionWarning).IsRequired(false);
         builder.Property(x => x.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        builder.Property(x => x.IsAvailable).HasDefaultValue(false);
 
         var stringListComparer = new ValueComparer<List<string>>(
             (c1, c2) => c1 != null && c2 != null ? c1.SequenceEqual(c2) : c1 == c2,

@@ -7,7 +7,6 @@ namespace PhytoIntellect.Infrastructure.ExternalApi.AiContracts;
 
 public class FlaskAiRequest
 {
-    // --- البيانات الأساسية ---
     [JsonPropertyName("age")] public int Age { get; set; }
     [JsonPropertyName("gender")] public string Gender { get; set; }
     [JsonPropertyName("weight_kg")] public double WeightKg { get; set; }
@@ -15,21 +14,18 @@ public class FlaskAiRequest
     [JsonPropertyName("bmi")] public double Bmi { get; set; }
     [JsonPropertyName("severity_score")] public int SeverityScore { get; set; }
 
-    // --- العلامات الحيوية ---
     [JsonPropertyName("blood_pressure_systolic")] public int BloodPressureSystolic { get; set; }
     [JsonPropertyName("blood_pressure_diastolic")] public int BloodPressureDiastolic { get; set; }
     [JsonPropertyName("temperature_celsius")] public double TemperatureCelsius { get; set; }
     [JsonPropertyName("heart_rate_bpm")] public int HeartRateBpm { get; set; }
     [JsonPropertyName("symptom_duration_days")] public int SymptomDurationDays { get; set; }
 
-    // --- التاريخ المرضي ---
     [JsonPropertyName("has_diabetes")] public int HasDiabetes { get; set; }
     [JsonPropertyName("has_hypertension")] public int HasHypertension { get; set; }
     [JsonPropertyName("has_allergy")] public int HasAllergy { get; set; }
     [JsonPropertyName("is_pregnant")] public int IsPregnant { get; set; }
     [JsonPropertyName("is_smoker")] public int IsSmoker { get; set; }
 
-    // --- الـ 33 عرض (كلهم int عشان الفلاسك مستني 0 أو 1) ---
     [JsonPropertyName("itchy_eyes")] public int ItchyEyes { get; set; }
     [JsonPropertyName("visual_aura")] public int VisualAura { get; set; }
     [JsonPropertyName("runny_nose")] public int RunnyNose { get; set; }

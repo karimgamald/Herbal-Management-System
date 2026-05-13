@@ -25,13 +25,13 @@ public class UnitOfWork(
     IRepository<Order> orderRepository,
     IRepository<SubOrder> subOrderRepository,
     IRepository<AiRecipe> aiRecipeRepository,
+    IRepository<AiChatRecipe> aiChatRecipeRepository,
     IRepository<HerbalistAiRecipe> herbalistAiRecipeRepository,
     IRepository<OrderAiRecipe> orderAiRecipeRepository,
     IRepository<UserFavorite> userFavoriteRepository
     ) : IUnitOfWork
 { 
     public IRepository<User> UserRepository { get; } = userRepository;
-    //public IUserRepository UserRepository { get; } = userRepository;
     public IPatientRepository PatientRepository { get; } = patientRepository;
     public IRepository<Herbalist> HerbalistRepository { get; } = herbalistRepository;
     public IRepository<RefreshToken> RefreshTokenRepository { get; } = refreshTokenRepository;
@@ -46,6 +46,7 @@ public class UnitOfWork(
     public IRepository<Order> OrderRepository { get; } = orderRepository;
     public IRepository<SubOrder> SubOrderRepository { get; } = subOrderRepository;
     public IRepository<AiRecipe> AiRecipeRepository { get; } = aiRecipeRepository;
+    public IRepository<AiChatRecipe> AiChatRecipeRepository { get; } = aiChatRecipeRepository;
     public IRepository<HerbalistAiRecipe> HerbalistAiRecipeRepository { get; } = herbalistAiRecipeRepository;
     public IRepository<OrderAiRecipe> OrderAiRecipeRepository { get; } = orderAiRecipeRepository;
     public IRepository<UserFavorite> UserFavoriteRepository { get; } = userFavoriteRepository;
