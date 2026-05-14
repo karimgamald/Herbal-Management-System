@@ -29,11 +29,11 @@ public static class AddApplicationServicesDI
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<ISubOrderService, SubOrderService>();
         services.AddScoped<IAiRecipeService, AiRecipeService>();
+        services.AddScoped<IChatAiRecipeService, ChatAiRecipeService>();
         services.AddScoped<IHerbalistAiRecipeService, HerbalistAiRecipeService>();
         services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<ICurrentLanguageService, CurrentLanguageService>();
 
-        //for Email
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
         services.AddScoped<IEmailService, EmailService>();
 
@@ -49,14 +49,10 @@ public static class AddApplicationServicesDI
 
     private static IServiceCollection AddFluentValidationServices(this IServiceCollection services)
     {
+        //services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
         services.AddValidatorsFromAssemblyContaining<UpdatePatientValidator>();
         services.AddValidatorsFromAssemblyContaining<UserValidator>();
         services.AddValidatorsFromAssemblyContaining<CreateAiRecipeValidator>();
-        //services.AddValidatorsFromAssemblyContaining<ManageUserAddressValidator>();
-
-        //services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-
-
         services.AddValidatorsFromAssemblyContaining<RegisterUserAuthValidator>();
         services.AddFluentValidationAutoValidation();
 

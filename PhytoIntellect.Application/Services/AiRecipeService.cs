@@ -187,20 +187,18 @@ public class AiRecipeService(
             TemperatureCelsius = request.TemperatureCelsius,
             HeartRateBpm = request.HeartRateBpm,
             SymptomDurationDays = request.SymptomDurationDays,
-
             HasDiabetes = aiInput.HasDiabetes,
             HasHypertension = aiInput.HasHypertension,
             HasAllergies = aiInput.HasAllergies,
             IsPregnant = aiInput.IsPregnant,
             IsSmoker = aiInput.IsSmoker,
-
             Symptoms = request.SelectedSymptoms,
-
             RecommendedRecipeName = predictionResult.RecommendedRecipeName,
             Condition = predictionResult.Condition,
             ConfidenceScore = predictionResult.ConfidenceScore,
             PreparationInstructions = predictionResult.PreparationInstructions,
-            CautionWarning = predictionResult.CautionWarning
+            CautionWarning = predictionResult.CautionWarning,
+            IsAvailable = false
         };
 
         await _unitOfWork.AiRecipeRepository.CreateAsync(recipeRecord);

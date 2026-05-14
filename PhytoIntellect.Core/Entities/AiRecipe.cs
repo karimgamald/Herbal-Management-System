@@ -11,11 +11,9 @@ public class AiRecipe: LocalizedEntity
 {
     [Key]
     public int Id { get; set; }
-
     public int PatientId { get; set; }
     [ForeignKey("PatientId")]
     public Patient Patient { get; set; }
-
     public int Age { get; set; }
     public string Gender { get; set; } = string.Empty;
     public double WeightKg { get; set; }
@@ -27,27 +25,20 @@ public class AiRecipe: LocalizedEntity
     public double TemperatureCelsius { get; set; }
     public int HeartRateBpm { get; set; }
     public int SymptomDurationDays { get; set; }
-
     public bool HasDiabetes { get; set; }
     public bool HasHypertension { get; set; }
     public bool HasAllergies { get; set; }
     public bool IsPregnant { get; set; }
     public bool IsSmoker { get; set; }
-
     public List<string> Symptoms { get; set; } = [];
-
-
     public string RecommendedRecipeName { get; set; } = string.Empty;
     public string Condition { get; set; } = string.Empty;
     public double ConfidenceScore { get; set; }
-
     public List<string> PreparationInstructions { get; set; } = [];
     public string CautionWarning { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-
+    public bool IsAvailable { get; set; } = false;
     public float? Rating { get; set; }
-
     public float HerbalistAverageRating { get; set; } = 0;
     public int HerbalistTotalRatings { get; set; } = 0;
 

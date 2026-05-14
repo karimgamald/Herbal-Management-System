@@ -68,15 +68,12 @@ public class CreateAiRecipeValidator : AbstractValidator<CreateAiRecipeRequest>
             .WithMessage("One or more selected symptoms are invalid. Please choose from the provided list.");
     }
 
-    // ⚙️ دالة بتتأكد إن كل الأعراض اللي جاية من الموبايل موجودة في لستة الفلاسك
     private bool HaveValidSymptoms(List<string> symptoms)
     {
         if (symptoms == null || !symptoms.Any()) return false;
 
-        // بنلف على كل عرض المريض اختاره
         foreach (var symptom in symptoms)
         {
-            // لو العرض مش موجود في اللستة بتاعتنا، بنرجع false والـ Validation بيفشل
             if (!AllowedSymptoms.Contains(symptom.Trim()))
             {
                 return false;

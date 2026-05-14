@@ -254,14 +254,22 @@ public class AuthService(
 
         try
         {
+            var validAudiences = new List<string>();
+
+            var webClientId = _config["Google:WebClientId"];
+            if (!string.IsNullOrEmpty(webClientId)) validAudiences.Add(webClientId);
+
+            var androidClientId = _config["Google:AndroidClientId"];
+            if (!string.IsNullOrEmpty(androidClientId)) validAudiences.Add(androidClientId);
+
             var settings = new GoogleJsonWebSignature.ValidationSettings()
             {
-                Audience = new List<string>() { _config["Google:ClientId"]! }
+                Audience = validAudiences
             };
 
             payload = await GoogleJsonWebSignature.ValidateAsync(model.IdToken, settings);
         }
-        catch
+        catch (Exception ex)
         {
             return new RegisterUserAuthResponse
             { Success = false, Message = "Invalid Google IdToken." };
@@ -324,7 +332,7 @@ public class AuthService(
             ExpiresAt = DateTime.UtcNow.AddDays(refreshDuration)
         }, cancellationToken);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken); 
 
         return new RegisterUserAuthResponse
         {
