@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Application.Contracts.Feedbacks;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
@@ -94,7 +95,31 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return mapper.Map<FeedbackResponse>(feedbackEntity);
+
+        var feedback = await unitOfWork.FeedbackRepository
+            .GetQueryable()
+            .Where(f => f.FeedbackId == feedbackEntity.FeedbackId)
+            .Include(f => f.Patient)
+                .ThenInclude(p => p.User)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new FeedbackResponse
+        {
+            FeedbackId = feedback.FeedbackId,
+
+            // ✅ IDs (كل الحالات)
+            RecipeId = feedback.RecipeId,
+            AiRecipeId = feedback.AiRecipeId,
+            AiChatRecipeId = feedback.AiChatRecipeId,
+
+            // ⭐ Data
+            RatingValue = feedback.RatingValue,
+            Comment = feedback.Comment,
+            RatingDate = feedback.RatingDate,
+
+            // 👤 Patient Name
+            PatientName = feedback.Patient?.User?.FullName ?? "Unknown"
+        };
     }
 
     public async Task<PaginatedList<FeedbackResponse>> GetRecipeFeedbacksAsync(
@@ -205,7 +230,31 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return mapper.Map<FeedbackResponse>(feedbackEntity);
+
+        var feedback = await unitOfWork.FeedbackRepository
+            .GetQueryable()
+            .Where(f => f.FeedbackId == feedbackEntity.FeedbackId)
+            .Include(f => f.Patient)
+                .ThenInclude(p => p.User)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new FeedbackResponse
+        {
+            FeedbackId = feedback.FeedbackId,
+
+            // ✅ IDs (كل الحالات)
+            RecipeId = feedback.RecipeId,
+            AiRecipeId = feedback.AiRecipeId,
+            AiChatRecipeId = feedback.AiChatRecipeId,
+
+            // ⭐ Data
+            RatingValue = feedback.RatingValue,
+            Comment = feedback.Comment,
+            RatingDate = feedback.RatingDate,
+
+            // 👤 Patient Name
+            PatientName = feedback.Patient?.User?.FullName ?? "Unknown"
+        };
     }
 
     public async Task<PaginatedList<FeedbackResponse>> GetAiRecipeFeedbacksAsync(
@@ -327,7 +376,31 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return mapper.Map<FeedbackResponse>(feedbackEntity);
+
+        var feedback = await unitOfWork.FeedbackRepository
+            .GetQueryable()
+            .Where(f => f.FeedbackId == feedbackEntity.FeedbackId)
+            .Include(f => f.Patient)
+                .ThenInclude(p => p.User)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new FeedbackResponse
+        {
+            FeedbackId = feedback.FeedbackId,
+
+            // ✅ IDs (كل الحالات)
+            RecipeId = feedback.RecipeId,
+            AiRecipeId = feedback.AiRecipeId,
+            AiChatRecipeId = feedback.AiChatRecipeId,
+
+            // ⭐ Data
+            RatingValue = feedback.RatingValue,
+            Comment = feedback.Comment,
+            RatingDate = feedback.RatingDate,
+
+            // 👤 Patient Name
+            PatientName = feedback.Patient?.User?.FullName ?? "Unknown"
+        };
     }
 
     public async Task<PaginatedList<FeedbackResponse>> GetAiChatRecipeFeedbacksAsync(

@@ -121,7 +121,7 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
 
                 "herbalistname" => isDesc ? query.OrderByDescending(r => r.Herbalist!.User!.FullName) : query.OrderBy(r => r.Herbalist.User.FullName),
 
-                _ => isDesc ? query.OrderByDescending(r => r.ReviewRecipeId) : query.OrderBy(r => r.ReviewRecipeId)
+                _ => isDesc ? query.OrderByDescending(r => r.RatingValue) : query.OrderBy(r => r.RatingValue)
             };
         }
         else

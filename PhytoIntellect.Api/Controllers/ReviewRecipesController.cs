@@ -13,7 +13,7 @@ namespace PhytoIntellect.Api.Controllers;
 
 [ApiController]
 [Route("api/ai-recipe/{id}/reviews")]
-public class ReviewRecipesController(IReviewRecipeService reviewService) : ControllerBase
+public class AiRecipeReviewsController(IReviewRecipeService reviewService) : ControllerBase
 {
     [HttpGet("get-me")]
     [Authorize(Roles = AppRoles.Herbalist)]

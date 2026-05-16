@@ -17,6 +17,6 @@ public class ToggleFavoriteRequestValidator : AbstractValidator<ToggleFavoriteRe
         RuleFor(x => x.Type)
              .NotEmpty().WithMessage("Type field is required.")
              .IsEnumName(typeof(FavoriteType), caseSensitive: false)
-             .WithMessage("Invalid Favorite Type. Allowed values are: 'Herb', 'Recipe', 'AiRecipe', 'Herbalist'.");
+             .WithMessage("Invalid Favorite Type. Allowed values are: 'Herb', 'Recipe', 'AiRecipe', 'Herbalist','AiChatRecipe'.");
     }
 }
