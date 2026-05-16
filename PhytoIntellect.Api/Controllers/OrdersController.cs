@@ -127,7 +127,7 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     [HttpPatch("{id}/favorite")]
     public async Task<IActionResult> ToggleFavorite(int id, CancellationToken cancellationToken)
     {
-        var userId = User.GetUserId().ToString();
+        var userId = User.GetUserId().ToString(); 
         var isFavorite = await _orderService.ToggleFavoriteOrderAsync(userId, id, cancellationToken);
 
         return Ok(new

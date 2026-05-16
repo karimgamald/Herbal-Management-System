@@ -129,6 +129,66 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
         return Ok(new { Message = "Feedback deleted successfully." });
     }
 
+    // ==========================================
+    // (AI Chat Recipes) - NEW
+    // ==========================================
+
+    [HttpGet("ai-chat-recipe/{id}/all")]
+    public async Task<IActionResult> GetAiChatRecipeFeedbacks(int id, [FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        var feedbacks = await feedbackService.GetAiChatRecipeFeedbacksAsync(id, filters, cancellationToken);
+        return Ok(feedbacks);
+    }
+
+    [HttpGet("ai-chat-recipe/{id}/get-me")]
+    [Authorize(Roles = AppRoles.Patient)]
+    public async Task<IActionResult> GetMyAiChatRecipeFeedback(int id, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
+
+        var result = await feedbackService.GetMyAiChatRecipeFeedbackAsync(userId, id, cancellationToken);
+        if (result == null)
+            return NotFound(new { Message = "You haven't rated this AI chat recipe yet." });
+
+        return Ok(result);
+    }
+
+    [HttpPost("ai-chat-recipe/{id}/submit")]
+    [Authorize(Roles = AppRoles.Patient)]
+    public async Task<IActionResult> SubmitAiChatRecipeFeedback(int id, [FromBody] SubmitFeedbackRequest request, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
+
+        try
+        {
+            var result = await feedbackService.SubmitAiChatRecipeFeedbackAsync(userId, id, request, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpDelete("ai-chat-recipe/{id}/delete-me")]
+    [Authorize(Roles = AppRoles.Patient)]
+    public async Task<IActionResult> DeleteMyAiChatRecipeFeedback(int id, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
+
+        var success = await feedbackService.DeleteMyAiChatRecipeFeedbackAsync(userId, id, cancellationToken);
+        if (!success)
+            return NotFound(new { Message = "Feedback not found." });
+
+        return Ok(new { Message = "Feedback deleted successfully." });
+    }
+
 
     [HttpGet("my-history")]
     [Authorize(Roles = AppRoles.Patient)]

@@ -40,6 +40,13 @@ public class FavoritesController(IFavoriteService favoriteService) : ControllerB
         return Ok(herbalists);
     }
 
+    [HttpGet("my-ai-chat-recipes")]
+    public async Task<IActionResult> GetAiChatRecipes([FromQuery] RequestFilters filters)
+    {
+        var aiChatRecipes = await favoriteService.GetMyFavoriteAiChatRecipesAsync(User.GetUserId(), filters);
+        return Ok(aiChatRecipes);
+    }
+
     [HttpPost("toggle")]
     public async Task<IActionResult> Toggle([FromBody] ToggleFavoriteRequest request)
     {
@@ -52,4 +59,6 @@ public class FavoritesController(IFavoriteService favoriteService) : ControllerB
 
         return Ok(new { Message = result });
     }
+
+
 }

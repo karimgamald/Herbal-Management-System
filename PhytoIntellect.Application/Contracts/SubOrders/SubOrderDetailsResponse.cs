@@ -16,4 +16,5 @@ public record SubOrderDetailsResponse
     public List<OrderHerbResponse> Herbs { get; init; } = new();
     public List<OrderRecipeResponse> Recipes { get; init; } = new();
     public List<OrderAiRecipeResponse> AiRecipes { get; init; } = new();
+    public List<OrderAiChatRecipeResponse>? AiChatRecipes { get; set; }
 }

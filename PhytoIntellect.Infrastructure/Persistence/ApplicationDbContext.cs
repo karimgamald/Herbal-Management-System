@@ -23,11 +23,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ReviewRecipe> ReviewRecipes { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<SubOrder> SubOrders { get; set; }
-    public DbSet<OrderRecipe> OrderRecipes { get; set; }
     public DbSet<OrderHerb> OrderHerbs { get; set; }
-    public DbSet<AiRecipe> AiRecipes { get; set; }
-    public DbSet<HerbalistAiRecipe> HerbalistAiRecipes { get; set; }
+    public DbSet<OrderRecipe> OrderRecipes { get; set; }
     public DbSet<OrderAiRecipe> OrderAiRecipes { get; set; }
+    public DbSet<OrderAiChatRecipe> OrderAiChatRecipes { get; set; }
+    public DbSet<AiRecipe> AiRecipes { get; set; }
+    public DbSet<AiChatRecipe> AiChatRecipes { get; set; }
+    public DbSet<HerbalistAiRecipe> HerbalistAiRecipes { get; set; }
+    public DbSet<HerbalistAiChatRecipe> HerbalistAiChatRecipes { get; set; }
     public DbSet<UserFavorite> UserFavorites { get; set; }
 
 

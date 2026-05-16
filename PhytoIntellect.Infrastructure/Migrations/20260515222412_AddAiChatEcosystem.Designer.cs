@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515222412_AddAiChatEcosystem")]
+    partial class AddAiChatEcosystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -108,7 +111,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("PatientId");
 
-                    b.ToTable("AiChatRecipes");
+                    b.ToTable("AiChatRecipe");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.AiRecipe", b =>
@@ -349,11 +352,9 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasKey("FeedbackId");
 
-                    b.HasIndex("PatientId");
+                    b.HasIndex("AiChatRecipeId");
 
-                    b.HasIndex("AiChatRecipeId", "PatientId")
-                        .IsUnique()
-                        .HasFilter("[AiChatRecipeId] IS NOT NULL");
+                    b.HasIndex("PatientId");
 
                     b.HasIndex("AiRecipeId", "PatientId")
                         .IsUnique()
@@ -367,7 +368,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_Feedback_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5");
 
-                            t.HasCheckConstraint("CK_Feedback_Target", "(CASE WHEN [RecipeId] IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN [AiRecipeId] IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN [AiChatRecipeId] IS NOT NULL THEN 1 ELSE 0 END) = 1");
+                            t.HasCheckConstraint("CK_Feedback_Target", "([RecipeId] IS NOT NULL AND [AiRecipeId] IS NULL) OR ([RecipeId] IS NULL AND [AiRecipeId] IS NOT NULL)");
                         });
                 });
 
@@ -478,7 +479,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("AiChatRecipeId");
 
-                    b.ToTable("HerbalistAiChatRecipes");
+                    b.ToTable("HerbalistAiChatRecipe");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.HerbalistAiRecipe", b =>
@@ -660,7 +661,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasIndex("SubOrderId");
 
-                    b.ToTable("OrderAiChatRecipes");
+                    b.ToTable("OrderAiChatRecipe");
                 });
 
             modelBuilder.Entity("PhytoIntellect.Core.Entities.OrderAiRecipe", b =>
@@ -921,7 +922,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.Property<int?>("AiChatRecipeId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("AiRecipeId")
+                    b.Property<int>("AiRecipeId")
                         .HasColumnType("int");
 
                     b.Property<string>("Comment")
@@ -948,8 +949,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasIndex("HerbalistId");
 
                     b.HasIndex("AiRecipeId", "HerbalistId")
-                        .IsUnique()
-                        .HasFilter("[AiRecipeId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("ReviewRecipes", null, t =>
                         {
@@ -1398,7 +1398,8 @@ namespace PhytoIntellect.Infrastructure.Migrations
                     b.HasOne("PhytoIntellect.Core.Entities.AiRecipe", "AiRecipe")
                         .WithMany("HerbalistReviews")
                         .HasForeignKey("AiRecipeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("PhytoIntellect.Core.Entities.Herbalist", "Herbalist")
                         .WithMany("ReviewRecipes")

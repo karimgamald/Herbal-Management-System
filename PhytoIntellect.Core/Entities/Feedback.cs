@@ -10,12 +10,15 @@ public class Feedback: LocalizedEntity
     public string? Comment { get; set; }
     public DateTime RatingDate { get; set; } = DateTime.UtcNow;
 
+    public int PatientId { get; set; }
+    public Patient? Patient { get; set; }
+
     public int? RecipeId { get; set; }
     public Recipe? Recipe { get; set; }
 
     public int? AiRecipeId { get; set; }
     public AiRecipe? AiRecipe { get; set; }
 
-    public int PatientId { get; set; }
-    public Patient? Patient { get; set; }
+    public int? AiChatRecipeId { get; set; }
+    public AiChatRecipe? AiChatRecipe { get; set; }
 } 

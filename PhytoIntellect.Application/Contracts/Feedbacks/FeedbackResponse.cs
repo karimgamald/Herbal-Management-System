@@ -10,6 +10,7 @@ public record FeedbackResponse
 
     public int? RecipeId { get; init; }
     public int? AiRecipeId { get; init; }
+    public int? AiChatRecipeId { get; init; }
 
     public float RatingValue { get; init; }
     public string? Comment { get; init; }

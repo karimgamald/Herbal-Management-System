@@ -27,13 +27,12 @@ public class AiChatRecipe : LocalizedEntity
     public bool IsActive { get; set; } = true; 
     public bool IsAvailable { get; set; } = false;
 
-    // 4. Rating System
-    //public float? Rating { get; set; }
-    //public float HerbalistAverageRating { get; set; } = 0;
-    //public int HerbalistTotalRatings { get; set; } = 0;
+    public float? Rating { get; set; }
+    public float HerbalistAverageRating { get; set; } = 0;
+    public int HerbalistTotalRatings { get; set; } = 0;
 
-    // 5. Navigation Properties
-    //public ICollection<Feedback> Feedbacks { get; set; } = [];
-    //public ICollection<ReviewRecipe> HerbalistReviews { get; set; } = [];
-    //public ICollection<HerbalistAiRecipe> HerbalistInventories { get; set; } = [];
+    public ICollection<Feedback> Feedbacks { get; set; } = [];
+    public ICollection<ReviewRecipe> HerbalistReviews { get; set; } = [];
+    public ICollection<HerbalistAiChatRecipe> HerbalistInventories { get; set; } = [];
+
 }

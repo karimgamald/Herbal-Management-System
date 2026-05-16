@@ -31,6 +31,7 @@ public static class AddApplicationServicesDI
         services.AddScoped<IAiRecipeService, AiRecipeService>();
         services.AddScoped<IChatAiRecipeService, ChatAiRecipeService>();
         services.AddScoped<IHerbalistAiRecipeService, HerbalistAiRecipeService>();
+        services.AddScoped<IHerbalistAiChatRecipeService, HerbalistAiChatRecipeService>();
         services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<ICurrentLanguageService, CurrentLanguageService>();
 

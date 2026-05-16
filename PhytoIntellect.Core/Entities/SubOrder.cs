@@ -20,4 +20,5 @@ public class SubOrder
     public ICollection<OrderHerb> OrderHerbs { get; set; } = [];
     public ICollection<OrderRecipe> OrderRecipes { get; set; } = [];
     public ICollection<OrderAiRecipe> OrderAiRecipes { get; set; } = [];
+    public ICollection<OrderAiChatRecipe> OrderAiChatRecipes { get; set; } = [];
 }

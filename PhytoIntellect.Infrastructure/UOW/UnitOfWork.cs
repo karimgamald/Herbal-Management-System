@@ -27,6 +27,7 @@ public class UnitOfWork(
     IRepository<AiRecipe> aiRecipeRepository,
     IRepository<AiChatRecipe> aiChatRecipeRepository,
     IRepository<HerbalistAiRecipe> herbalistAiRecipeRepository,
+    IRepository<HerbalistAiChatRecipe> herbalistAiChatRecipeRepository,
     IRepository<OrderAiRecipe> orderAiRecipeRepository,
     IRepository<UserFavorite> userFavoriteRepository
     ) : IUnitOfWork
@@ -48,6 +49,7 @@ public class UnitOfWork(
     public IRepository<AiRecipe> AiRecipeRepository { get; } = aiRecipeRepository;
     public IRepository<AiChatRecipe> AiChatRecipeRepository { get; } = aiChatRecipeRepository;
     public IRepository<HerbalistAiRecipe> HerbalistAiRecipeRepository { get; } = herbalistAiRecipeRepository;
+    public IRepository<HerbalistAiChatRecipe> HerbalistAiChatRecipeRepository { get; } = herbalistAiChatRecipeRepository;
     public IRepository<OrderAiRecipe> OrderAiRecipeRepository { get; } = orderAiRecipeRepository;
     public IRepository<UserFavorite> UserFavoriteRepository { get; } = userFavoriteRepository;
 

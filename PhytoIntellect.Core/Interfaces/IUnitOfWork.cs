@@ -24,6 +24,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<AiRecipe> AiRecipeRepository { get; }
     IRepository<AiChatRecipe> AiChatRecipeRepository { get; }
     IRepository<HerbalistAiRecipe> HerbalistAiRecipeRepository { get; }
+    IRepository<HerbalistAiChatRecipe> HerbalistAiChatRecipeRepository { get; }
     IRepository<OrderAiRecipe> OrderAiRecipeRepository { get; }
     IRepository<UserFavorite> UserFavoriteRepository { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

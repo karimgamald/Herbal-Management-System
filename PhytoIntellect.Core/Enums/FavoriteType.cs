@@ -9,5 +9,6 @@ public enum FavoriteType
     Herb = 1,
     Recipe = 2,
     AiRecipe = 3,
-    Herbalist = 4
+    Herbalist = 4,
+    AiChatRecipe = 5
 }

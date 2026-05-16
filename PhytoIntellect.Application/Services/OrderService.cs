@@ -53,6 +53,10 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         {
             await ProcessAiRecipesAsync(request.AiRecipes, mainOrder, subOrderStatus, cancellationToken);
         }
+        if (request.AiChatRecipes != null && request.AiChatRecipes.Any())
+        {
+            await ProcessAiChatRecipesAsync(request.AiChatRecipes, mainOrder, subOrderStatus, cancellationToken);
+        }
 
         // 6. حساب الإجماليات والحفظ
         CalculateOrderTotals(mainOrder);
@@ -150,7 +154,7 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
 
         var order = await _unitOfWork.OrderRepository.GetAsync(
             filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
-            includeProperties: "SubOrders.Herbalist.User,SubOrders.OrderRecipes.Recipe,SubOrders.OrderHerbs.Herb,SubOrders.OrderAiRecipes.AiRecipe",
+            includeProperties: "SubOrders.Herbalist.User,SubOrders.OrderRecipes.Recipe,SubOrders.OrderHerbs.Herb,SubOrders.OrderAiRecipes.AiRecipe,SubOrders.OrderAiChatRecipes.AiChatRecipe",
             tracked: false,
             cancellationToken: cancellationToken);
 
@@ -307,7 +311,7 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
 
         // 🚀 Projection
         var projectedQuery = query.ProjectTo<OrderSummaryResponse>(
-            mapper.ConfigurationProvider);
+            mapper.ConfigurationProvider); 
 
         // 📄 Pagination
         var result = await PaginatedList<OrderSummaryResponse>.CreateAsync(
@@ -490,6 +494,43 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         }
     }
 
+    private async Task ProcessAiChatRecipesAsync(IEnumerable<OrderAiChatRecipeRequest> requestedAiChatRecipes, Order mainOrder, string status, CancellationToken cancellationToken)
+    {
+        var aiChatRecipesGrouped = requestedAiChatRecipes.GroupBy(r => r.HerbalistId);
+
+        foreach (var group in aiChatRecipesGrouped)
+        {
+            int currentHerbalistId = group.Key;
+            var subOrder = GetOrCreateSubOrder(mainOrder, currentHerbalistId, status);
+
+            foreach (var requestedRecipe in group)
+            {
+                var inventoryItem = await _unitOfWork.HerbalistAiChatRecipeRepository.GetAsync(
+                    filter: h => h.HerbalistId == currentHerbalistId
+                              && h.AiChatRecipeId == requestedRecipe.AiChatRecipeId
+                              && h.IsActive == true,
+                    tracked: false,
+                    cancellationToken: cancellationToken);
+
+                if (inventoryItem == null)
+                    throw new InvalidOperationException($"AI Chat Recipe ID {requestedRecipe.AiChatRecipeId} is not active or not sold by Herbalist ID {currentHerbalistId}.");
+
+                decimal unitPrice = inventoryItem.Price;
+                decimal itemTotal = unitPrice * requestedRecipe.Quantity;
+
+                subOrder.OrderAiChatRecipes.Add(new OrderAiChatRecipe
+                {
+                    AiChatRecipeId = requestedRecipe.AiChatRecipeId,
+                    Quantity = requestedRecipe.Quantity,
+                    UnitPrice = unitPrice,
+                    SubTotal = itemTotal
+                });
+            }
+
+            UpdateSubOrderTotal(subOrder);
+        }
+    }
+
     private SubOrder GetOrCreateSubOrder(Order mainOrder, int herbalistId, string status)
     {
         var existingSubOrder = mainOrder.SubOrders.FirstOrDefault(s => s.HerbalistId == herbalistId);
@@ -508,12 +549,13 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
         return newSubOrder;
     }
 
-    private void UpdateSubOrderTotal(SubOrder subOrder)
+    private void UpdateSubOrderTotal(SubOrder subOrder) 
     {
         subOrder.SubTotal =
             (subOrder.OrderRecipes?.Sum(r => r.SubTotal) ?? 0) +
             (subOrder.OrderHerbs?.Sum(h => h.SubTotal) ?? 0) +
-            (subOrder.OrderAiRecipes?.Sum(a => a.SubTotal) ?? 0);
+            (subOrder.OrderAiRecipes?.Sum(a => a.SubTotal) ?? 0) +
+            (subOrder.OrderAiChatRecipes?.Sum(c => c.SubTotal) ?? 0);
     }
 
     private void CalculateOrderTotals(Order mainOrder)

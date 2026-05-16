@@ -18,17 +18,30 @@ public class FeedbackConfiguration : IEntityTypeConfiguration<Feedback>
         {
             t.HasCheckConstraint("CK_Feedback_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5");
 
-            t.HasCheckConstraint("CK_Feedback_Target", "([RecipeId] IS NOT NULL AND [AiRecipeId] IS NULL) OR ([RecipeId] IS NULL AND [AiRecipeId] IS NOT NULL)");
+            t.HasCheckConstraint("CK_Feedback_Target",
+                "(CASE WHEN [RecipeId] IS NOT NULL THEN 1 ELSE 0 END + " +
+                "CASE WHEN [AiRecipeId] IS NOT NULL THEN 1 ELSE 0 END + " +
+                "CASE WHEN [AiChatRecipeId] IS NOT NULL THEN 1 ELSE 0 END) = 1");
         });
 
         builder.HasIndex(f => new { f.RecipeId, f.PatientId })
                .IsUnique()
-               .HasFilter("[RecipeId] IS NOT NULL"); 
+               .HasFilter("[RecipeId] IS NOT NULL");
 
         builder.HasIndex(f => new { f.AiRecipeId, f.PatientId })
                .IsUnique()
                .HasFilter("[AiRecipeId] IS NOT NULL");
-        
+
+        builder.HasIndex(f => new { f.AiChatRecipeId, f.PatientId })
+               .IsUnique()
+               .HasFilter("[AiChatRecipeId] IS NOT NULL");
+
+        // Navigation Properties
+        builder.HasOne(f => f.Patient)
+               .WithMany(p => p.Feedbacks)
+               .HasForeignKey(f => f.PatientId)
+               .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(f => f.Recipe)
                .WithMany(r => r.Feedbacks)
                .HasForeignKey(f => f.RecipeId)
@@ -41,9 +54,10 @@ public class FeedbackConfiguration : IEntityTypeConfiguration<Feedback>
                .IsRequired(false)
                .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(f => f.Patient)
-               .WithMany(p => p.Feedbacks)
-               .HasForeignKey(f => f.PatientId)
-               .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.AiChatRecipe)
+               .WithMany(x => x.Feedbacks)
+               .HasForeignKey(x => x.AiChatRecipeId)
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.Cascade);
     }
-} 
+}

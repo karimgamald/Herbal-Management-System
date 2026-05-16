@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhytoIntellect.Infrastructure.Presistence;
 
@@ -11,9 +12,11 @@ using PhytoIntellect.Infrastructure.Presistence;
 namespace PhytoIntellect.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515233858_AddNullableNamedColumn")]
+    partial class AddNullableNamedColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -349,11 +352,9 @@ namespace PhytoIntellect.Infrastructure.Migrations
 
                     b.HasKey("FeedbackId");
 
-                    b.HasIndex("PatientId");
+                    b.HasIndex("AiChatRecipeId");
 
-                    b.HasIndex("AiChatRecipeId", "PatientId")
-                        .IsUnique()
-                        .HasFilter("[AiChatRecipeId] IS NOT NULL");
+                    b.HasIndex("PatientId");
 
                     b.HasIndex("AiRecipeId", "PatientId")
                         .IsUnique()
@@ -367,7 +368,7 @@ namespace PhytoIntellect.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_Feedback_RatingValue", "[RatingValue] >= 1 AND [RatingValue] <= 5");
 
-                            t.HasCheckConstraint("CK_Feedback_Target", "(CASE WHEN [RecipeId] IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN [AiRecipeId] IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN [AiChatRecipeId] IS NOT NULL THEN 1 ELSE 0 END) = 1");
+                            t.HasCheckConstraint("CK_Feedback_Target", "([RecipeId] IS NOT NULL AND [AiRecipeId] IS NULL) OR ([RecipeId] IS NULL AND [AiRecipeId] IS NOT NULL)");
                         });
                 });
 

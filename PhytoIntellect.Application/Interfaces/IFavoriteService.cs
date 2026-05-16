@@ -17,4 +17,5 @@ public interface IFavoriteService
     Task<PaginatedList<FavoriteResponse>> GetMyFavoriteRecipesAsync(int userId, RequestFilters filters, CancellationToken cancellationToken = default);
     Task<PaginatedList<FavoriteResponse>> GetMyFavoriteAiRecipesAsync(int userId, RequestFilters filters, CancellationToken cancellationToken = default); 
     Task<PaginatedList<FavoriteResponse>> GetMyFavoriteHerbalistsAsync(int userId, RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<PaginatedList<FavoriteResponse>> GetMyFavoriteAiChatRecipesAsync(int userId, RequestFilters filters, CancellationToken cancellationToken = default);
 }

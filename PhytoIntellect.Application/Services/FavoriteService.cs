@@ -203,6 +203,44 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteAiChatRecipesAsync(
+     int userId,
+     RequestFilters filters,
+     CancellationToken cancellationToken = default)
+    {
+        var ids = await GetFavoriteIds(userId, FavoriteType.AiChatRecipe);
+        if (!ids.Any())
+            return new PaginatedList<FavoriteResponse>(new List<FavoriteResponse>(), filters.PageNumber, 0, filters.PageSize);
+
+        var query = unitOfWork.AiChatRecipeRepository.GetQueryable(tracked: false)
+            .Where(r => ids.Contains(r.Id));
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(r => r.RecommendedRecipeName.ToLower().Contains(search));
+        }
+
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            query = filters.SortColumn.ToLower() switch
+            {
+                "recommendedrecipename" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
+                "matchpercentage" => isDesc ? query.OrderByDescending(r => r.MatchPercentage) : query.OrderBy(r => r.MatchPercentage),
+                "date" => isDesc ? query.OrderByDescending(r => r.CreatedAt) : query.OrderBy(r => r.CreatedAt),
+                _ => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName)
+            };
+        }
+        else
+        {
+            query = isDesc ? query.OrderByDescending(r => r.CreatedAt) : query.OrderBy(r => r.CreatedAt);
+        }
+
+        var projectedQuery = query.ProjectTo<FavoriteResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
     // Helper Method 1: Get IDs
     private async Task<List<int>> GetFavoriteIds(int userId, FavoriteType type)
     {
@@ -221,6 +259,7 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
             FavoriteType.Herb => await unitOfWork.HerbRepository.GetAsync(h => h.HerbId == targetId, tracked: false) != null,
             FavoriteType.Recipe => await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == targetId, tracked: false) != null,
             FavoriteType.AiRecipe => await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == targetId, tracked: false) != null,
+            FavoriteType.AiChatRecipe => await unitOfWork.AiChatRecipeRepository.GetAsync(r => r.Id == targetId, tracked: false) != null,
             FavoriteType.Herbalist => await unitOfWork.HerbalistRepository.GetAsync(h => h.HerbalistId == targetId, tracked: false) != null,
             _ => false
         };

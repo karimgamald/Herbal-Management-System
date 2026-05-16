@@ -20,6 +20,11 @@ public interface IFeedbackService
     Task<FeedbackResponse?> GetMyAiRecipeFeedbackAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default);
     Task<bool> DeleteMyAiRecipeFeedbackAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default);
 
+    Task<FeedbackResponse> SubmitAiChatRecipeFeedbackAsync(int userId, int aiChatRecipeId, SubmitFeedbackRequest request, CancellationToken cancellationToken = default);
+    Task<PaginatedList<FeedbackResponse>> GetAiChatRecipeFeedbacksAsync(int aiChatRecipeId, RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<FeedbackResponse?> GetMyAiChatRecipeFeedbackAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteMyAiChatRecipeFeedbackAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken = default);
+
     // 👤 دالة سجل تقييمات المريض (شاشة البروفايل)
     Task<PaginatedList<FeedbackResponse>> GetMyFeedbacksAsync(int userId, RequestFilters filters, CancellationToken cancellationToken = default);
 

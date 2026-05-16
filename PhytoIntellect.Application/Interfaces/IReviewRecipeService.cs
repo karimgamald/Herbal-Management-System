@@ -12,4 +12,8 @@ public interface IReviewRecipeService
     Task<PaginatedList<ReviewResponse>> GetAllRecipeReviewsAsync(int aiRecipeId, RequestFilters filters, CancellationToken cancellationToken = default);
     Task<ReviewResponse?> GetMyReviewAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default);
     Task<bool> DeleteMyReviewAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default);
+    Task<ReviewResponse> SubmitAiChatReviewAsync(int userId, int aiChatRecipeId, SubmitReviewRequest request, CancellationToken cancellationToken = default);
+    Task<PaginatedList<ReviewResponse>> GetAllAiChatRecipeReviewsAsync(int aiChatRecipeId, RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<ReviewResponse?> GetMyAiChatReviewAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteMyAiChatReviewAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken = default);
 }

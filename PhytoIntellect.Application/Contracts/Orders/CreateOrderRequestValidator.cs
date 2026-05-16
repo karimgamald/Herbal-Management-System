@@ -18,6 +18,7 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
         RuleForEach(x => x.Herbs).SetValidator(new OrderHerbRequestValidator());
         RuleForEach(x => x.Recipes).SetValidator(new OrderRecipeRequestValidator());
         RuleForEach(x => x.AiRecipes).SetValidator(new OrderAiRecipeRequestValidator());
+        RuleForEach(x => x.AiChatRecipes).SetValidator(new OrderAiChatRecipeRequestValidator());
 
         // Business Rule: The order must not be empty
         RuleFor(x => x)
@@ -32,10 +33,11 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
 
     private bool HaveAtLeastOneItem(CreateOrderRequest request)
     {
-        bool hasRecipes = request.Recipes != null && request.Recipes.Any();
         bool hasHerbs = request.Herbs != null && request.Herbs.Any();
+        bool hasRecipes = request.Recipes != null && request.Recipes.Any();
         bool hasAiRecipes = request.AiRecipes != null && request.AiRecipes.Any();
+        bool hasAiChatRecipes = request.AiChatRecipes != null && request.AiChatRecipes.Any();
 
-        return hasRecipes || hasHerbs || hasAiRecipes;
+        return hasRecipes || hasHerbs || hasAiRecipes || hasAiChatRecipes;
     }
 }

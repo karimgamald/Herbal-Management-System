@@ -109,7 +109,7 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
 
         var subOrder = await _unitOfWork.SubOrderRepository.GetAsync(
             filter: s => s.SubOrderId == subOrderId && s.HerbalistId == herbalist.HerbalistId,
-            includeProperties: "OrderRecipes.Recipe,OrderHerbs.Herb,OrderAiRecipes.AiRecipe",
+            includeProperties: "OrderRecipes.Recipe,OrderHerbs.Herb,OrderAiRecipes.AiRecipe,OrderAiChatRecipes.AiChatRecipe",
             tracked: false,
             cancellationToken: cancellationToken);
 
@@ -145,6 +145,15 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             {
                 AiRecipeId = a.AiRecipeId,
                 RecipeName = a.AiRecipe!.RecommendedRecipeName ?? "AI Recipe",
+                Quantity = a.Quantity,
+                UnitPrice = a.UnitPrice,
+                SubTotal = a.SubTotal
+            }).ToList(),
+
+            AiChatRecipes = subOrder.OrderAiChatRecipes.Select(a => new OrderAiChatRecipeResponse
+            {
+                AiChatRecipeId = a.AiChatRecipeId,
+                RecipeName = a.AiChatRecipe!.RecommendedRecipeName ?? "AI Chat Recipe",
                 Quantity = a.Quantity,
                 UnitPrice = a.UnitPrice,
                 SubTotal = a.SubTotal
@@ -247,7 +256,7 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         // 2. نجيب كل الطلبات مع كل الجداول المرتبطة (عشان نعرف نجيب الأسماء والتاريخ)
         var subOrders = await _unitOfWork.SubOrderRepository.GetAllAsync(
             filter: s => s.HerbalistId == herbalist.HerbalistId,
-            includeProperties: "Order,OrderHerbs.Herb,OrderRecipes.Recipe,OrderAiRecipes.AiRecipe", // 👈 ضفنا الـ AI Recipe هنا
+            includeProperties: "Order,OrderHerbs.Herb,OrderRecipes.Recipe,OrderAiRecipes.AiRecipe,OrderAiChatRecipes.AiChatRecipe", // 👈 ضفنا الـ AI Recipe هنا
             tracked: false,
             cancellationToken: cancellationToken);
 
@@ -298,6 +307,10 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         else if (subOrder.OrderAiRecipes != null && subOrder.OrderAiRecipes.Any())
         {
             productName = subOrder.OrderAiRecipes.First().AiRecipe?.RecommendedRecipeName ?? "AI Generated Recipe";
+        }
+        else if (subOrder.OrderAiChatRecipes != null && subOrder.OrderAiChatRecipes.Any())
+        {
+            productName = subOrder.OrderAiChatRecipes.First().AiChatRecipe?.RecommendedRecipeName ?? "AI Chat Recipe";
         }
 
         // 2. قص النص لو طويل بزيادة (الثلاث نقط الشيك)
