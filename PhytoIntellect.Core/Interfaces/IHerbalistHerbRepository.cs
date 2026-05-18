@@ -3,9 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PhytoIntellect.Core.Interfaces
+namespace PhytoIntellect.Core.Interfaces;
+
+public interface IHerbalistHerbRepository : IRepository<HerbalistHerb>
 {
-    public interface IHerbalistHerbRepository : IRepository<HerbalistHerb>
-    {
-    }
 }

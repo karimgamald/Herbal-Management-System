@@ -5,6 +5,6 @@ using System.Text;
 
 namespace PhytoIntellect.Core.Interfaces;
 
-public interface IHerbRepository: IRepository<Herb>
+public interface INotificationRepository: IRepository<Notification>
 {
 }

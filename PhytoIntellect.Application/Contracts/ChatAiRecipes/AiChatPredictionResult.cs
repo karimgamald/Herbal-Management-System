@@ -6,6 +6,7 @@ namespace PhytoIntellect.Application.Contracts.ChatAiRecipes;
 
 public class AiChatPredictionResult
 {
+    public int AiChatRecipeId { get; set; }
     public string RecommendedRecipeName { get; set; } = string.Empty;
     public string MainHerb { get; set; } = string.Empty;
     public string ScientificName { get; set; } = string.Empty;

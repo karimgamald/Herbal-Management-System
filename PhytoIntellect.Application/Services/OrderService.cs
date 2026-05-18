@@ -8,25 +8,21 @@ using PhytoIntellect.Core.Enums;
 
 namespace PhytoIntellect.Application.Services;
 
-public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderService
+public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationService notificationService) : IOrderService
 {
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IMapper _mapper = mapper;
 
     public async Task<string> CreateOrderAsync(string userId, CreateOrderRequest request, CancellationToken cancellationToken = default)
     {
-        // 1. التحقق من المريض
         int parsedUserId = ParseUserId(userId);
         int patientId = await GetPatientIdAsync(parsedUserId, cancellationToken);
 
-        // 2. تجهيز العنوان
         string finalShippingAddress = 
             await ResolveShippingAddressAsync(parsedUserId, request.ShippingAddress, cancellationToken);
 
-        // 3. تحديد حالة الدفع
         var (orderStatus, subOrderStatus) = DetermineOrderStatuses(request.PaymentMethod);
 
-        // 4. تهيئة الأوردر الرئيسي
         var mainOrder = new Order
         {
             PatientId = patientId,
@@ -39,7 +35,6 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             SubOrders = new List<SubOrder>()
         };
 
-        // 5. معالجة العناصر (الوصفات والأعشاب)
 
         if (request.Herbs != null && request.Herbs.Any())
         {
@@ -58,10 +53,29 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper) : IOrderServic
             await ProcessAiChatRecipesAsync(request.AiChatRecipes, mainOrder, subOrderStatus, cancellationToken);
         }
 
-        // 6. حساب الإجماليات والحفظ
         CalculateOrderTotals(mainOrder);
         await _unitOfWork.OrderRepository.CreateAsync(mainOrder, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (mainOrder.SubOrders != null && mainOrder.SubOrders.Any())
+        {
+            foreach (var subOrder in mainOrder.SubOrders)
+            {
+                var herbalistEntity = await _unitOfWork.HerbalistRepository.GetAsync(
+                    filter: h => h.HerbalistId == subOrder.HerbalistId,
+                    tracked: false,
+                    cancellationToken: cancellationToken);
+
+                if (herbalistEntity != null)
+                {
+                    await notificationService.SendNotificationAsync(
+                        userId: herbalistEntity.UserId,
+                        title: "New Order 📦",
+                        message: "You have a new order waiting to be prepared. Please check your orders list.",
+                        cancellationToken: cancellationToken);
+                }
+            }
+        }
 
         return mainOrder.OrderStatus == "AwaitingPayment"
             ? "Order created successfully. Please proceed to payment."

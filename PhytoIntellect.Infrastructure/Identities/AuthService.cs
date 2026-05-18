@@ -14,17 +14,28 @@ public class AuthService(
     ITokenService tokenService,
     IMapper mapper,
     IConfiguration _config,
-    IEmailService emailService) : IAuthService 
+    IEmailService emailService) : IAuthService  
 {
-    public async Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model, 
+    public async Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model,
+        bool isAddedByAdmin = false,
         CancellationToken cancellationToken = default)
     {
+        if (model.Role == AppRoles.Admin && !isAddedByAdmin)
+        {
+            return new RegisterUserAuthResponse
+            {
+                Success = false,
+                Message = "Unauthorized to register as Admin."
+            };
+        }
+
         if (!AppRoles.IsValidRole(model.Role))
             return new RegisterUserAuthResponse
             {
                 Success = false,
-                Message = $"Invalid Role. Role must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'."
+                Message = $"Invalid Role. Role must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}', or '{AppRoles.Admin}'."
             };
+
 
         if (model.Password != model.ConfirmPassword)
         {
@@ -75,6 +86,11 @@ public class AuthService(
             };
             
             await unitOfWork.HerbalistRepository.CreateAsync(newHerbalist, cancellationToken);
+        }
+
+        else if (user.Role == AppRoles.Admin)
+        {
+            await unitOfWork.UserRepository.CreateAsync(user, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -228,14 +244,13 @@ public class AuthService(
         var accessToken = tokenService.CreateAccessToken(user);
         var refreshToken = tokenService.CreateRefreshToken();
 
-        // 🕒 سحب مدة الـ Refresh Token من الإعدادات (لو مش موجودة هنخليها 7 أيام افتراضياً)
         var refreshDuration = double.Parse(_config["JwtSettings:RefreshTokenDurationInDays"] ?? "7");
 
         var tokenEntity = new RefreshToken
         {
             UserId = user.Id,
             TokenHash = TokenHasher.HashToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(refreshDuration), // مدة ديناميكية
+            ExpiresAt = DateTime.UtcNow.AddDays(refreshDuration),
             IsRevoked = false
         };
 

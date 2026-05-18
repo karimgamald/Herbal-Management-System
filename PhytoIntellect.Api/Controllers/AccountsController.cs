@@ -20,7 +20,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await authService.RegisterAsync(model, cancellationToken);
+        var result = await authService.RegisterAsync(model, isAddedByAdmin: false, cancellationToken);
 
         if (!result.Success)
             return BadRequest(new { result.Message });

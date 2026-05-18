@@ -54,12 +54,10 @@ public class ChatAiRecipeService(
         await _unitOfWork.AiChatRecipeRepository.CreateAsync(recipeRecord, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        predictionResult.AiChatRecipeId = recipeRecord.Id;
         return predictionResult;
     }
 
-    // ==============================
-    // Get All Public Recipes
-    // ==============================
     public async Task<PaginatedList<AiChatPredictionResult>> GetAllPublicAsync(RequestFilters filters,CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.AiChatRecipeRepository
@@ -67,7 +65,6 @@ public class ChatAiRecipeService(
 
         query = query.Where(r => r.IsActive);
 
-        // 🔍 Search
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
@@ -78,7 +75,6 @@ public class ChatAiRecipeService(
                 r.Category.ToLower().Contains(search));
         }
 
-        // 🔃 Sorting
         bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
 
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))

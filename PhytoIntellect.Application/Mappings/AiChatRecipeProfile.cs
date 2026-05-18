@@ -9,7 +9,8 @@ public class AiChatRecipeProfile : Profile
 {
     public AiChatRecipeProfile()
     {
-        CreateMap<AiChatRecipe, AiChatPredictionResult>();
+        CreateMap<AiChatRecipe, AiChatPredictionResult>()
+            .ForMember(dest => dest.AiChatRecipeId, opt => opt.MapFrom(src => src.Id));
 
         CreateMap<AiChatRecipe, FavoriteResponse>()
         .ForMember(dest => dest.TargetId, opt => opt.MapFrom(src => src.Id))

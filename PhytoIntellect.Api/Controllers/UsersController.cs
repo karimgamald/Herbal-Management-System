@@ -1,9 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Contracts.Users;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Application.Services;
+using PhytoIntellect.Core.Constants;
+using PhytoIntellect.Infrastructure.Identities;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,8 +15,8 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-// [Authorize(Roles = "Admin")]  
-public class UsersController(IUserService userService) : ControllerBase
+[Authorize(Roles = AppRoles.Admin)]  
+public class UsersController(IUserService userService, IAuthService authService) : ControllerBase
 {
     [HttpGet("get-all")]
     public async Task<IActionResult> GetAllUsers([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
@@ -31,6 +34,18 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(user);
     }
 
+
+    [HttpPost("add-admin")]
+    public async Task<IActionResult> AddUser([FromBody] RegisterUserAuthRequest model, CancellationToken cancellationToken)
+    {
+        var result = await authService.RegisterAsync(model, isAddedByAdmin: true, cancellationToken);
+
+        if (!result.Success)
+            return BadRequest(new { Message = result.Message });
+
+        return Ok(new { Message = result.Message });
+    }
+
     [HttpPut("update/{id}")]
     public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request,CancellationToken cancellationToken)
     {
@@ -44,7 +59,6 @@ public class UsersController(IUserService userService) : ControllerBase
     [HttpPatch("update-my-address")]
     public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressRequest model,CancellationToken cancellationToken)
     {
-        // get the userid from claims
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim))
             return Unauthorized();
@@ -67,4 +81,5 @@ public class UsersController(IUserService userService) : ControllerBase
             return NotFound(new { Message = result });
         return Ok(new { Message = result });
     }
+
 }

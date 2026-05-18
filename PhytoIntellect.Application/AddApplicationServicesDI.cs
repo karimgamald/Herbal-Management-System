@@ -34,6 +34,7 @@ public static class AddApplicationServicesDI
         services.AddScoped<IHerbalistAiChatRecipeService, HerbalistAiChatRecipeService>();
         services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<ICurrentLanguageService, CurrentLanguageService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
         services.AddScoped<IEmailService, EmailService>();

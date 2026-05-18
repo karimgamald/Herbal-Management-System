@@ -4,7 +4,7 @@ namespace PhytoIntellect.Application.Interfaces;
 
 public interface IAuthService
 {
-    Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model, CancellationToken cancellationToken = default);
+    Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model, bool isAddedByAdmin = false, CancellationToken cancellationToken = default);
     Task<RegisterUserAuthResponse> LoginAsync(LoginAccountRequest model, CancellationToken cancellationToken = default);
     Task<RegisterUserAuthResponse> ConfirmEmailAsync(string email, string token, CancellationToken cancellationToken = default);
     Task<RegisterUserAuthResponse> ResendConfirmationEmailAsync(string email, CancellationToken cancellationToken = default);

@@ -32,7 +32,7 @@ namespace PhytoIntellect.Application.Contracts.Accounts
 
             RuleFor(x => x.Role)
                 .NotEmpty()
-                .Must(role => role == "Patient" || role == "Herbalist")
+                .Must(role => role == "Patient" || role == "Herbalist" || role == "Admin")
                 .WithMessage("Role must be Patient or Herbalist.");
 
             RuleFor(x => x.Phone)

@@ -29,7 +29,8 @@ public class UnitOfWork(
     IRepository<HerbalistAiRecipe> herbalistAiRecipeRepository,
     IRepository<HerbalistAiChatRecipe> herbalistAiChatRecipeRepository,
     IRepository<OrderAiRecipe> orderAiRecipeRepository,
-    IRepository<UserFavorite> userFavoriteRepository
+    IRepository<UserFavorite> userFavoriteRepository,
+    IRepository<Notification> notificationRepository
     ) : IUnitOfWork
 { 
     public IRepository<User> UserRepository { get; } = userRepository;
@@ -52,6 +53,7 @@ public class UnitOfWork(
     public IRepository<HerbalistAiChatRecipe> HerbalistAiChatRecipeRepository { get; } = herbalistAiChatRecipeRepository;
     public IRepository<OrderAiRecipe> OrderAiRecipeRepository { get; } = orderAiRecipeRepository;
     public IRepository<UserFavorite> UserFavoriteRepository { get; } = userFavoriteRepository;
+    public IRepository<Notification> NotificationRepository { get; } = notificationRepository;
 
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
