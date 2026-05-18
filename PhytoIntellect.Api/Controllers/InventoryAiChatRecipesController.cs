@@ -12,7 +12,7 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/inventory-ai-chat-recipes")]
 [ApiController]
-public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inventoryService) : ControllerBase
+public class AiChatRecipesInventoryController(IHerbalistAiChatRecipeService inventoryService) : ControllerBase
 {
     [Authorize(Roles = AppRoles.Herbalist)]
     [HttpGet("my-inventory")]
@@ -79,17 +79,17 @@ public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inve
     // Admin Endpoints
     [HttpGet("~/api/admin/inventory-ai-chat-recipes")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminGetAllInventory([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllInventoryByAdmin([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var result = await inventoryService.AdminGetAllInventoryAsync(filters, cancellationToken);
+        var result = await inventoryService.GetAllAiChatRecipeInventoryByAdminAsync(filters, cancellationToken);
         return Ok(result);
     }
 
     [HttpDelete("~/api/admin/inventory-ai-chat-recipes/{herbalistId}/{recipeId}")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminRemoveFromInventory(int herbalistId, int recipeId, CancellationToken cancellationToken)
+    public async Task<IActionResult> RemoveFromInventoryByAdmin(int herbalistId, int recipeId, CancellationToken cancellationToken)
     {
-        var success = await inventoryService.AdminRemoveAiChatRecipeAsync(herbalistId, recipeId, cancellationToken);
+        var success = await inventoryService.RemoveAiChatRecipeByAdminAsync(herbalistId, recipeId, cancellationToken);
         if (!success)
             return NotFound(new { Message = "Inventory item not found." });
 

@@ -8,11 +8,11 @@ using PhytoIntellect.Core.Constants;
 
 namespace PhytoIntellect.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/inventory-ai-recipes")] // جعل الرابط موحداً ومنظماً مثل التاني
 [ApiController]
-[Authorize(Roles = AppRoles.Herbalist)]
 public class InventoryAiRecipesController(IHerbalistAiRecipeService inventoryService) : ControllerBase
 {
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpGet("my-inventory")]
     public async Task<IActionResult> GetMyInventory([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
@@ -21,6 +21,7 @@ public class InventoryAiRecipesController(IHerbalistAiRecipeService inventorySer
         return Ok(result);
     }
 
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpPost("add")]
     public async Task<IActionResult> AddToInventory([FromBody] AddAiRecipeToInventoryRequest request, CancellationToken cancellationToken)
     {
@@ -29,7 +30,8 @@ public class InventoryAiRecipesController(IHerbalistAiRecipeService inventorySer
         return Ok(result);
     }
 
-    [HttpPatch("{id}/price")]
+    [Authorize(Roles = AppRoles.Herbalist)]
+    [HttpPatch("{id:int}/price")] // إضافة Route Constraint للـ int للحماية
     public async Task<IActionResult> UpdatePrice(int id, [FromBody] UpdatePriceRequest request, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
@@ -37,21 +39,22 @@ public class InventoryAiRecipesController(IHerbalistAiRecipeService inventorySer
         return Ok(new { Message = "Price updated successfully." });
     }
 
-    [HttpPatch("{id}/status")]
+    [Authorize(Roles = AppRoles.Herbalist)]
+    [HttpPatch("{id:int}/status")]
     public async Task<IActionResult> ToggleStatus(int id, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
-
         var newState = await inventoryService.ToggleStatusAsync(userId, id, cancellationToken);
 
         return Ok(new
         {
-            Message = newState ?   "Recipe activated successfully." : "Recipe deactivated successfully.",
+            Message = newState ? "Recipe activated successfully." : "Recipe deactivated successfully.",
             IsActive = newState
         });
     }
 
-    [HttpDelete("{id}/delete")]
+    [Authorize(Roles = AppRoles.Herbalist)]
+    [HttpDelete("{id:int}/delete")]
     public async Task<IActionResult> RemoveFromInventory(int id, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
@@ -59,9 +62,9 @@ public class InventoryAiRecipesController(IHerbalistAiRecipeService inventorySer
         return Ok(new { Message = "Recipe removed from inventory." });
     }
 
-    [HttpGet("{id}/herbalists")]
+    [HttpGet("{id:int}/herbalists")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetHerbalistsForAiRecipe([FromRoute] int id, 
+    public async Task<IActionResult> GetHerbalistsForAiRecipe([FromRoute] int id,
         [FromQuery] bool isActive = true, CancellationToken cancellationToken = default)
     {
         var result = await inventoryService.GetHerbalistsByAiRecipeAsync(id, isActive, cancellationToken);
@@ -70,5 +73,26 @@ public class InventoryAiRecipesController(IHerbalistAiRecipeService inventorySer
             return NotFound(new { Message = "No herbalists currently offer this recipe." });
 
         return Ok(result);
+    }
+
+    // ================= Admin Endpoints =================
+
+    [HttpGet("~/api/admin/inventory-ai-recipes")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> GetAllInventoryByAdmin([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        var result = await inventoryService.GetAllAiRecipeInventoryByAdminAsync(filters, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("~/api/admin/inventory-ai-recipes/{herbalistId:int}/{recipeId:int}")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> RemoveFromInventoryByAdmin([FromRoute] int herbalistId, [FromRoute] int recipeId, CancellationToken cancellationToken)
+    {
+        var success = await inventoryService.RemoveAiRecipeByAdminAsync(herbalistId, recipeId, cancellationToken);
+        if (!success)
+            return NotFound(new { Message = "Inventory item not found." });
+
+        return Ok(new { Message = "Recipe removed from herbalist's inventory by Admin." });
     }
 }

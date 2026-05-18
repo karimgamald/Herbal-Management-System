@@ -1,4 +1,6 @@
-﻿using PhytoIntellect.Application.Interfaces;
+﻿using PhytoIntellect.Application.Contracts.Notifications;
+using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using System;
 using System.Collections.Generic;
@@ -85,5 +87,48 @@ public class NotificationService(IUnitOfWork unitOfWork) : INotificationService
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    // ================= Admin Bulk Notification Service =================
+
+    public async Task SendBulkNotificationAsync(AdminNotificationRequest request, CancellationToken cancellationToken = default)
+    {
+        IQueryable<int> targetUserIds;
+
+        // الفرز وجلب المعرفات بناءً على الفئة المستهدفة للـ Admin
+        if (request.TargetRole == AppRoles.Herbalist)
+        {
+            targetUserIds = unitOfWork.HerbalistRepository.GetQueryable(tracked: false).Select(h => h.UserId);
+        }
+        else if (request.TargetRole == AppRoles.Patient)
+        {
+            targetUserIds = unitOfWork.PatientRepository.GetQueryable(tracked: false).Select(p => p.UserId);
+        }
+        else // في حالة اختيار "All" لجميع مستخدمي النظام الأساسيين من الفئتين
+        {
+            var herbalistUsers = unitOfWork.HerbalistRepository.GetQueryable(tracked: false).Select(h => h.UserId);
+            var patientUsers = unitOfWork.PatientRepository.GetQueryable(tracked: false).Select(p => p.UserId);
+            targetUserIds = herbalistUsers.Union(patientUsers);
+        }
+
+        var userIdsList = targetUserIds.ToList();
+        if (!userIdsList.Any()) return;
+
+        // تجهيز قائمة الإشعارات لعمل Bulk Insert سريع وموفر لموارد الخادم
+        var notifications = userIdsList.Select(userId => new Notification
+        {
+            UserId = userId,
+            Title = request.Title,
+            Message = request.Message,
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        }).ToList();
+
+        foreach (var notification in notifications)
+        {
+            await unitOfWork.NotificationRepository.CreateAsync(notification, cancellationToken);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

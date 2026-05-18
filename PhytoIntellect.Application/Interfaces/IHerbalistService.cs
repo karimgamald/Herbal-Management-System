@@ -11,7 +11,7 @@ public interface IHerbalistService
     Task<HerbalistResponse?> GetHerbalistByIdAsync(int id, CancellationToken cancellationToken);
     Task<PaginatedList<HerbalistResponse>> GetAllHerbalistsAsync(RequestFilters filters, CancellationToken cancellationToken = default);
 
-    Task<PaginatedList<HerbalistResponse>> AdminGetAllHerbalistsAsync(RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<PaginatedList<HerbalistResponse>> GetAllHerbalistsByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default);
     Task<bool> DeleteHerbalistAsync(int herbalistId, CancellationToken cancellationToken = default);
     Task<object> GetHerbalistsStatsAsync(CancellationToken cancellationToken = default);
 }

@@ -1,8 +1,11 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Patients;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
+using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Enums;
 
 namespace PhytoIntellect.Application.Services;
@@ -30,7 +33,8 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
 
         return "Profile updated successfully.";
     }
-   
+
+    
     public async Task<PatientRequest?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default)
     {
         var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == patientId, tracked: false,
@@ -38,6 +42,7 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
         return patient == null ? null : mapper.Map<PatientRequest>(patient);
     }
 
+    
     public async Task<PaginatedList<PatientRequest>> GetAllPatientsAsync(RequestFilters filters,
      CancellationToken cancellationToken = default)
     {
@@ -98,4 +103,22 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
 
         return result;
     }
+
+    public async Task<bool> DeletePatientAsync(int patientId, CancellationToken cancellationToken = default)
+    {
+        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == patientId, tracked: true, cancellationToken: cancellationToken);
+        if (patient == null) return false;
+
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == patient.UserId, tracked: true, cancellationToken: cancellationToken);
+
+        unitOfWork.PatientRepository.Remove(patient);
+        if (user != null)
+        {
+            unitOfWork.UserRepository.Remove(user);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
 }

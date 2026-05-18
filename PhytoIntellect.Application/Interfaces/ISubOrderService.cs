@@ -10,4 +10,5 @@ public interface ISubOrderService
     Task<SubOrderDetailsResponse> GetSubOrderDetailsAsync(int subOrderId, string userId, CancellationToken cancellationToken = default);
     Task UpdateSubOrderStatusAsync(int subOrderId, string userId, UpdateSubOrderStatusRequest request, CancellationToken cancellationToken = default);
     Task<HerbalistFinancialDashboardResponse> GetHerbalistFinancialsAsync(string userId, CancellationToken cancellationToken = default);
+    Task CancelSubOrderByPatientAsync(int subOrderId, string userId, CancellationToken cancellationToken = default);
 }

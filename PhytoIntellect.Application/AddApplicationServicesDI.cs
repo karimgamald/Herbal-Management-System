@@ -23,7 +23,7 @@ public static class AddApplicationServicesDI
         services.AddScoped<IRecipeService, RecipeService>();
         services.AddScoped<IDiseaseService, DiseaseService>();
         services.AddScoped<IHerbService, HerbService>();
-        services.AddScoped<IInventoryService, InventoryService>();
+        services.AddScoped<IInventoryHerbsService, InventoryHerbsService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<IReviewRecipeService, ReviewRecipeService>();
         services.AddScoped<IOrderService, OrderService>();

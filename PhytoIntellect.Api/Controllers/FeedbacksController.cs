@@ -203,17 +203,17 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
     // Admin Endpoints
     [HttpGet("~/api/admin/feedbacks")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminGetAllFeedbacks([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllFeedbacksByAdmin([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var feedbacks = await feedbackService.AdminGetAllFeedbacksAsync(filters, cancellationToken);
+        var feedbacks = await feedbackService.GetAllFeedbacksByAdminAsync(filters, cancellationToken);
         return Ok(feedbacks);
     }
 
     [HttpDelete("~/api/admin/feedbacks/{id}")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminDeleteFeedback(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteFeedbackByAdmin(int id, CancellationToken cancellationToken)
     {
-        var success = await feedbackService.AdminDeleteFeedbackAsync(id, cancellationToken);
+        var success = await feedbackService.DeleteFeedbackByAdminAsync(id, cancellationToken);
         if (!success) return NotFound(new { Message = "Feedback not found." });
 
         return Ok(new { Message = "Feedback deleted successfully by Admin." });

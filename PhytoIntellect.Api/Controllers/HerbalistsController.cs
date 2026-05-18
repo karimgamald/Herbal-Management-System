@@ -40,7 +40,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
         return Ok(herbalist);
     }
 
-    [Authorize(Roles = AppRoles.Patient)]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist},{AppRoles.Patient}")]
     [HttpGet("get-all")]
     public async Task<IActionResult> GetAllHerbalists([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
@@ -67,15 +67,15 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
     // Admin Endpoints
     [HttpGet("~/api/admin/herbalists")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminGetAllHerbalists([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllHerbalistsByAdmin([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
-        var herbalists = await herbalistService.AdminGetAllHerbalistsAsync(filters, cancellationToken);
+        var herbalists = await herbalistService.GetAllHerbalistsByAdminAsync(filters, cancellationToken);
         return Ok(herbalists);
     }
 
     [HttpDelete("~/api/admin/herbalists/{id}")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminDeleteHerbalist(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteHerbalistByAdmin(int id, CancellationToken cancellationToken)
     {
         var success = await herbalistService.DeleteHerbalistAsync(id, cancellationToken);
         if (!success)

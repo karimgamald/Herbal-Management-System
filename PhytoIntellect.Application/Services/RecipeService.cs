@@ -259,5 +259,25 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
         return result;
     }
 
+    public async Task<bool> DeleteRecipeByAdminAsync(int recipeId, CancellationToken cancellationToken = default)
+    {
+        // 1. جلب الوصفة من قاعدة البيانات مع تتبع التغييرات لحذفها
+        var recipe = await unitOfWork.RecipeRepository.GetAsync(
+            filter: r => r.RecipeId == recipeId, // أو حسب اسم الحقل لديك Id / RecipeId
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        // 2. إذا كانت الوصفة غير موجودة نرجع false للـ Controller
+        if (recipe == null) return false;
+
+        // 3. استدعاء أمر الحذف من الـ Repository الخاص بالوصفات
+        unitOfWork.RecipeRepository.Remove(recipe);
+
+        // 4. حفظ التغييرات نهائياً في قاعدة البيانات
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
 
 }

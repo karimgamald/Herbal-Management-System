@@ -14,12 +14,14 @@ namespace PhytoIntellect.Api.Controllers;
 public class RecipesController(IRecipeService recipeService) : ControllerBase
 {
     [HttpGet("all")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAllRecipes([FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
         var recipes = await recipeService.GetAllActiveRecipesAsync(filters,cancellationToken);
         return Ok(recipes);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}/get-id")]
     public async Task<IActionResult> GetRecipeById(int id, CancellationToken cancellationToken)
     {
@@ -30,6 +32,7 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         return Ok(recipe);
     }
 
+    [AllowAnonymous]
     [HttpGet("herbalist/{id}")]
     public async Task<IActionResult> GetRecipesByHerbalist([FromRoute] int id,[FromQuery] RequestFilters filters, [FromQuery] bool? isActive, CancellationToken cancellationToken)
     {
@@ -37,6 +40,7 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
 
         return Ok(recipes);
     }
+
 
     [Authorize(Roles =AppRoles.Herbalist)]
     [HttpPost("add")]
@@ -80,7 +84,7 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         }
     }
 
-    [Authorize(Roles = "Herbalist")]
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpPatch("{id}/toggle-availability")]
     public async Task<IActionResult> ToggleRecipeAvailability(int id, CancellationToken cancellationToken)
     {
@@ -102,5 +106,26 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
             Message = responseMessage,
             IsActive = newState
         });
+    }
+
+    // New Endpoint: Force delete a recipe by Admin
+    // متاح فقط للمسؤول (Admin) لحذف أي وصفة نهائياً من النظام
+    [Authorize(Roles = AppRoles.Admin)]
+    [HttpDelete("admin/delete/{id:int}")]
+    public async Task<IActionResult> DeleteRecipeByAdmin(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var isDeleted = await recipeService.DeleteRecipeByAdminAsync(id, cancellationToken);
+
+            if (!isDeleted)
+                return NotFound(new { Message = "Recipe not found on the system." });
+
+            return Ok(new { Message = "Recipe Deleted successfully by Admin." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "An error occured when deleting this recipe.", Details = ex.Message });
+        }
     }
 } 

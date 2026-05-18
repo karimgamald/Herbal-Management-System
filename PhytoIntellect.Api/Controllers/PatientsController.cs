@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PhytoIntellect.Application.Contracts.Patients;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
+using PhytoIntellect.Application.Services;
 using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 using System.Threading;
@@ -28,7 +29,7 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         return Ok(patient);
     }
 
-
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPatientById(int id, CancellationToken cancellationToken)
     {
@@ -45,7 +46,7 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         return Ok(patient);
     }
 
-    [Authorize]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpGet("all")]
     public async Task<IActionResult> GetAllPatients([FromQuery] RequestFilters filters ,CancellationToken cancellationToken)
     {
@@ -64,5 +65,26 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         if (result == "Patient profile not found.") return NotFound(new { Message = result });
 
         return Ok(new { Message = result });
+    }
+    // Endpoint: Delete patient profile and user account by Admin
+    // متاح فقط للمسؤول (Admin) لحذف حساب المريض نهائياً من النظام
+    [Authorize(Roles = AppRoles.Admin)]
+    [HttpDelete("admin/delete/{patientId:int}")]
+    public async Task<IActionResult> DeletePatient(int patientId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // استدعاء الخدمة هنا يتم من خلال المتغير المحقون بالـ Controller (مثال: _patientService)
+            var isDeleted = await patientService.DeletePatientAsync(patientId, cancellationToken);
+
+            if (!isDeleted)
+                return NotFound(new { Message = "Patient not found" });
+
+            return Ok(new { Message = "Patient deleted successfully." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "An error occured when deleting the patient.", Details = ex.Message });
+        }
     }
 }

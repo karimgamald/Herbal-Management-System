@@ -102,7 +102,7 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
         return "Profile updated successfully.";
     }
 
-    public async Task<PaginatedList<HerbalistResponse>> AdminGetAllHerbalistsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<HerbalistResponse>> GetAllHerbalistsByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.HerbalistRepository.GetQueryable(tracked: false);
 

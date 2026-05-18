@@ -190,7 +190,7 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
         }
     }
 
-    public async Task<PaginatedList<HerbalistAiChatRecipeResponse>> AdminGetAllInventoryAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<HerbalistAiChatRecipeResponse>> GetAllAiChatRecipeInventoryByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.HerbalistAiChatRecipeRepository.GetQueryable(tracked: false);
 
@@ -222,7 +222,7 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
         return await PaginatedList<HerbalistAiChatRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<bool> AdminRemoveAiChatRecipeAsync(int herbalistId, int aiChatRecipeId, CancellationToken cancellationToken = default)
+    public async Task<bool> RemoveAiChatRecipeByAdminAsync(int herbalistId, int aiChatRecipeId, CancellationToken cancellationToken = default)
     {
         var item = await unitOfWork.HerbalistAiChatRecipeRepository.GetAsync(
             filter: h => h.AiChatRecipeId == aiChatRecipeId && h.HerbalistId == herbalistId,
@@ -238,5 +238,4 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }
-
 }

@@ -65,4 +65,14 @@ public class MedicalHistoryService(IUnitOfWork unitOfWork, IMapper mapper) : IMe
             return "Medical history updated successfully.";
         }
     }
+    public async Task<bool> DeleteMedicalHistoryByAdminAsync(int patientId, CancellationToken cancellationToken = default)
+    {
+        // جلب السجل مع تفعيل الـ Tracking للحذف
+        var history = await unitOfWork.MedicalHistoryRepository.GetAsync(h => h.PatientId == patientId, tracked: true, cancellationToken: cancellationToken);
+        if (history == null) return false;
+
+        unitOfWork.MedicalHistoryRepository.Remove(history);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }

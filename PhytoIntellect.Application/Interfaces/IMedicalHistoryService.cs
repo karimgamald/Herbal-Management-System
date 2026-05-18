@@ -11,4 +11,5 @@ public interface IMedicalHistoryService
     Task<string> AddOrUpdateMyMedicalHistoryAsync(int userId, MedicalHistoryRequest request, CancellationToken cancellationToken = default);
     // ضيف السطر ده تحت الميثودز اللي كتبناها
     Task<MedicalHistoryResponse?> GetPatientMedicalHistoryByPatientIdAsync(int patientId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteMedicalHistoryByAdminAsync(int patientId, CancellationToken cancellationToken = default);
 }

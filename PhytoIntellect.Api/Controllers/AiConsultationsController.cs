@@ -189,7 +189,7 @@ public class AiConsultationsController(
     // [Admin] Get All Global Consultations
     [HttpGet("~/api/admin/ai-consultations")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminGetAllConsultations([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllConsultationsByAdmin([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
         try
         {
@@ -205,7 +205,7 @@ public class AiConsultationsController(
 
     [HttpGet("~/api/admin/ai-consultations/statistics")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminGetAiStatistics(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAiStatisticsByAdmin(CancellationToken cancellationToken)
     {
         try
         {
@@ -221,7 +221,7 @@ public class AiConsultationsController(
 
     [HttpDelete("~/api/admin/ai-consultations/{id}")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> DeleteAiRecipe(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteAiRecipeByAdmin(int id, CancellationToken cancellationToken)
     {
         try
         {

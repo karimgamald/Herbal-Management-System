@@ -214,9 +214,15 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
 
     private string DetermineMainOrderStatus(List<string> subStatuses)
     {
+        // 1. Guard clause: To protect against empty collections
+        if (subStatuses == null || !subStatuses.Any())
+            return OrderStatus.Pending.ToString();
+
+        // 2. If ALL sub-orders are completely cancelled
         if (subStatuses.All(s => s == SubOrderStatus.Cancelled.ToString()))
             return OrderStatus.Cancelled.ToString();
 
+        // 3. If ALL sub-orders are finished (either Delivered or Cancelled)
         if (subStatuses.All(s => s == SubOrderStatus.Delivered.ToString() || s == SubOrderStatus.Cancelled.ToString()))
         {
             if (subStatuses.Contains(SubOrderStatus.Cancelled.ToString()))
@@ -225,6 +231,7 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             return OrderStatus.Delivered.ToString();
         }
 
+        // 4. If ALL active sub-orders are shipped (mixed with Delivered or Cancelled)
         if (subStatuses.All(s => s == SubOrderStatus.Shipped.ToString() || s == SubOrderStatus.Delivered.ToString() || s == SubOrderStatus.Cancelled.ToString()))
         {
             if (subStatuses.Contains(SubOrderStatus.Cancelled.ToString()))
@@ -236,7 +243,11 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         if (subStatuses.Any(s => s == SubOrderStatus.Preparing.ToString() || s == SubOrderStatus.Shipped.ToString()))
             return OrderStatus.Processing.ToString();
 
-        return OrderStatus.Pending.ToString(); 
+        if (subStatuses.Contains(SubOrderStatus.Cancelled.ToString()))
+            return OrderStatus.PartiallyCancelled.ToString();
+
+        // 7. Default fallback (All sub-orders are still Pending)
+        return OrderStatus.Pending.ToString();
     }
 
     public async Task<HerbalistFinancialDashboardResponse> GetHerbalistFinancialsAsync(string userId, CancellationToken cancellationToken = default)
@@ -321,5 +332,58 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         }
 
         return productName;
+    }
+
+    // 🔥 Patient cancels a specific sub-order if it is still pending and untouched by the herbalist
+    public async Task CancelSubOrderByPatientAsync(int subOrderId, string userId, CancellationToken cancellationToken = default)
+    {
+        if (!int.TryParse(userId, out int parsedUserId))
+            throw new UnauthorizedAccessException("User is unidentified or the session has expired.");
+
+        // 1. Retrieve patient data to verify order ownership later
+        var patient = await _unitOfWork.PatientRepository.GetAsync(
+            p => p.UserId == parsedUserId,
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (patient == null)
+            throw new UnauthorizedAccessException("Patient profile not found in the system.");
+
+        // 2. Retrieve the sub-order, including the main order and other sibling sub-orders to update statuses together
+        var subOrder = await _unitOfWork.SubOrderRepository.GetAsync(
+            filter: s => s.SubOrderId == subOrderId,
+            tracked: true,
+            includeProperties: "Order.SubOrders",
+            cancellationToken: cancellationToken);
+
+        if (subOrder == null)
+            throw new KeyNotFoundException("Sub-order not found.");
+
+        // 3. Security Check: Does this sub-order belong to the logged-in patient?
+        if (subOrder.Order.PatientId != patient.PatientId)
+            throw new UnauthorizedAccessException("You do not have permission to cancel this sub-order.");
+
+        // 4. 🛑 Validation Check: Verify that the sub-order status is still pending/untouched
+        if (subOrder.Status != SubOrderStatus.Pending.ToString() && subOrder.Status != "AwaitingPayment")
+        {
+            throw new InvalidOperationException("You cannot cancel this sub-order because the herbalist has already started preparing or has shipped it.");
+        }
+
+        // 5. Update the sub-order status to Cancelled
+        subOrder.Status = SubOrderStatus.Cancelled.ToString();
+        _unitOfWork.SubOrderRepository.Update(subOrder);
+
+        // 6. 🧠 Recalculate Master Order Status automatically based on the remaining Sub-Orders
+        if (subOrder.Order != null)
+        {
+            var allSubStatuses = subOrder.Order.SubOrders.Select(s => s.Status).ToList();
+
+            // Re-evaluating the overall master order state using your existing helper method
+            subOrder.Order.OrderStatus = DetermineMainOrderStatus(allSubStatuses);
+            _unitOfWork.OrderRepository.Update(subOrder.Order);
+        }
+
+        // 7. Save all database changes in a single transaction
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

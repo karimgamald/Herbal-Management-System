@@ -15,4 +15,6 @@ public interface IHerbalistAiRecipeService
     Task<bool> RemoveAiRecipeAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default);
 
     Task<IEnumerable<HerbalistWithAiRecipeResponse>> GetHerbalistsByAiRecipeAsync(int aiRecipeId, bool isActive = true, CancellationToken cancellationToken = default);
+    Task<PaginatedList<HerbalistAiRecipeResponse>> GetAllAiRecipeInventoryByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<bool> RemoveAiRecipeByAdminAsync(int herbalistId, int aiRecipeId, CancellationToken cancellationToken = default);
 }

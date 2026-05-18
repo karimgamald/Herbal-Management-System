@@ -12,5 +12,6 @@ public enum OrderStatus
     PartiallyShipped = 4,     // تم الشحن جزئياً (عطار شحن وعطار لغى) 👈 الجديد
     Delivered = 5,            // تم التوصيل (الطلب كامل)
     PartiallyDelivered = 6,   // تم التوصيل جزئياً (الطلب ناقص) 👈 الجديد
-    Cancelled = 7             // تم الإلغاء (كل العطارين لغوا أو المريض لغى)
+    PartiallyCancelled = 7,   // if one cancelled
+    Cancelled = 8             // تم الإلغاء (كل العطارين لغوا أو المريض لغى)
 }

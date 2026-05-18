@@ -13,4 +13,6 @@ public interface IOrderService
 
     Task<bool> ToggleFavoriteOrderAsync(string userId, int orderId, CancellationToken cancellationToken = default);
     Task<PaginatedList<OrderSummaryResponse>> GetFavoriteOrdersAsync(string userId, RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<PaginatedList<OrderSummaryResponse>> GetAllPendingOrdersForAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<PaginatedList<OrderSummaryResponse>> GetAllOrdersForAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default);
 }

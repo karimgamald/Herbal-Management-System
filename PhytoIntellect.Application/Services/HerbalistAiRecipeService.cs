@@ -216,6 +216,64 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : 
             }
         }
     }
+    public async Task<PaginatedList<HerbalistAiRecipeResponse>> GetAllAiRecipeInventoryByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.HerbalistAiRecipeRepository.GetQueryable(tracked: false);
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(h =>
+                h.AiRecipe.RecommendedRecipeName.ToLower().Contains(search) || // فرضاً أن الحقل اسمه RecipeName في جدول الـ AiRecipe
+                h.Herbalist.User!.FullName.ToLower().Contains(search));
+        }
+
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            query = filters.SortColumn.ToLower() switch
+            {
+                "recipename" => isDesc ? query.OrderByDescending(h => h.AiRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiRecipe.RecommendedRecipeName),
+                "price" => isDesc ? query.OrderByDescending(h => h.Price) : query.OrderBy(h => h.Price),
+                "herbalistname" => isDesc ? query.OrderByDescending(h => h.Herbalist.User!.FullName) : query.OrderBy(h => h.Herbalist.User.FullName),
+                _ => isDesc ? query.OrderByDescending(h => h.AiRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiRecipe.RecommendedRecipeName)
+            };
+        }
+        else
+        {
+            query = isDesc ? query.OrderByDescending(h => h.AiRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiRecipe.RecommendedRecipeName);
+        }
+
+        // 3. عمل الإسقاط (Projection) والـ Pagination باستخدام AutoMapper
+        var projectedQuery = query.ProjectTo<HerbalistAiRecipeResponse>(mapper.ConfigurationProvider);
+
+        return await PaginatedList<HerbalistAiRecipeResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+    }
+
+    public async Task<bool> RemoveAiRecipeByAdminAsync(int herbalistId, int aiRecipeId, CancellationToken cancellationToken = default)
+    {
+        // جلب العنصر المحدد بناءً على معرف الخبير ومعرف الوصفة العادية
+        var item = await unitOfWork.HerbalistAiRecipeRepository.GetAsync(
+            filter: h => h.AiRecipeId == aiRecipeId && h.HerbalistId == herbalistId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (item == null) return false;
+
+        // حذف العنصر من مستودع البيانات
+        unitOfWork.HerbalistAiRecipeRepository.Remove(item);
+
+        // استدعاء ميثود التحديث المساعدة الخاصة بالوصفات العادية (إذا كانت موجودة لديك مثل الـ Chat)
+        await CheckAndUpdateAvailability(aiRecipeId, herbalistId, cancellationToken);
+
+        // حفظ التغييرات في قاعدة البيانات
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }
 
 

@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-public interface IInventoryService
+public interface IInventoryHerbsService
 {
     Task<PaginatedList<InventoryResponse>> GetMyInventoryAsync(int userId,RequestFilters filters ,CancellationToken cancellationToken);
     Task<PaginatedList<InventoryResponse>> GetAllByHerbalistIdAsync(int herbalistId, RequestFilters filters,
@@ -14,4 +14,6 @@ public interface IInventoryService
     Task<bool> UpdateInventoryAsync(int userId,int herbId,UpdateInventoryRequest request,CancellationToken cancellationToken);
 
     Task<bool> RemoveHerbAsync(int userId,int herbId,CancellationToken cancellationToken);
+    Task<PaginatedList<InventoryResponse>> GetAllInventoryByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<bool> RemoveHerbByAdminAsync(int herbalistId, int herbId, CancellationToken cancellationToken = default);
 }

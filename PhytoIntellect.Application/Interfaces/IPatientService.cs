@@ -10,4 +10,5 @@ public interface IPatientService
 
     Task<PatientRequest?> GetPatientByIdAsync(int patientId, CancellationToken cancellationToken = default);
     Task<PaginatedList<PatientRequest>> GetAllPatientsAsync(RequestFilters filters,CancellationToken cancellationToken = default);
+    Task<bool> DeletePatientAsync(int patientId, CancellationToken cancellationToken = default);
 }

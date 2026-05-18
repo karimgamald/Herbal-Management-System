@@ -26,7 +26,7 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
         return Ok(history);
     }
 
-    [Authorize(Roles = AppRoles.Herbalist)]
+    [Authorize(Roles = $"{AppRoles.Herbalist} ,{AppRoles.Admin} ")]
     [HttpGet("patient/{id}")]
     public async Task<IActionResult> GetPatientMedicalHistory(int id, CancellationToken cancellationToken)
     {
@@ -50,5 +50,15 @@ public class MedicalHistoriesController(IMedicalHistoryService medicalHistorySer
         if (result.Contains("not found") || result.Contains("Error")) return BadRequest(new { Message = result });
 
         return Ok(new { Message = result });
+    }
+
+    [Authorize(Roles = AppRoles.Admin)]
+    [HttpDelete("~/api/admin/medical-histories/patient/{patientId:int}")]
+    public async Task<IActionResult> DeletePatientMedicalHistoryByAdmin([FromRoute] int patientId, CancellationToken cancellationToken)
+    {
+        var success = await medicalHistoryService.DeleteMedicalHistoryByAdminAsync(patientId, cancellationToken);
+        if (!success) return NotFound(new { Message = "No medical history found to delete." });
+
+        return Ok(new { Message = "Medical history deleted successfully by Admin." });
     }
 }

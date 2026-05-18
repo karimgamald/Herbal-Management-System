@@ -485,7 +485,7 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
     }
 
 
-    public async Task<PaginatedList<FeedbackResponse>> AdminGetAllFeedbacksAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<FeedbackResponse>> GetAllFeedbacksByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
 
@@ -515,7 +515,7 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<bool> AdminDeleteFeedbackAsync(int feedbackId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteFeedbackByAdminAsync(int feedbackId, CancellationToken cancellationToken = default)
     {
         var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.FeedbackId == feedbackId, tracked: true, cancellationToken: cancellationToken);
         if (feedback == null) return false;

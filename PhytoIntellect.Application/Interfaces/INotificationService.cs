@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PhytoIntellect.Application.Contracts.Notifications;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -12,4 +13,5 @@ public interface INotificationService
 
     Task<bool> DeleteNotificationAsync(int notificationId, int userId, CancellationToken cancellationToken = default);
     Task<bool> MarkAllAsReadAsync(int userId, CancellationToken cancellationToken = default);
+    Task SendBulkNotificationAsync(AdminNotificationRequest request, CancellationToken cancellationToken = default);
 }

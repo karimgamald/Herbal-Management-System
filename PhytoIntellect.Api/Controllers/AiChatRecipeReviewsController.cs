@@ -28,6 +28,7 @@ public class AiChatRecipeReviewsController(IReviewRecipeService reviewService) :
         return Ok(result);
     }
 
+    // this get all reviews for just one recipe
     [HttpGet("all")]
     public async Task<IActionResult> GetAiChatRecipeReviews(int id, [FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
@@ -73,7 +74,7 @@ public class AiChatRecipeReviewsController(IReviewRecipeService reviewService) :
     // [Admin] Get All Global Chat Reviews
     [HttpGet("~/api/admin/ai-chat-recipe-reviews")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminGetAllChatReviews([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllAiChatReviewsByAdmin([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
         var reviews = await reviewService.GetAllSystemAiChatReviewsAsync(filters, cancellationToken);
         return Ok(reviews);
@@ -82,7 +83,7 @@ public class AiChatRecipeReviewsController(IReviewRecipeService reviewService) :
     // [Admin] Delete Any Chat Review
     [HttpDelete("~/api/admin/ai-chat-recipe-reviews/{reviewId}")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> AdminDeleteChatReview(int reviewId, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteChatReviewByAdmin(int reviewId, CancellationToken cancellationToken)
     {
         var success = await reviewService.DeleteAnyAiChatReviewAsync(reviewId, cancellationToken);
         if (!success)

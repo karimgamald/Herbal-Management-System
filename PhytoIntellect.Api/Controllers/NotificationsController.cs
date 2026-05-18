@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PhytoIntellect.Application.Contracts.Notifications;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Core.Constants;
 using System.Security.Claims;
 
 namespace PhytoIntellect.Api.Controllers;
@@ -11,6 +13,7 @@ namespace PhytoIntellect.Api.Controllers;
 [Authorize]
 public class NotificationsController(INotificationService notificationService) : ControllerBase
 {
+    [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("my-notifications")]
     public async Task<IActionResult> GetMyNotifications([FromQuery] bool? isRead = null, CancellationToken cancellationToken = default)
     {
@@ -19,6 +22,7 @@ public class NotificationsController(INotificationService notificationService) :
         return Ok(notis);
     }
 
+    [Authorize(Roles = AppRoles.Patient)]
     [HttpPatch("{id}/mark-as-read")]
     public async Task<IActionResult> MarkAsRead(int id, CancellationToken cancellationToken)
     {
@@ -29,6 +33,20 @@ public class NotificationsController(INotificationService notificationService) :
         return Ok(new { Message = "Marked as read successfully." });
     }
 
+    [Authorize(Roles = AppRoles.Patient)]
+    [HttpPatch("mark-all-as-read")]
+    public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+        var success = await notificationService.MarkAllAsReadAsync(int.Parse(userIdStr), cancellationToken);
+        if (!success) return Ok(new { Message = "No unread notifications found." });
+
+        return Ok(new { Message = "All notifications marked as read successfully." });
+    }
+
+    [Authorize(Roles = AppRoles.Patient)]
     [HttpDelete("{id}/delete")]
     public async Task<IActionResult> DeleteNotification(int id, CancellationToken cancellationToken)
     {
@@ -41,15 +59,19 @@ public class NotificationsController(INotificationService notificationService) :
         return Ok(new { Message = "Notification deleted successfully." });
     }
 
-    [HttpPatch("mark-all-as-read")]
-    public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken)
+    // ================= Admin Endpoints =================
+    // send group notification to herbalists or patients or the same => for 
+    [Authorize(Roles = AppRoles.Admin)]
+    [HttpPost("~/api/admin/notifications/send-bulk")]
+    public async Task<IActionResult> SendBulkNotification([FromBody] AdminNotificationRequest request, CancellationToken cancellationToken)
     {
-        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+        // التحقق من صحة المدخلات الخاصة بالـ Role المستهدف
+        if (request.TargetRole != AppRoles.Herbalist && request.TargetRole != AppRoles.Patient && request.TargetRole.ToLower() != "all")
+        {
+            return BadRequest(new { Message = "Invalid Target Role. Use 'Herbalist', 'Patient', or 'All'." });
+        }
 
-        var success = await notificationService.MarkAllAsReadAsync(int.Parse(userIdStr), cancellationToken);
-        if (!success) return Ok(new { Message = "No unread notifications found." });
-
-        return Ok(new { Message = "All notifications marked as read successfully." });
+        await notificationService.SendBulkNotificationAsync(request, cancellationToken);
+        return Ok(new { Message = $"Notification sent successfully to {request.TargetRole}." });
     }
 }

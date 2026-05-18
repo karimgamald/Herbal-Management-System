@@ -337,6 +337,80 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
         return result;
     }
 
+    public async Task<PaginatedList<OrderSummaryResponse>> GetAllPendingOrdersForAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        // جلب الطلبات المعلقة بالنظام بالكامل باستخدام الـ Enum الخاص بك
+        var query = unitOfWork.OrderRepository
+            .GetQueryable(tracked: false)
+            .Where(o => o.OrderStatus == OrderStatus.Pending.ToString());
+
+        // الفلترة والبحث والترتيب (Pagination & Sorting & Search)
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(o => o.OrderId.ToString().Contains(search));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = string.Equals(filters.SortDirection, "DESC", StringComparison.OrdinalIgnoreCase);
+            query = filters.SortColumn.ToLower() switch
+            {
+                "id" => isDesc ? query.OrderByDescending(o => o.OrderId) : query.OrderBy(o => o.OrderId),
+                _ => isDesc ? query.OrderByDescending(o => o.OrderDate) : query.OrderBy(o => o.OrderDate)
+            };
+        }
+        else
+        {
+            query = query.OrderBy(o => o.OrderDate);
+        }
+
+        var projectedQuery = query.ProjectTo<OrderSummaryResponse>(mapper.ConfigurationProvider);
+
+        return await PaginatedList<OrderSummaryResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+    public async Task<PaginatedList<OrderSummaryResponse>> GetAllOrdersForAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        // 1. جلب استعلام لجميع الطلبات في النظام بالكامل بدون تتبع للتسريع (tracked: false)
+        var query = unitOfWork.OrderRepository.GetQueryable(tracked: false);
+
+        // 2. 🔍 ميزة البحث (Search) - يتيح للـ Admin البحث برقم الطلب أو حالة الطلب النصية
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(o => o.OrderId.ToString().Contains(search) ||
+                                     o.OrderStatus.ToLower().Contains(search));
+        }
+
+        // 3. 🔃 عمليات الترتيب والفرز (Sorting)
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = string.Equals(filters.SortDirection, "DESC", StringComparison.OrdinalIgnoreCase);
+
+            query = filters.SortColumn.ToLower() switch
+            {
+                "id" => isDesc ? query.OrderByDescending(o => o.OrderId) : query.OrderBy(o => o.OrderId),
+                "date" => isDesc ? query.OrderByDescending(o => o.OrderDate) : query.OrderBy(o => o.OrderDate),
+                "status" => isDesc ? query.OrderByDescending(o => o.OrderStatus) : query.OrderBy(o => o.OrderStatus),
+                _ => isDesc ? query.OrderByDescending(o => o.OrderDate) : query.OrderBy(o => o.OrderDate)
+            };
+        }
+        else
+        {
+            // الافتراضي للـ Admin: أحدث الطلبات المضافة للنظام تظهر أولاً
+            query = query.OrderByDescending(o => o.OrderDate);
+        }
+
+        // 4. تحويل البيانات (Mapping) إلى الـ DTO المخصص للملخصات
+        var projectedQuery = query.ProjectTo<OrderSummaryResponse>(mapper.ConfigurationProvider);
+
+        // 5. إنشاء القائمة المقسمة (Pagination) وإرجاعها
+        return await PaginatedList<OrderSummaryResponse>.CreateAsync(
+            projectedQuery,
+            filters.PageNumber,
+            filters.PageSize,
+            cancellationToken);
+    }
 
     #region Private Helper Methods
 

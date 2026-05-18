@@ -24,6 +24,6 @@ public interface IFeedbackService
     Task<bool> DeleteMyAiChatRecipeFeedbackAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken = default);
 
     Task<PaginatedList<FeedbackResponse>> GetMyFeedbacksAsync(int userId, RequestFilters filters, CancellationToken cancellationToken = default);
-    Task<PaginatedList<FeedbackResponse>> AdminGetAllFeedbacksAsync(RequestFilters filters, CancellationToken cancellationToken = default);
-    Task<bool> AdminDeleteFeedbackAsync(int feedbackId, CancellationToken cancellationToken = default);
+    Task<PaginatedList<FeedbackResponse>> GetAllFeedbacksByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<bool> DeleteFeedbackByAdminAsync(int feedbackId, CancellationToken cancellationToken = default);
 }
