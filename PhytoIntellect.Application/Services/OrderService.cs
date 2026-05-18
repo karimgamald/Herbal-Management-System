@@ -68,10 +68,17 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
 
                 if (herbalistEntity != null)
                 {
+                    int itemsCount = (subOrder.OrderHerbs?.Count ?? 0) +
+                                     (subOrder.OrderRecipes?.Count ?? 0) +
+                                     (subOrder.OrderAiRecipes?.Count ?? 0) +
+                                     (subOrder.OrderAiChatRecipes?.Count ?? 0);
+
+                    string paymentText = mainOrder.PaymentMethod == "Cash" ? "Cash on Delivery" : "Paid via Card";
+
                     await notificationService.SendNotificationAsync(
                         userId: herbalistEntity.UserId,
-                        title: "New Order 📦",
-                        message: "You have a new order waiting to be prepared. Please check your orders list.",
+                        title: "New Order Alert! 📦",
+                        message: $"You received a new order #{mainOrder.OrderId} containing {itemsCount} items. Payment Method: {paymentText}. Please start preparing it.",
                         cancellationToken: cancellationToken);
                 }
             }
@@ -103,12 +110,10 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
                 filters.PageNumber,
                 filters.PageSize);
 
-        // 🔥 Query
         var query = unitOfWork.OrderRepository
             .GetQueryable(tracked: false)
             .Where(o => o.PatientId == patient.PatientId);
 
-        // 🔍 Search
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
@@ -141,15 +146,12 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
         }
         else
         {
-            // الافتراضي: الأحدث أولاً
             query = query.OrderByDescending(o => o.OrderDate);
         }
 
-        // 🚀 Projection
         var projectedQuery = query.ProjectTo<OrderSummaryResponse>(
             mapper.ConfigurationProvider);
 
-        // 📄 Pagination
         var result = await PaginatedList<OrderSummaryResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,
@@ -242,6 +244,22 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
         _unitOfWork.OrderRepository.Update(order);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        if (order.SubOrders != null)
+        {
+            foreach (var subOrder in order.SubOrders)
+            {
+                var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.HerbalistId == subOrder.HerbalistId, tracked: false, cancellationToken: cancellationToken);
+                if (herbalist != null)
+                {
+                    await notificationService.SendNotificationAsync(
+                        userId: herbalist.UserId,
+                        title: "Payment Received 💳",
+                        message: $"Order #{order.OrderId} has been successfully paid by the patient. You can now start preparing the items.",
+                        cancellationToken: cancellationToken);
+                }
+            }
+        }
+
         return fakeTransactionId;
     }
 
@@ -286,12 +304,10 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
                 filters.PageNumber,
                 filters.PageSize);
 
-        // 🔥 Query
         var query = unitOfWork.OrderRepository
             .GetQueryable(tracked: false)
             .Where(o => o.PatientId == patient.PatientId && o.IsFavorite);
 
-        // 🔍 Search
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
@@ -300,7 +316,6 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
                 o.OrderId.ToString().Contains(search));
         }
 
-        // 🔃 Sorting
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
             bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
@@ -323,11 +338,9 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
             query = query.OrderByDescending(o => o.OrderDate);
         }
 
-        // 🚀 Projection
         var projectedQuery = query.ProjectTo<OrderSummaryResponse>(
             mapper.ConfigurationProvider); 
 
-        // 📄 Pagination
         var result = await PaginatedList<OrderSummaryResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,
@@ -339,12 +352,10 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
 
     public async Task<PaginatedList<OrderSummaryResponse>> GetAllPendingOrdersForAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        // جلب الطلبات المعلقة بالنظام بالكامل باستخدام الـ Enum الخاص بك
         var query = unitOfWork.OrderRepository
             .GetQueryable(tracked: false)
             .Where(o => o.OrderStatus == OrderStatus.Pending.ToString());
 
-        // الفلترة والبحث والترتيب (Pagination & Sorting & Search)
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
@@ -371,10 +382,8 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
     }
     public async Task<PaginatedList<OrderSummaryResponse>> GetAllOrdersForAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        // 1. جلب استعلام لجميع الطلبات في النظام بالكامل بدون تتبع للتسريع (tracked: false)
         var query = unitOfWork.OrderRepository.GetQueryable(tracked: false);
 
-        // 2. 🔍 ميزة البحث (Search) - يتيح للـ Admin البحث برقم الطلب أو حالة الطلب النصية
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
@@ -382,7 +391,6 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
                                      o.OrderStatus.ToLower().Contains(search));
         }
 
-        // 3. 🔃 عمليات الترتيب والفرز (Sorting)
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
             bool isDesc = string.Equals(filters.SortDirection, "DESC", StringComparison.OrdinalIgnoreCase);
@@ -396,15 +404,12 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
             };
         }
         else
-        {
-            // الافتراضي للـ Admin: أحدث الطلبات المضافة للنظام تظهر أولاً
+        { 
             query = query.OrderByDescending(o => o.OrderDate);
         }
 
-        // 4. تحويل البيانات (Mapping) إلى الـ DTO المخصص للملخصات
         var projectedQuery = query.ProjectTo<OrderSummaryResponse>(mapper.ConfigurationProvider);
 
-        // 5. إنشاء القائمة المقسمة (Pagination) وإرجاعها
         return await PaginatedList<OrderSummaryResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,

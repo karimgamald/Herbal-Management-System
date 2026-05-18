@@ -8,7 +8,7 @@ using PhytoIntellect.Core.Constants;
 
 namespace PhytoIntellect.Api.Controllers;
 
-[Route("api/inventory-ai-recipes")] // جعل الرابط موحداً ومنظماً مثل التاني
+[Route("api/inventory-ai-recipes")]
 [ApiController]
 public class InventoryAiRecipesController(IHerbalistAiRecipeService inventoryService) : ControllerBase
 {
@@ -31,7 +31,7 @@ public class InventoryAiRecipesController(IHerbalistAiRecipeService inventorySer
     }
 
     [Authorize(Roles = AppRoles.Herbalist)]
-    [HttpPatch("{id:int}/price")] // إضافة Route Constraint للـ int للحماية
+    [HttpPatch("{id:int}/price")]
     public async Task<IActionResult> UpdatePrice(int id, [FromBody] UpdatePriceRequest request, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();

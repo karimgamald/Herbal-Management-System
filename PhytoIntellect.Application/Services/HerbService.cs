@@ -8,7 +8,7 @@ using PhytoIntellect.Core.Entities;
 
 namespace PhytoIntellect.Application.Services;
 
-public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
+public class HerbService(IUnitOfWork unitOfWork, IMapper mapper, INotificationService notificationService) : IHerbService
 {
     public async Task<PaginatedList<HerbResponse>> GetApprovedHerbsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
@@ -204,6 +204,19 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
             if (File.Exists(imagePath)) File.Delete(imagePath);
         }
 
+        if (herb.AddedByHerbalistId.HasValue)
+        {
+            var herbalist = await unitOfWork.HerbalistRepository.GetAsync(h => h.HerbalistId == herb.AddedByHerbalistId.Value, tracked: false, cancellationToken: cancellationToken);
+            if (herbalist != null)
+            {
+                await notificationService.SendNotificationAsync(
+                    userId: herbalist.UserId,
+                    title: "Herb Rejected/Removed ❌",
+                    message: $"System Notice: The herb '{herb.HerbName}' has been removed from the system by the administration.",
+                    cancellationToken: cancellationToken);
+            }
+        }
+
         unitOfWork.HerbRepository.Remove(herb);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
@@ -214,6 +227,20 @@ public class HerbService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbService
         if (herb == null) return false;
 
         herb.IsApproved = true;
+
+        if (herb.AddedByHerbalistId.HasValue)
+        {
+            var herbalist = await unitOfWork.HerbalistRepository.GetAsync(h => h.HerbalistId == herb.AddedByHerbalistId.Value, tracked: false, cancellationToken: cancellationToken);
+            if (herbalist != null)
+            {
+                await notificationService.SendNotificationAsync(
+                    userId: herbalist.UserId,
+                    title: "Herb Approved! 🎉",
+                    message: $"Good news! Your proposed herb '{herb.HerbName}' has been approved and is now live in the global catalog.",
+                    cancellationToken: cancellationToken);
+            }
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }

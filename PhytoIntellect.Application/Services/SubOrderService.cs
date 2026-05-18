@@ -10,10 +10,10 @@ using PhytoIntellect.Core.Enums;
 
 namespace PhytoIntellect.Application.Services;
 
-public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrderService
+public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationService notificationService) : ISubOrderService
 {
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
-    private readonly IMapper _mapper = mapper;
+    private readonly INotificationService _notificationService = notificationService;
 
     public async Task<PaginatedList<SubOrderSummaryResponse>> GetHerbalistSubOrdersAsync(
     string userId,
@@ -39,21 +39,18 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
                 filters.PageNumber,
                 filters.PageSize);
 
-        // 🔥 Query
-        var query = unitOfWork.SubOrderRepository
+        var query = _unitOfWork.SubOrderRepository
             .GetQueryable(tracked: false)
             .Where(s => s.HerbalistId == herbalist.HerbalistId);
 
-        // 🔍 Search
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
 
             query = query.Where(s =>
-                s.Herbalist.User.FullName.ToLower().Contains(search));
+                s.Herbalist!.User!.FullName.ToLower().Contains(search));
         }
 
-        // 🔃 Sorting
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
             bool isDesc = string.Equals(
@@ -69,8 +66,8 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
 
 
                 "date" => isDesc
-                    ? query.OrderByDescending(s => s.Order.OrderDate)
-                    : query.OrderBy(s => s.Order.OrderDate),
+                    ? query.OrderByDescending(s => s.Order!.OrderDate)
+                    : query.OrderBy(s => s.Order!.OrderDate),
 
                 _ => isDesc
                     ? query.OrderByDescending(s => s.SubOrderId)
@@ -79,15 +76,12 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         }
         else
         {
-            // الافتراضي: الأحدث أولاً
-            query = query.OrderByDescending(s => s.Order.OrderDate);
+            query = query.OrderByDescending(s => s.Order!.OrderDate);
         }
 
-        // 🚀 Projection
         var projectedQuery = query.ProjectTo<SubOrderSummaryResponse>(
             mapper.ConfigurationProvider);
 
-        // 📄 Pagination
         var paginatedResult = await PaginatedList<SubOrderSummaryResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,
@@ -203,6 +197,34 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             _unitOfWork.OrderRepository.Update(mainOrder);
         }
 
+        if (mainOrder != null)
+        {
+            var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.PatientId == mainOrder.PatientId, includeProperties: "User", tracked: false, cancellationToken: cancellationToken);
+
+            if (patient != null)
+            {
+                string notifTitle = "Order Update 🔄";
+                string notifMessage = $"Your items in Order #{mainOrder.OrderId} are now: {newSubStatus.ToString()}.";
+
+                if (newSubStatus == SubOrderStatus.Shipped)
+                {
+                    notifTitle = "Order Shipped! 🚚";
+                    notifMessage = $"Good news! Your items in Order #{mainOrder.OrderId} have been shipped. Tracking ID: {subOrder.ExternalDeliveryID}.";
+                }
+                else if (newSubStatus == SubOrderStatus.Delivered)
+                {
+                    notifTitle = "Order Delivered 🎉";
+                    notifMessage = $"Your items in Order #{mainOrder.OrderId} have been delivered successfully. We hope you feel better soon!";
+                }
+
+                await _notificationService.SendNotificationAsync(
+                    userId: patient.UserId,
+                    title: notifTitle,
+                    message: notifMessage,
+                    cancellationToken: cancellationToken);
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -214,15 +236,12 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
 
     private string DetermineMainOrderStatus(List<string> subStatuses)
     {
-        // 1. Guard clause: To protect against empty collections
         if (subStatuses == null || !subStatuses.Any())
             return OrderStatus.Pending.ToString();
 
-        // 2. If ALL sub-orders are completely cancelled
         if (subStatuses.All(s => s == SubOrderStatus.Cancelled.ToString()))
             return OrderStatus.Cancelled.ToString();
 
-        // 3. If ALL sub-orders are finished (either Delivered or Cancelled)
         if (subStatuses.All(s => s == SubOrderStatus.Delivered.ToString() || s == SubOrderStatus.Cancelled.ToString()))
         {
             if (subStatuses.Contains(SubOrderStatus.Cancelled.ToString()))
@@ -231,7 +250,6 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             return OrderStatus.Delivered.ToString();
         }
 
-        // 4. If ALL active sub-orders are shipped (mixed with Delivered or Cancelled)
         if (subStatuses.All(s => s == SubOrderStatus.Shipped.ToString() || s == SubOrderStatus.Delivered.ToString() || s == SubOrderStatus.Cancelled.ToString()))
         {
             if (subStatuses.Contains(SubOrderStatus.Cancelled.ToString()))
@@ -246,13 +264,11 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         if (subStatuses.Contains(SubOrderStatus.Cancelled.ToString()))
             return OrderStatus.PartiallyCancelled.ToString();
 
-        // 7. Default fallback (All sub-orders are still Pending)
         return OrderStatus.Pending.ToString();
     }
 
     public async Task<HerbalistFinancialDashboardResponse> GetHerbalistFinancialsAsync(string userId, CancellationToken cancellationToken = default)
     {
-        // 1. التأكد من اليوزر والعطار
         if (!int.TryParse(userId, out int parsedUserId))
             return new HerbalistFinancialDashboardResponse();
 
@@ -264,7 +280,6 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         if (herbalist == null)
             return new HerbalistFinancialDashboardResponse();
 
-        // 2. نجيب كل الطلبات مع كل الجداول المرتبطة (عشان نعرف نجيب الأسماء والتاريخ)
         var subOrders = await _unitOfWork.SubOrderRepository.GetAllAsync(
             filter: s => s.HerbalistId == herbalist.HerbalistId,
             includeProperties: "Order,OrderHerbs.Herb,OrderRecipes.Recipe,OrderAiRecipes.AiRecipe,OrderAiChatRecipes.AiChatRecipe", // 👈 ضفنا الـ AI Recipe هنا
@@ -274,39 +289,33 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         if (!subOrders.Any())
             return new HerbalistFinancialDashboardResponse();
 
-        // 3. الحسابات الوقتية (Derived State)
         string cancelledStatus = SubOrderStatus.Cancelled.ToString();
 
         return new HerbalistFinancialDashboardResponse
         {
-            // الرصيد: أي حاجة مش ملغية
             CurrentBalance = subOrders
                 .Where(s => s.Status != cancelledStatus)
                 .Sum(s => s.SubTotal),
 
-            // المخصوم: الحاجات الملغية بس
             CancelledDeductions = subOrders
                 .Where(s => s.Status == cancelledStatus)
                 .Sum(s => s.SubTotal),
 
-            // كشف الحساب
             TasksHistory = subOrders.Select(s => new TaskHistoryResponse
             {
                 TaskId = s.SubOrderId,
-                ProductName = DetermineProductName(s), // 👈 بننده على الدالة المساعدة
+                ProductName = DetermineProductName(s), 
                 Amount = s.SubTotal,
                 Status = s.Status,
                 Date = s.Order?.OrderDate
-            }).OrderByDescending(t => t.Date) // ترتيب من الأحدث للأقدم
+            }).OrderByDescending(t => t.Date) 
         };
     }
 
-    // Helper Method عشان نجيب اسم المنتج أياً كان نوعه
     private string DetermineProductName(SubOrder subOrder)
     {
         string productName = "Unknown Product";
 
-        // 1. تحديد الاسم بناءً على نوع المنتج
         if (subOrder.OrderHerbs != null && subOrder.OrderHerbs.Any())
         {
             productName = subOrder.OrderHerbs.First().Herb?.HerbName ?? "Medicinal Herb";
@@ -324,7 +333,6 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
             productName = subOrder.OrderAiChatRecipes.First().AiChatRecipe?.RecommendedRecipeName ?? "AI Chat Recipe";
         }
 
-        // 2. قص النص لو طويل بزيادة (الثلاث نقط الشيك)
         int maxLength = 35;
         if (productName.Length > maxLength)
         {
@@ -334,13 +342,11 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         return productName;
     }
 
-    // 🔥 Patient cancels a specific sub-order if it is still pending and untouched by the herbalist
     public async Task CancelSubOrderByPatientAsync(int subOrderId, string userId, CancellationToken cancellationToken = default)
     {
         if (!int.TryParse(userId, out int parsedUserId))
             throw new UnauthorizedAccessException("User is unidentified or the session has expired.");
 
-        // 1. Retrieve patient data to verify order ownership later
         var patient = await _unitOfWork.PatientRepository.GetAsync(
             p => p.UserId == parsedUserId,
             tracked: false,
@@ -349,7 +355,6 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         if (patient == null)
             throw new UnauthorizedAccessException("Patient profile not found in the system.");
 
-        // 2. Retrieve the sub-order, including the main order and other sibling sub-orders to update statuses together
         var subOrder = await _unitOfWork.SubOrderRepository.GetAsync(
             filter: s => s.SubOrderId == subOrderId,
             tracked: true,
@@ -359,31 +364,35 @@ public class SubOrderService(IUnitOfWork unitOfWork, IMapper mapper) : ISubOrder
         if (subOrder == null)
             throw new KeyNotFoundException("Sub-order not found.");
 
-        // 3. Security Check: Does this sub-order belong to the logged-in patient?
         if (subOrder.Order.PatientId != patient.PatientId)
             throw new UnauthorizedAccessException("You do not have permission to cancel this sub-order.");
 
-        // 4. 🛑 Validation Check: Verify that the sub-order status is still pending/untouched
         if (subOrder.Status != SubOrderStatus.Pending.ToString() && subOrder.Status != "AwaitingPayment")
         {
             throw new InvalidOperationException("You cannot cancel this sub-order because the herbalist has already started preparing or has shipped it.");
         }
 
-        // 5. Update the sub-order status to Cancelled
         subOrder.Status = SubOrderStatus.Cancelled.ToString();
         _unitOfWork.SubOrderRepository.Update(subOrder);
 
-        // 6. 🧠 Recalculate Master Order Status automatically based on the remaining Sub-Orders
         if (subOrder.Order != null)
         {
             var allSubStatuses = subOrder.Order.SubOrders.Select(s => s.Status).ToList();
 
-            // Re-evaluating the overall master order state using your existing helper method
             subOrder.Order.OrderStatus = DetermineMainOrderStatus(allSubStatuses);
             _unitOfWork.OrderRepository.Update(subOrder.Order);
         }
 
-        // 7. Save all database changes in a single transaction
+        var herbalist = await _unitOfWork.HerbalistRepository.GetAsync(h => h.HerbalistId == subOrder.HerbalistId, tracked: false, cancellationToken: cancellationToken);
+        if (herbalist != null)
+        {
+            await notificationService.SendNotificationAsync(
+                userId: herbalist.UserId,
+                title: "Order Cancelled 🚫",
+                message: $"The patient has cancelled their items in Order #{subOrder.Order!.OrderId}. No further action is needed.",
+                cancellationToken: cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

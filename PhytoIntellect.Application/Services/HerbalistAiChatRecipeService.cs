@@ -11,11 +11,9 @@ using System.Text;
 
 namespace PhytoIntellect.Application.Services;
 
-public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbalistAiChatRecipeService
+public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper, INotificationService notificationService) : IHerbalistAiChatRecipeService
 {
-    public async Task<PaginatedList<HerbalistAiChatRecipeResponse>> GetMyInventoryAsync(
-     int userId,
-     RequestFilters filters,
+    public async Task<PaginatedList<HerbalistAiChatRecipeResponse>> GetMyInventoryAsync(int userId, RequestFilters filters,
      CancellationToken cancellationToken)
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
@@ -59,13 +57,15 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
             filter: h => h.UserId == userId,
+            includeProperties: "User",
             tracked: false,
             cancellationToken: cancellationToken);
 
         if (herbalist == null) throw new KeyNotFoundException("Herbalist not found.");
 
         var aiChatRecipe = await unitOfWork.AiChatRecipeRepository.GetAsync(
-            filter: h => h.Id == request.AiChatRecipeId, 
+            filter: h => h.Id == request.AiChatRecipeId,
+            includeProperties: "Patient",
             tracked: true,
             cancellationToken: cancellationToken);
 
@@ -90,6 +90,15 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
         await unitOfWork.HerbalistAiChatRecipeRepository.CreateAsync(entity, cancellationToken);
 
         aiChatRecipe.IsAvailable = true;
+
+        if (aiChatRecipe.Patient != null)
+        {
+            await notificationService.SendNotificationAsync(
+                userId: aiChatRecipe.Patient.UserId,
+                title: "Recipe Now Available! ✨",
+                message: $"Herbalist {herbalist.User?.FullName} has added your AI Chat Recipe '{aiChatRecipe.RecommendedRecipeName}' to their inventory for {request.Price} EGP. You can now order it!",
+                cancellationToken: cancellationToken);
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -234,6 +243,16 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
         unitOfWork.HerbalistAiChatRecipeRepository.Remove(item);
 
         await CheckAndUpdateAvailability(aiChatRecipeId, herbalistId, cancellationToken);
+
+        var herbalistOwner = await unitOfWork.HerbalistRepository.GetAsync(h => h.HerbalistId == herbalistId, tracked: false, cancellationToken: cancellationToken);
+        if (herbalistOwner != null)
+        {
+            await notificationService.SendNotificationAsync(
+                userId: herbalistOwner.UserId,
+                title: "Item Removed ⚠️",
+                message: "System Notice: An AI Chat Recipe has been removed from your inventory by the administration.",
+                cancellationToken: cancellationToken);
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;

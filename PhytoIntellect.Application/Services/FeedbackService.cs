@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace PhytoIntellect.Application.Services; 
 
-public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedbackService
+public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper, INotificationService notificationService) : IFeedbackService
 {
     public async Task<FeedbackResponse> SubmitRecipeFeedbackAsync(int userId, int recipeId, SubmitFeedbackRequest request, CancellationToken cancellationToken = default)
     {
@@ -66,17 +66,14 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         if (herbalist != null)
         {
-            // التريكة هنا: بنجيب كل الوصفات "ما عدا" الوصفة اللي بنقيمها دلوقتي
             var otherRecipes = await unitOfWork.RecipeRepository.GetAllAsync(
                 filter: r => r.HerbalistId == recipe.HerbalistId && r.RecipeId != recipeId && r.TotalRatings > 0,
                 tracked: false,
                 cancellationToken: cancellationToken);
 
-            // نحسب نقط باقي الوصفات
             float otherPoints = otherRecipes.Sum(r => r.AverageRating * r.TotalRatings);
             int otherVotes = otherRecipes.Sum(r => r.TotalRatings);
 
-            // نجمع عليهم نقط الوصفة الحالية اللي اتعدلت فوق
             float totalPoints = otherPoints + (recipe.AverageRating * recipe.TotalRatings);
             int totalVotes = otherVotes + recipe.TotalRatings;
 
@@ -96,6 +93,19 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        if (recipe != null)
+        {
+            var herbalistToNotify = await unitOfWork.HerbalistRepository.GetAsync(h => h.HerbalistId == recipe.HerbalistId, tracked: false, cancellationToken: cancellationToken);
+            if (herbalistToNotify != null)
+            {
+                await notificationService.SendNotificationAsync(
+                    userId: herbalistToNotify.UserId,
+                    title: "New Review! ⭐",
+                    message: $"A patient has left a {cleanRating}-star review on your recipe '{recipe.Description}'.",
+                    cancellationToken: cancellationToken);
+            }
+        }
+
         var feedback = await unitOfWork.FeedbackRepository
             .GetQueryable()
             .Where(f => f.FeedbackId == feedbackEntity.FeedbackId)
@@ -105,7 +115,7 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         return new FeedbackResponse
         {
-            FeedbackId = feedback.FeedbackId,
+            FeedbackId = feedback!.FeedbackId,
 
             RecipeId = feedback.RecipeId,
             AiRecipeId = feedback.AiRecipeId,
@@ -566,6 +576,17 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         }
 
         unitOfWork.FeedbackRepository.Remove(feedback);
+
+        var patientToNotify = await unitOfWork.PatientRepository.GetAsync(p => p.PatientId == feedback.PatientId, tracked: false, cancellationToken: cancellationToken);
+        if (patientToNotify != null)
+        {
+            await notificationService.SendNotificationAsync(
+                userId: patientToNotify.UserId,
+                title: "Review Removed ⚠️",
+                message: "System Notice: One of your reviews has been removed by the administration due to a policy violation.",
+                cancellationToken: cancellationToken);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }

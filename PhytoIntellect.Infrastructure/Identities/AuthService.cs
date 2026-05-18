@@ -3,6 +3,7 @@ using Google.Apis.Auth;
 using Microsoft.Extensions.Configuration;
 using PhytoIntellect.Application.Contracts.Accounts;
 using PhytoIntellect.Application.Interfaces;
+using PhytoIntellect.Application.Services;
 using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Enums;
@@ -14,10 +15,10 @@ public class AuthService(
     ITokenService tokenService,
     IMapper mapper,
     IConfiguration _config,
-    IEmailService emailService) : IAuthService  
+    IEmailService emailService,
+    INotificationService notificationService) : IAuthService  
 {
-    public async Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model,
-        bool isAddedByAdmin = false,
+    public async Task<RegisterUserAuthResponse> RegisterAsync(RegisterUserAuthRequest model, bool isAddedByAdmin = false,
         CancellationToken cancellationToken = default)
     {
         if (model.Role == AppRoles.Admin && !isAddedByAdmin)
@@ -141,11 +142,9 @@ public class AuthService(
 
     public async Task<RegisterUserAuthResponse> ConfirmEmailAsync(string email, string token, CancellationToken cancellationToken = default)
     {
-        // 1. Fail-Fast Validation
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
             return new RegisterUserAuthResponse { Success = false, Message = "Email and token are required." };
 
-        // 2. Fetch User
         var user = await unitOfWork.UserRepository.GetAsync(
             u => u.Email == email,
             tracked: true,
@@ -154,22 +153,26 @@ public class AuthService(
         if (user == null)
             return new RegisterUserAuthResponse { Success = false, Message = "User not found." };
 
-        // 3. Check if already confirmed
         if (user.IsEmailConfirmed)
             return new RegisterUserAuthResponse { Success = true, Message = "Email already confirmed." };
 
-        // 4. Validate Token & Expiry
         if (user.EmailConfirmationToken != token || user.EmailConfirmationTokenExpiry < DateTime.UtcNow)
         {
             return new RegisterUserAuthResponse { Success = false, Message = "Invalid or expired token." };
         }
 
-        // 5. Update User
         user.IsEmailConfirmed = true;
         user.EmailConfirmationToken = null;
         user.EmailConfirmationTokenExpiry = null;
 
         unitOfWork.UserRepository.Update(user);
+
+        await notificationService.SendNotificationAsync(
+            userId: user.Id,
+            title: "Welcome to PhytoIntellect! 🌱",
+            message: "Your email has been successfully confirmed. We are glad to have you on board!",
+            cancellationToken: cancellationToken);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new RegisterUserAuthResponse { Success = true, Message = "Email confirmed successfully." };
@@ -362,10 +365,9 @@ public class AuthService(
         };
     }
 
-   public async Task<RegisterUserAuthResponse> ResetPasswordAsync(ResetPasswordAccountRequest model,
+    public async Task<RegisterUserAuthResponse> ResetPasswordAsync(ResetPasswordAccountRequest model,
     CancellationToken cancellationToken = default)
     {
-        // 1️⃣ Get user
         var user = await unitOfWork.UserRepository.GetAsync(
             u => u.Email == model.Email,
             tracked: true,
@@ -378,9 +380,6 @@ public class AuthService(
                 Message = "User not found."
             };
 
-        // =========================================
-        // 🔐 CASE 1: Reset using TOKEN (Forgot Password Flow)
-        // =========================================
         if (!string.IsNullOrEmpty(model.Token))
         {
             if (user.PasswordResetToken == null ||
@@ -395,17 +394,12 @@ public class AuthService(
                 };
             }
 
-            // update password
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
 
-            // clear token after use
             user.PasswordResetToken = null;
             user.PasswordResetTokenExpiry = null;
         }
 
-        // =========================================
-        // 🔐 CASE 2: Reset using OLD PASSWORD (Logged-in user)
-        // =========================================
         else
         {
             if (string.IsNullOrWhiteSpace(model.OldPassword))
@@ -430,27 +424,31 @@ public class AuthService(
                 };
             }
 
-            // update password
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
         }
 
-        // 3️⃣ Save changes
         unitOfWork.UserRepository.Update(user);
+
+        await notificationService.SendNotificationAsync(
+            userId: user.Id,
+            title: "Security Alert 🔒",
+            message: "Your password was recently changed successfully. If you did not make this change, please contact support immediately.",
+            cancellationToken: default);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // 4️⃣ Send notification email
         var message = $"""
-    Password Changed Successfully
+            Password Changed Successfully
     
-    Hello {user.FullName},
+            Hello {user.FullName},
     
-    Your password has been updated successfully.
+            Your password has been updated successfully.
     
-    If this wasn't you, please contact support immediately.
+            If this wasn't you, please contact support immediately.
     
-    Best regards,
-    Herbal System Security Team
-    """;
+            Best regards,
+            Herbal System Security Team
+            """;
 
         await emailService.SendEmailAsync(
             user.Email,
