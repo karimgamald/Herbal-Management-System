@@ -1,15 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application.Contracts.UserFavorites;
 using PhytoIntellect.Application.Interfaces;
-using PhytoIntellect.Api.Extensions;
 using PhytoIntellect.Application.Paginations;
+using PhytoIntellect.Core.Constants;
 namespace PhytoIntellect.Api.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/[controller]")] 
 public class FavoritesController(IFavoriteService favoriteService) : ControllerBase
 {
     [HttpGet("my-herbs")]
@@ -60,5 +61,20 @@ public class FavoritesController(IFavoriteService favoriteService) : ControllerB
         return Ok(new { Message = result });
     }
 
+    // Admin Endpoints
+    [HttpGet("~/api/admin/favorites/overview")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> GetFavoritesOverview(CancellationToken cancellationToken)
+    {
+        var result = await favoriteService.GetFavoritesOverviewAsync(cancellationToken);
+        return Ok(result);
+    }
 
-}
+    [HttpGet("~/api/admin/favorites/top-stats")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> GetTopFavorites(CancellationToken cancellationToken)
+    {
+        var result = await favoriteService.GetTopFavoritesAsync(cancellationToken);
+        return Ok(result);
+    }
+} 

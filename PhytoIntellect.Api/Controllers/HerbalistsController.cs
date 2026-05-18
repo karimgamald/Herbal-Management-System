@@ -12,7 +12,7 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class HerbalistsController(IHerbalistService herbalistService) : ControllerBase
 {
-    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpGet("get-profile/me")]
     public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
     {
@@ -28,11 +28,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
         return Ok(herbalist);
     }
 
-    // ===============================
-    // Endpoints للإدارة / العرض العام
-    // ===============================
-
-    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist},{AppRoles.Patient}")]
     [HttpGet("get-by-id/{id}")]
     public async Task<IActionResult> GetHerbalistById(int id, CancellationToken cancellationToken)
     {
@@ -44,7 +40,7 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
         return Ok(herbalist);
     }
 
-    [Authorize(Roles = $"{AppRoles.Patient}")]
+    [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("get-all")]
     public async Task<IActionResult> GetAllHerbalists([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
@@ -52,10 +48,9 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
         return Ok(herbalists);
     }
 
-    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Herbalist}")]
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpPut("update-profile/me")]
-    public async Task<IActionResult> UpdateMyProfile([FromBody] CreateOrUpdateHerbalistRequest request,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateMyProfile([FromBody] CreateOrUpdateHerbalistRequest request, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdStr, out int userId))
@@ -67,5 +62,33 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
             return NotFound(new { Message = result });
 
         return Ok(new { Message = result });
+    }
+
+    // Admin Endpoints
+    [HttpGet("~/api/admin/herbalists")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminGetAllHerbalists([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        var herbalists = await herbalistService.AdminGetAllHerbalistsAsync(filters, cancellationToken);
+        return Ok(herbalists);
+    }
+
+    [HttpDelete("~/api/admin/herbalists/{id}")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminDeleteHerbalist(int id, CancellationToken cancellationToken)
+    {
+        var success = await herbalistService.DeleteHerbalistAsync(id, cancellationToken);
+        if (!success)
+            return NotFound(new { Message = "Herbalist not found." });
+
+        return Ok(new { Message = "Herbalist deleted successfully by Admin." });
+    }
+
+    [HttpGet("~/api/admin/herbalists/stats")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> GetHerbalistsStats(CancellationToken cancellationToken)
+    {
+        var stats = await herbalistService.GetHerbalistsStatsAsync(cancellationToken);
+        return Ok(stats);
     }
 }

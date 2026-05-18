@@ -129,9 +129,6 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
         return Ok(new { Message = "Feedback deleted successfully." });
     }
 
-    // ==========================================
-    // (AI Chat Recipes) - NEW
-    // ==========================================
 
     [HttpGet("ai-chat-recipe/{id}/all")]
     public async Task<IActionResult> GetAiChatRecipeFeedbacks(int id, [FromQuery] RequestFilters filters, CancellationToken cancellationToken)
@@ -187,7 +184,7 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
             return NotFound(new { Message = "Feedback not found." });
 
         return Ok(new { Message = "Feedback deleted successfully." });
-    }
+    } 
 
 
     [HttpGet("my-history")]
@@ -200,5 +197,25 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
 
         var result = await feedbackService.GetMyFeedbacksAsync(userId, filters, cancellationToken);
         return Ok(result);
+    }
+
+
+    // Admin Endpoints
+    [HttpGet("~/api/admin/feedbacks")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminGetAllFeedbacks([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        var feedbacks = await feedbackService.AdminGetAllFeedbacksAsync(filters, cancellationToken);
+        return Ok(feedbacks);
+    }
+
+    [HttpDelete("~/api/admin/feedbacks/{id}")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminDeleteFeedback(int id, CancellationToken cancellationToken)
+    {
+        var success = await feedbackService.AdminDeleteFeedbackAsync(id, cancellationToken);
+        if (!success) return NotFound(new { Message = "Feedback not found." });
+
+        return Ok(new { Message = "Feedback deleted successfully by Admin." });
     }
 }

@@ -54,20 +54,16 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
 
         return paginatedUsers;
     }
-
     public async Task<UserResponse?> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: false, cancellationToken: cancellationToken);
         return user == null ? null : mapper.Map<UserResponse>(user);
     }
-
     public async Task<string> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
     {
-        // 1. Validation للـ Role
         if (!AppRoles.IsValidRole(request.Role))
             return $"Invalid Role. Must be '{AppRoles.Patient}' or '{AppRoles.Herbalist}'.";
 
-        // 2. Validation لليوزرنيم
         var existingUser = await unitOfWork.UserRepository.GetAsync(u => u.Email == request.Email, 
             tracked: false, cancellationToken: cancellationToken);
         if (existingUser != null) 
@@ -81,7 +77,6 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
 
         return "User created successfully.";
     }
-
     public async Task<string> UpdateUserAsync(int id, UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id,tracked: true, cancellationToken: cancellationToken);
@@ -121,21 +116,18 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == id, tracked: true, cancellationToken: cancellationToken);
         if (user == null) return "User not found.";
 
-        unitOfWork.UserRepository.Remove(user); // مفيش await
+        unitOfWork.UserRepository.Remove(user);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return "User deleted successfully.";
     }
-
     public async Task<RegisterUserAuthResponse> UpdateAddressAsync(int userId, UpdateUserAddressRequest model, CancellationToken cancellationToken = default)
     {
-        // بنجيب اليوزر من Repository اليوزر نفسه
         var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == userId, tracked: true, cancellationToken: cancellationToken);
 
         if (user == null)
             return new RegisterUserAuthResponse { Success = false, Message = "User not found." };
 
-        // تحديث البيانات (حتى لو مبعوتة بـ null هتتحدث عادي)
         if (!string.IsNullOrWhiteSpace(model.Governorate) && model.Governorate != "string")
             user.Governorate = model.Governorate;
 
@@ -149,5 +141,28 @@ public class UserService(IUnitOfWork unitOfWork, IMapper mapper) : IUserService
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new RegisterUserAuthResponse { Success = true, Message = "User address updated successfully." };
+    }
+
+
+    public async Task<bool> UpdateMyFullNameAsync(int userId, string newFullName, CancellationToken cancellationToken = default)
+    {
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == userId, tracked: true, cancellationToken: cancellationToken);
+        if (user == null) return false;
+
+        user.FullName = newFullName;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+    public async Task<string> UpdateMyUserNameAsync(int userId, string newUserName, CancellationToken cancellationToken = default)
+    {
+        var user = await unitOfWork.UserRepository.GetAsync(u => u.Id == userId, tracked: true, cancellationToken: cancellationToken);
+        if (user == null) return "User not found.";
+
+        var exists = await unitOfWork.UserRepository.GetAsync(u => u.UserName.ToLower() == newUserName.ToLower() && u.Id != userId, tracked: false, cancellationToken: cancellationToken);
+        if (exists != null) return "Username is already taken.";
+
+        user.UserName = newUserName;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return "Username updated successfully.";
     }
 }

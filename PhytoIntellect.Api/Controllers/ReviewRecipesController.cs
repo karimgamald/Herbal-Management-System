@@ -70,4 +70,26 @@ public class AiRecipeReviewsController(IReviewRecipeService reviewService) : Con
 
         return Ok(new { Message = "Review deleted successfully." });
     }
-}
+
+
+    // [Admin] Get All Global Reviews
+    [HttpGet("~/api/admin/ai-recipe-reviews")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminGetAllReviews([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        var reviews = await reviewService.GetAllSystemReviewsAsync(filters, cancellationToken);
+        return Ok(reviews);
+    }
+
+    // [Admin] Delete Any Review
+    [HttpDelete("~/api/admin/ai-recipe-reviews/{reviewId}")] // Override Route
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminDeleteReview(int reviewId, CancellationToken cancellationToken)
+    {
+        var success = await reviewService.DeleteAnyReviewAsync(reviewId, cancellationToken);
+        if (!success)
+            return NotFound(new { Message = "Review not found." });
+
+        return Ok(new { Message = "Review deleted successfully by Admin." });
+    }
+} 

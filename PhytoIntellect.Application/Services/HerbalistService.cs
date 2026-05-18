@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Application.Contracts.Herbalists;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
@@ -11,7 +12,6 @@ namespace PhytoIntellect.Application.Services;
 
 public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbalistService
 {
-    // 1️⃣ العشاب يجيب بروفايله
     public async Task<HerbalistResponse?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
@@ -20,7 +20,6 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
         return herbalist == null ? null : mapper.Map<HerbalistResponse>(herbalist);
     }
 
-    // 4️⃣ جلب عشاب بالـ Id (للإدارة أو العرض)
     public async Task<HerbalistResponse?> GetHerbalistByIdAsync(int herbalistId, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
@@ -29,7 +28,6 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
         return herbalist == null ? null : mapper.Map<HerbalistResponse>(herbalist);
     }
 
-    // 5️⃣ عرض كل العشابين
     public async Task<PaginatedList<HerbalistResponse>> GetAllHerbalistsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.HerbalistRepository.GetQueryable(tracked: false);
@@ -66,7 +64,7 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
 
         return paginatedHerbalists;
     }
-    // 2️⃣ إنشاء بروفايل
+
     public async Task<string> CreateProfileAsync(int userId, CreateOrUpdateHerbalistRequest request, CancellationToken cancellationToken = default)
     {
         var exists = await unitOfWork.HerbalistRepository
@@ -85,9 +83,7 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
         return "Herbalist profile created successfully.";
     }
 
-    // 3️⃣ تعديل البروفايل
-    public async Task<string> UpdateMyProfileAsync(int userId,CreateOrUpdateHerbalistRequest request,
-     CancellationToken cancellationToken = default)
+    public async Task<string> UpdateMyProfileAsync(int userId,CreateOrUpdateHerbalistRequest request, CancellationToken cancellationToken = default)
     {
         var herbalist = await unitOfWork.HerbalistRepository
             .GetAsync(h => h.UserId == userId, tracked: true, cancellationToken: cancellationToken);
@@ -105,4 +101,67 @@ public class HerbalistService(IUnitOfWork unitOfWork, IMapper mapper) : IHerbali
 
         return "Profile updated successfully.";
     }
-}
+
+    public async Task<PaginatedList<HerbalistResponse>> AdminGetAllHerbalistsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.HerbalistRepository.GetQueryable(tracked: false);
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(h => h.User!.FullName.ToLower().Contains(search) || h.LicenseNumber.ToLower().Contains(search));
+        }
+
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            query = filters.SortColumn.ToLower() switch
+            {
+                "fullname" => isDesc ? query.OrderByDescending(h => h.User!.FullName) : query.OrderBy(h => h.User!.FullName),
+                "licensenumber" => isDesc ? query.OrderByDescending(h => h.LicenseNumber) : query.OrderBy(h => h.LicenseNumber),
+                "averagerating" => isDesc ? query.OrderByDescending(h => h.AverageRating) : query.OrderBy(h => h.AverageRating),
+                _ => isDesc ? query.OrderByDescending(h => h.HerbalistId) : query.OrderBy(h => h.HerbalistId)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(h => h.HerbalistId);
+        }
+
+        var projectedQuery = query.ProjectTo<HerbalistResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<HerbalistResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
+    public async Task<bool> DeleteHerbalistAsync(int herbalistId, CancellationToken cancellationToken = default)
+    {
+        var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
+            h => h.HerbalistId == herbalistId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (herbalist == null) return false;
+
+        unitOfWork.HerbalistRepository.Remove(herbalist);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<object> GetHerbalistsStatsAsync(CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.HerbalistRepository.GetQueryable(tracked: false);
+
+        var totalHerbalists = await query.CountAsync(cancellationToken);
+
+        double averageRating = 0;
+        if (totalHerbalists > 0)
+        {
+            averageRating = await query.AverageAsync(h => h.AverageRating, cancellationToken);
+        }
+
+        return new
+        {
+            TotalHerbalists = totalHerbalists,
+            SystemAverageRating = Math.Round(averageRating, 1)
+        };
+    }
+} 

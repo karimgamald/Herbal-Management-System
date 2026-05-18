@@ -75,9 +75,7 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         return response with { HerbalistName = herbalist.User?.FullName ?? "Unknown Herbalist" };
     }
 
-    public async Task<PaginatedList<ReviewResponse>> GetAllRecipeReviewsAsync(
-    int aiRecipeId,
-    RequestFilters filters,
+    public async Task<PaginatedList<ReviewResponse>> GetAllRecipeReviewsAsync(int aiRecipeId, RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
         var aiRecipeExists = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == aiRecipeId, tracked: false,
@@ -194,10 +192,6 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         return true;
     }
 
-    // ==========================================
-    // (AiChatRecipeId) - NEW Ecosystem
-    // ==========================================
-
     public async Task<ReviewResponse> SubmitAiChatReviewAsync(int userId, int aiChatRecipeId, SubmitReviewRequest request, CancellationToken cancellationToken = default)
     {
         float cleanRating = (float)Math.Round(request.RatingValue, 1);
@@ -258,9 +252,7 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         return response with { HerbalistName = herbalist.User?.FullName ?? "Unknown Herbalist" };
     }
 
-    public async Task<PaginatedList<ReviewResponse>> GetAllAiChatRecipeReviewsAsync(
-    int aiChatRecipeId,
-    RequestFilters filters,
+    public async Task<PaginatedList<ReviewResponse>> GetAllAiChatRecipeReviewsAsync(int aiChatRecipeId, RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
         var aiChatRecipeExists = await unitOfWork.AiChatRecipeRepository.GetAsync(r => r.Id == aiChatRecipeId, tracked: false,
@@ -351,4 +343,135 @@ public class ReviewRecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRevi
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }
-}
+
+
+    public async Task<PaginatedList<ReviewResponse>> GetAllSystemReviewsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.ReviewRecipeRepository
+            .GetQueryable(tracked: false)
+            .Where(r => r.AiRecipeId != null);
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue;
+            query = query.Where(r =>
+                (r.Comment != null && EF.Functions.Like(r.Comment, $"%{search}%")) ||
+                EF.Functions.Like(r.Herbalist!.User!.FullName, $"%{search}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = string.Equals(filters.SortDirection, "DESC", StringComparison.OrdinalIgnoreCase);
+            query = filters.SortColumn.ToLower() switch
+            {
+                "rating" => isDesc ? query.OrderByDescending(r => r.RatingValue) : query.OrderBy(r => r.RatingValue),
+                "date" => isDesc ? query.OrderByDescending(r => r.RatingDate) : query.OrderBy(r => r.RatingDate),
+                "herbalistname" => isDesc ? query.OrderByDescending(r => r.Herbalist!.User!.FullName) : query.OrderBy(r => r.Herbalist.User.FullName),
+                _ => isDesc ? query.OrderByDescending(r => r.RatingDate) : query.OrderBy(r => r.RatingDate)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.RatingDate);
+        }
+
+        var projectedQuery = query.ProjectTo<ReviewResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<ReviewResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
+    public async Task<bool> DeleteAnyReviewAsync(int reviewId, CancellationToken cancellationToken = default)
+    {
+        var review = await unitOfWork.ReviewRecipeRepository.GetAsync(
+            filter: r => r.ReviewRecipeId == reviewId && r.AiRecipeId != null,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (review == null) return false;
+
+        var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == review.AiRecipeId, tracked: true, cancellationToken: cancellationToken);
+
+        if (aiRecipe != null)
+        {
+            if (aiRecipe.HerbalistTotalRatings <= 1)
+            {
+                aiRecipe.HerbalistAverageRating = 0;
+                aiRecipe.HerbalistTotalRatings = 0;
+            }
+            else
+            {
+                var calculatedAverage = ((aiRecipe.HerbalistAverageRating * aiRecipe.HerbalistTotalRatings) - review.RatingValue) / (aiRecipe.HerbalistTotalRatings - 1);
+                aiRecipe.HerbalistAverageRating = (float)Math.Round(calculatedAverage, 1);
+                aiRecipe.HerbalistTotalRatings -= 1;
+            }
+        }
+
+        unitOfWork.ReviewRecipeRepository.Remove(review);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<PaginatedList<ReviewResponse>> GetAllSystemAiChatReviewsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.ReviewRecipeRepository
+            .GetQueryable(tracked: false)
+            .Where(r => r.AiChatRecipeId != null);
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue;
+            query = query.Where(r =>
+                (r.Comment != null && EF.Functions.Like(r.Comment, $"%{search}%")) ||
+                EF.Functions.Like(r.Herbalist!.User!.FullName, $"%{search}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            bool isDesc = string.Equals(filters.SortDirection, "DESC", StringComparison.OrdinalIgnoreCase);
+            query = filters.SortColumn.ToLower() switch
+            {
+                "rating" => isDesc ? query.OrderByDescending(r => r.RatingValue) : query.OrderBy(r => r.RatingValue),
+                "date" => isDesc ? query.OrderByDescending(r => r.RatingDate) : query.OrderBy(r => r.RatingDate),
+                "herbalistname" => isDesc ? query.OrderByDescending(r => r.Herbalist!.User!.FullName) : query.OrderBy(r => r.Herbalist.User.FullName),
+                _ => isDesc ? query.OrderByDescending(r => r.RatingDate) : query.OrderBy(r => r.RatingDate)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.RatingDate);
+        }
+
+        var projectedQuery = query.ProjectTo<ReviewResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<ReviewResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
+    public async Task<bool> DeleteAnyAiChatReviewAsync(int reviewId, CancellationToken cancellationToken = default)
+    {
+        var review = await unitOfWork.ReviewRecipeRepository.GetAsync(
+            filter: r => r.ReviewRecipeId == reviewId && r.AiChatRecipeId != null,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (review == null) return false;
+
+        var aiChatRecipe = await unitOfWork.AiChatRecipeRepository.GetAsync(r => r.Id == review.AiChatRecipeId, tracked: true, cancellationToken: cancellationToken);
+
+        if (aiChatRecipe != null)
+        {
+            if (aiChatRecipe.HerbalistTotalRatings <= 1)
+            {
+                aiChatRecipe.HerbalistAverageRating = 0;
+                aiChatRecipe.HerbalistTotalRatings = 0;
+            }
+            else
+            {
+                var calculatedAverage = ((aiChatRecipe.HerbalistAverageRating * aiChatRecipe.HerbalistTotalRatings) - review.RatingValue) / (aiChatRecipe.HerbalistTotalRatings - 1);
+                aiChatRecipe.HerbalistAverageRating = (float)Math.Round(calculatedAverage, 1);
+                aiChatRecipe.HerbalistTotalRatings -= 1;
+            }
+        }
+
+        unitOfWork.ReviewRecipeRepository.Remove(review);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+} 

@@ -14,4 +14,7 @@ public interface IHerbalistAiChatRecipeService
     Task<bool> ToggleStatusAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken);
     Task<bool> RemoveAiChatRecipeAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken);
     Task<IEnumerable<HerbalistWithAiChatRecipeResponse>> GetHerbalistsByAiChatRecipeAsync(int aiChatRecipeId, bool isActive = true, CancellationToken cancellationToken = default);
+
+    Task<PaginatedList<HerbalistAiChatRecipeResponse>> AdminGetAllInventoryAsync(RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<bool> AdminRemoveAiChatRecipeAsync(int herbalistId, int aiChatRecipeId, CancellationToken cancellationToken = default);
 }

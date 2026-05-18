@@ -7,26 +7,20 @@ using PhytoIntellect.Application.Services;
 
 public interface IHerbService
 {
-    // 1️⃣ عرض كل الأعشاب المعتمدة
     Task<PaginatedList<HerbResponse>> GetApprovedHerbsAsync(RequestFilters filters, CancellationToken cancellationToken = default);
-
-    // 2️⃣ عرض تفاصيل عشبة
-    Task<HerbResponse?> GetHerbByIdAsync(int herbId,CancellationToken cancellationToken = default);
-    
+    Task<PaginatedList<HerbResponse>> GetPendingHerbsAsync(RequestFilters filters, CancellationToken cancellationToken = default);
+    Task<HerbResponse?> GetHerbByIdAsync(int herbId, CancellationToken cancellationToken = default);
     Task<HerbWithHerbalistResponse?> GetHerbWithHerbalistAsync(int herbId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<HerbalistHerbResponse>> GetHerbalistsByHerbIdAsync(int herbId, CancellationToken cancellationToken = default);
 
-    Task<IEnumerable<HerbalistHerbResponse>> GetHerbalistsByHerbIdAsync(int herbId,CancellationToken cancellationToken = default);
-    // 4 اقتراح عشبة جديدة
-    Task<HerbResponse?> CreateHerbAsync(int userId,HerbRequest request,CancellationToken cancellationToken = default);
+    Task<HerbResponse?> CreateHerbAsync(int userId, HerbRequest request, CancellationToken cancellationToken = default);
+    Task<HerbResponse?> UpdateHerbAsync(int userId, int herbId, HerbRequest request, CancellationToken cancellationToken = default);
+    Task<bool> DeleteHerbAsync(int userId, int herbId, CancellationToken cancellationToken = default);
 
-    // 5 تعديل عشبة
-    Task<HerbResponse?> UpdateHerbAsync(int herbalistId, int herbId, HerbRequest request, CancellationToken cancellationToken);
-
-    // 6 الموافقة على العشبة (Admin)
-    Task<bool> ApproveHerbAsync(int herbId,CancellationToken cancellationToken = default);
-
-    // 7 حذف العشبة
-    Task<bool> DeleteHerbAsync(int herbId,CancellationToken cancellationToken = default);
+    Task<HerbResponse> AdminCreateHerbAsync(HerbRequest request, CancellationToken cancellationToken = default);
+    Task<HerbResponse?> AdminUpdateHerbAsync(int herbId, HerbRequest request, CancellationToken cancellationToken = default);
+    Task<bool> AdminDeleteHerbAsync(int herbId, CancellationToken cancellationToken = default);
+    Task<bool> ApproveHerbAsync(int herbId, CancellationToken cancellationToken = default);
 }
 
 

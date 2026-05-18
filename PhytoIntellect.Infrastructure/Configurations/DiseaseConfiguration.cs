@@ -11,12 +11,10 @@ public class DiseaseConfiguration : IEntityTypeConfiguration<Disease>
 {
     public void Configure(EntityTypeBuilder<Disease> builder)
     {
-        // 1. تظبيط الخصائص
         builder.HasKey(d => d.DiseaseId);
         builder.Property(d => d.DiseaseName).HasMaxLength(150).IsRequired();
         builder.Property(d => d.DiseaseType).HasMaxLength(100);
 
-        // 2. Data Seeding (عشان تلاقي داتا تجرب بيها فوراً)
         builder.HasData(
             new Disease { DiseaseId = 1, DiseaseName = "Insomnia", DiseaseType = "Neurological", Description = "Habitual sleeplessness or inability to sleep.", Symptoms = "Difficulty falling asleep, waking up often." },
             new Disease { DiseaseId = 2, DiseaseName = "Irritable Bowel Syndrome (IBS)", DiseaseType = "Gastrointestinal", Description = "A common disorder that affects the large intestine.", Symptoms = "Cramping, abdominal pain, bloating, gas." },

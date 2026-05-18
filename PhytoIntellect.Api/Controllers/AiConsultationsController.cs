@@ -184,19 +184,57 @@ public class AiConsultationsController(
             return StatusCode(500, new { Message = "An internal error occurred while communicating with the AI Engine. Please try again later." });
         }
     }
-    // Only admin can delete the un used recipe 
-    //[HttpDelete("{id}")]
-    //[Authorize(Roles = AppRoles.Admin)]
-    //public async Task<IActionResult> DeleteAiRecipe(int id)
-    //{
-    //    var recipe = await _unitOfWork.AiRecipeRepository.GetByIdAsync(id);
 
-    //    if (recipe == null)
-    //        return NotFound(new { Message = "AI Recipe not found." });
 
-    //    await _unitOfWork.AiRecipeRepository.DeleteAsync(recipe);
-    //    await _unitOfWork.SaveChangesAsync();
+    // [Admin] Get All Global Consultations
+    [HttpGet("~/api/admin/ai-consultations")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminGetAllConsultations([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await aiRecipeService.GetAllSystemConsultationsAsync(filters, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving all AI consultations for Admin.");
+            return StatusCode(500, new { Message = "Internal server error" });
+        }
+    }
 
-    //    return Ok(new { Message = "AI Recipe deleted successfully." });
-    //}
+    [HttpGet("~/api/admin/ai-consultations/statistics")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminGetAiStatistics(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var stats = await aiRecipeService.GetAiModelStatisticsAsync(cancellationToken);
+            return Ok(stats);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving AI model statistics for Admin.");
+            return StatusCode(500, new { Message = "Internal server error" });
+        }
+    }
+
+    [HttpDelete("~/api/admin/ai-consultations/{id}")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> DeleteAiRecipe(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var success = await aiRecipeService.DeleteAsync(id, cancellationToken);
+            if (!success)
+                return NotFound(new { Message = "AI Recipe not found." });
+
+            return Ok(new { Message = "AI Recipe deleted successfully by Admin." });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting AI recipe {RecipeId} by Admin", id);
+            return StatusCode(500, new { Message = "Internal server error" });
+        }
+    }
 }

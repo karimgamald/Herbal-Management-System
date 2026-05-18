@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Application.Contracts.AiRecipes;
 using PhytoIntellect.Application.Contracts.Herbalists;
 using PhytoIntellect.Application.Contracts.Herbs;
@@ -9,7 +10,7 @@ using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Enums;
-using System;
+using System; 
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -51,9 +52,7 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return "Added to favorites successfully.";
     }
 
-    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteHerbsAsync(
-    int userId,
-    RequestFilters filters,
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteHerbsAsync(int userId, RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.Herb);
@@ -89,9 +88,7 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteRecipesAsync(
-     int userId,
-     RequestFilters filters,
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteRecipesAsync(int userId, RequestFilters filters,
      CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.Recipe);
@@ -128,9 +125,7 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteAiRecipesAsync(
-     int userId,
-     RequestFilters filters,
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteAiRecipesAsync(int userId, RequestFilters filters,
      CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.AiRecipe);
@@ -165,9 +160,7 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteHerbalistsAsync(
-    int userId,
-    RequestFilters filters,
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteHerbalistsAsync(int userId, RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.Herbalist);
@@ -203,9 +196,7 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteAiChatRecipesAsync(
-     int userId,
-     RequestFilters filters,
+    public async Task<PaginatedList<FavoriteResponse>> GetMyFavoriteAiChatRecipesAsync(int userId, RequestFilters filters,
      CancellationToken cancellationToken = default)
     {
         var ids = await GetFavoriteIds(userId, FavoriteType.AiChatRecipe);
@@ -241,7 +232,57 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return await PaginatedList<FavoriteResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    // Helper Method 1: Get IDs
+    public async Task<object> GetFavoritesOverviewAsync(CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.UserFavoriteRepository.GetQueryable(tracked: false);
+
+        var herbs = await query.CountAsync(f => f.Type == FavoriteType.Herb, cancellationToken);
+        var recipes = await query.CountAsync(f => f.Type == FavoriteType.Recipe, cancellationToken);
+        var aiRecipes = await query.CountAsync(f => f.Type == FavoriteType.AiRecipe, cancellationToken);
+        var aiChatRecipes = await query.CountAsync(f => f.Type == FavoriteType.AiChatRecipe, cancellationToken);
+        var herbalists = await query.CountAsync(f => f.Type == FavoriteType.Herbalist, cancellationToken);
+
+        return new
+        {
+            TotalHerbsFaved = herbs,
+            TotalRecipesFaved = recipes,
+            TotalAiRecipesFaved = aiRecipes,
+            TotalAiChatRecipesFaved = aiChatRecipes,
+            TotalHerbalistsFaved = herbalists,
+            TotalSystemFavorites = herbs + recipes + aiRecipes + aiChatRecipes + herbalists
+        };
+    }
+
+    public async Task<object> GetTopFavoritesAsync(CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.UserFavoriteRepository.GetQueryable(tracked: false);
+
+        var topHerb = await query.Where(f => f.Type == FavoriteType.Herb)
+            .GroupBy(f => f.TargetId).OrderByDescending(g => g.Count())
+            .Select(g => new { TargetId = g.Key, Count = g.Count() }).FirstOrDefaultAsync(cancellationToken);
+
+        var topRecipe = await query.Where(f => f.Type == FavoriteType.Recipe)
+            .GroupBy(f => f.TargetId).OrderByDescending(g => g.Count())
+            .Select(g => new { TargetId = g.Key, Count = g.Count() }).FirstOrDefaultAsync(cancellationToken);
+
+        var topHerbalist = await query.Where(f => f.Type == FavoriteType.Herbalist)
+            .GroupBy(f => f.TargetId).OrderByDescending(g => g.Count())
+            .Select(g => new { TargetId = g.Key, Count = g.Count() }).FirstOrDefaultAsync(cancellationToken);
+
+        return new
+        {
+            MostFavoritedHerbId = topHerb?.TargetId,
+            MostFavoritedHerbCount = topHerb?.Count ?? 0,
+
+            MostFavoritedRecipeId = topRecipe?.TargetId,
+            MostFavoritedRecipeCount = topRecipe?.Count ?? 0,
+
+            MostFavoritedHerbalistId = topHerbalist?.TargetId,
+            MostFavoritedHerbalistCount = topHerbalist?.Count ?? 0
+        };
+    }
+
+
     private async Task<List<int>> GetFavoriteIds(int userId, FavoriteType type)
     {
         var favorites = await unitOfWork.UserFavoriteRepository.GetAllAsync(
@@ -251,7 +292,6 @@ public class FavoriteService(IUnitOfWork unitOfWork, IMapper mapper) : IFavorite
         return favorites.Select(f => f.TargetId).ToList();
     }
 
-    // 🛑 Helper Method 2 (NEW): التأكد من وجود العنصر
     private async Task<bool> CheckTargetExistsAsync(int targetId, FavoriteType type)
     {
         return type switch

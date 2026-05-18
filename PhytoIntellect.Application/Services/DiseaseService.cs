@@ -1,25 +1,24 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Application.Contracts.Diseases;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
-using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PhytoIntellect.Application.Services;
 
 public class DiseaseService(IUnitOfWork unitOfWork, IMapper mapper) : IDiseaseService
 {
-    public async Task<PaginatedList<DiseaseResponse>> GetAllDiseasesAsync(
-     RequestFilters filters,
-     CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<DiseaseResponse>> GetAllDiseasesAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        var query = unitOfWork.DiseaseRepository.GetQueryable(tracked: false);
+        var query = unitOfWork.DiseaseRepository.GetQueryable(tracked: false)
+            .Where(d => d.IsApproved);
 
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
@@ -27,7 +26,7 @@ public class DiseaseService(IUnitOfWork unitOfWork, IMapper mapper) : IDiseaseSe
             query = query.Where(d => d.DiseaseName.ToLower().Contains(search));
         }
 
-        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+        bool isDesc = string.Equals(filters.SortDirection, "DESC", StringComparison.OrdinalIgnoreCase);
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
             query = filters.SortColumn.ToLower() switch
@@ -43,22 +42,16 @@ public class DiseaseService(IUnitOfWork unitOfWork, IMapper mapper) : IDiseaseSe
         }
 
         var projectedQuery = query.ProjectTo<DiseaseResponse>(mapper.ConfigurationProvider);
-
-        var paginatedDiseases = await PaginatedList<DiseaseResponse>.CreateAsync(
-            projectedQuery,
-            filters.PageNumber,
-            filters.PageSize,
-            cancellationToken);
-
-        return paginatedDiseases;
+        return await PaginatedList<DiseaseResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
     public async Task<IEnumerable<DiseaseNamesResponse>> GetDiseasesNameAsync(CancellationToken cancellationToken = default)
     {
-        // بنجيب الداتا خفيفة من غير Tracking
-        var diseases = await unitOfWork.DiseaseRepository.GetAllAsync(tracked: false, cancellationToken: cancellationToken);
+        var diseases = await unitOfWork.DiseaseRepository.GetAllAsync(
+            filter: d => d.IsApproved,
+            tracked: false,
+            cancellationToken: cancellationToken);
 
-        // بنحولها لـ Dropdown Response (ID + Name بس) وبنرتبها أبجدياً
         var mapped = mapper.Map<IEnumerable<DiseaseNamesResponse>>(diseases);
         return mapped.OrderBy(d => d.DiseaseName).ToList();
     }
@@ -67,7 +60,46 @@ public class DiseaseService(IUnitOfWork unitOfWork, IMapper mapper) : IDiseaseSe
     {
         string cleanName = request.DiseaseName.Trim();
 
-        // 🛡️ تأمين ضد التكرار (عشان الداتابيز متتمليش أمراض متكررة)
+        var existingDisease = await unitOfWork.DiseaseRepository.GetAsync(
+            d => d.DiseaseName.ToLower() == cleanName.ToLower(),
+            tracked: false,
+            cancellationToken: cancellationToken);
+
+        if (existingDisease != null)
+            throw new Exception("This disease already exists in the system.");
+
+        var diseaseEntity = mapper.Map<Disease>(request);
+        diseaseEntity.DiseaseName = cleanName;
+        diseaseEntity.IsSupportedByAi = false; 
+        diseaseEntity.IsApproved = false;     
+
+        await unitOfWork.DiseaseRepository.CreateAsync(diseaseEntity, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return mapper.Map<DiseaseResponse>(diseaseEntity);
+    }
+
+    public async Task<PaginatedList<DiseaseResponse>> GetPendingDiseasesAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.DiseaseRepository.GetQueryable(tracked: false)
+            .Where(d => !d.IsApproved); 
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(d => d.DiseaseName.ToLower().Contains(search));
+        }
+
+        query = query.OrderByDescending(d => d.DiseaseId);
+
+        var projectedQuery = query.ProjectTo<DiseaseResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<DiseaseResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
+    public async Task<DiseaseResponse> AddDiseaseByAdminAsync(CreateDiseaseRequest request, bool isAiSupported, CancellationToken cancellationToken = default)
+    {
+        string cleanName = request.DiseaseName.Trim();
+
         var existingDisease = await unitOfWork.DiseaseRepository.GetAsync(
             d => d.DiseaseName.ToLower() == cleanName.ToLower(),
             tracked: false,
@@ -76,128 +108,34 @@ public class DiseaseService(IUnitOfWork unitOfWork, IMapper mapper) : IDiseaseSe
         if (existingDisease != null)
             throw new Exception("This disease already exists.");
 
-        // سحر الـ AutoMapper (هياخد الاسم، ولو مفيش Type أو Symptoms هيحطهم بـ Null عادي)
         var diseaseEntity = mapper.Map<Disease>(request);
-        diseaseEntity.DiseaseName = cleanName; // نتأكد إن الاسم نضيف من غير مسافات
-
-        // 👈 هياخد القيمة المبعوتة في الريكويست (لو مبعتش حاجة هتبقى false)
-        //diseaseEntity.IsSupportedByAi = request.IsSupportedByAi;
+        diseaseEntity.DiseaseName = cleanName;
+        diseaseEntity.IsSupportedByAi = isAiSupported;
+        diseaseEntity.IsApproved = true;              
 
         await unitOfWork.DiseaseRepository.CreateAsync(diseaseEntity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // بنرجع المرض كامل بالـ ID الجديد بتاعه
         return mapper.Map<DiseaseResponse>(diseaseEntity);
     }
 
+    public async Task<bool> ApproveDiseaseAsync(int diseaseId, CancellationToken cancellationToken = default)
+    {
+        var disease = await unitOfWork.DiseaseRepository.GetAsync(d => d.DiseaseId == diseaseId, tracked: true, cancellationToken: cancellationToken);
+        if (disease == null) return false;
+
+        disease.IsApproved = true;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> RejectDiseaseAsync(int diseaseId, CancellationToken cancellationToken = default)
+    {
+        var disease = await unitOfWork.DiseaseRepository.GetAsync(d => d.DiseaseId == diseaseId, tracked: true, cancellationToken: cancellationToken);
+        if (disease == null) return false;
+
+        unitOfWork.DiseaseRepository.Remove(disease);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }
-
-
-#region Add Diseases service with Admin Approvaled
-//public bool IsApproved { get; set; } = false;
-
-// --- 1. جلب الأمراض المعتمدة فقط (عشان تظهر للمرضى والعطارين) ---
-//public async Task<IEnumerable<DiseaseResponse>> GetAllDiseasesAsync(CancellationToken cancellationToken = default)
-//{
-//    var diseases = await unitOfWork.DiseaseRepository.GetAllAsync(
-//        filter: d => d.IsApproved == true, // 👈 التعديل هنا
-//        tracked: false,
-//        cancellationToken: cancellationToken);
-
-//    var mappedDiseases = mapper.Map<IEnumerable<DiseaseResponse>>(diseases);
-//    return mappedDiseases.OrderBy(d => d.DiseaseName).ToList();
-//}
-
-//// --- 2. جلب أسماء الأمراض المعتمدة فقط (للـ Dropdown) ---
-//public async Task<IEnumerable<DiseaseNamesResponse>> GetDiseasesNameAsync(CancellationToken cancellationToken = default)
-//{
-//    var diseases = await unitOfWork.DiseaseRepository.GetAllAsync(
-//        filter: d => d.IsApproved == true, // 👈 التعديل هنا
-//        tracked: false,
-//        cancellationToken: cancellationToken);
-
-//    var mapped = mapper.Map<IEnumerable<DiseaseNamesResponse>>(diseases);
-//    return mapped.OrderBy(d => d.DiseaseName).ToList();
-//}
-
-//// --- 3. جلب الأمراض المعلقة (عشان الأدمن يراجعها) ---
-//public async Task<IEnumerable<DiseaseResponse>> GetPendingDiseasesAsync(CancellationToken cancellationToken = default)
-//{
-//    var diseases = await unitOfWork.DiseaseRepository.GetAllAsync(
-//        filter: d => d.IsApproved == false,
-//        tracked: false,
-//        cancellationToken: cancellationToken);
-
-//    return mapper.Map<IEnumerable<DiseaseResponse>>(diseases);
-//}
-
-//// --- 4. العطار بيقترح مرض جديد ---
-//public async Task<DiseaseResponse> ProposeDiseaseAsync(CreateDiseaseRequest request, CancellationToken cancellationToken = default)
-//{
-//    string cleanName = request.DiseaseName.Trim();
-
-//    var existingDisease = await unitOfWork.DiseaseRepository.GetAsync(
-//        d => d.DiseaseName.ToLower() == cleanName.ToLower(),
-//        tracked: false,
-//        cancellationToken: cancellationToken);
-
-//    if (existingDisease != null)
-//        throw new Exception("This disease already exists in the system.");
-
-//    var diseaseEntity = mapper.Map<Disease>(request);
-//    diseaseEntity.DiseaseName = cleanName;
-//    diseaseEntity.IsSupportedByAi = false; // العطار ملوش دعوة بالـ AI
-//    diseaseEntity.IsApproved = false;      // 👈 مستني موافقة الأدمن
-
-//    await unitOfWork.DiseaseRepository.CreateAsync(diseaseEntity, cancellationToken);
-//    await unitOfWork.SaveChangesAsync(cancellationToken);
-
-//    return mapper.Map<DiseaseResponse>(diseaseEntity);
-//}
-
-//// --- 5. الأدمن بيضيف مرض (AI أو عادي) ---
-//public async Task<DiseaseResponse> AddDiseaseByAdminAsync(CreateDiseaseRequest request, bool isAiSupported, CancellationToken cancellationToken = default)
-//{
-//    string cleanName = request.DiseaseName.Trim();
-
-//    var existingDisease = await unitOfWork.DiseaseRepository.GetAsync(
-//        d => d.DiseaseName.ToLower() == cleanName.ToLower(),
-//        tracked: false,
-//        cancellationToken: cancellationToken);
-
-//    if (existingDisease != null)
-//        throw new Exception("This disease already exists.");
-
-//    var diseaseEntity = mapper.Map<Disease>(request);
-//    diseaseEntity.DiseaseName = cleanName;
-//    diseaseEntity.IsSupportedByAi = isAiSupported; // الأدمن بيحدد
-//    diseaseEntity.IsApproved = true;               // 👈 موافق عليه فوراً
-
-//    await unitOfWork.DiseaseRepository.CreateAsync(diseaseEntity, cancellationToken);
-//    await unitOfWork.SaveChangesAsync(cancellationToken);
-
-//    return mapper.Map<DiseaseResponse>(diseaseEntity);
-//}
-
-//// --- 6. الأدمن بيوافق على اقتراح العطار ---
-//public async Task ApproveDiseaseAsync(int diseaseId, CancellationToken cancellationToken = default)
-//{
-//    var disease = await unitOfWork.DiseaseRepository.GetAsync(d => d.DiseaseId == diseaseId, tracked: true, cancellationToken: cancellationToken);
-
-//    if (disease == null) throw new Exception("Disease not found.");
-
-//    disease.IsApproved = true;
-//    await unitOfWork.SaveChangesAsync(cancellationToken);
-//}
-
-//// --- 7. الأدمن بيرفض ويمسح اقتراح العطار ---
-//public async Task RejectDiseaseAsync(int diseaseId, CancellationToken cancellationToken = default)
-//{
-//    var disease = await unitOfWork.DiseaseRepository.GetAsync(d => d.DiseaseId == diseaseId, tracked: true, cancellationToken: cancellationToken);
-
-//    if (disease == null) throw new Exception("Disease not found.");
-
-//    unitOfWork.DiseaseRepository.Remove(disease);
-//    await unitOfWork.SaveChangesAsync(cancellationToken);
-//}
-    #endregion

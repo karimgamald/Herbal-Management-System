@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Application.Contracts.AiRecipes;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
@@ -15,10 +16,8 @@ public class AiRecipeService(
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IAiPredictionService _aiPredictionService = aiPredictionService;
     private readonly IMapper _mapper = mapper;
-    // Get all AI recipes in the system
 
-    public async Task<PaginatedList<AiRecipeResponse>> GetAllPublicAsync(
-    RequestFilters filters,
+    public async Task<PaginatedList<AiRecipeResponse>> GetAllPublicAsync(RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.AiRecipeRepository.GetQueryable(tracked: false);
@@ -48,6 +47,7 @@ public class AiRecipeService(
 
         return await PaginatedList<AiRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
+
     public async Task<AiRecipeResponse> GetPublicByIdAsync(int recipeId,
     CancellationToken cancellationToken = default)
     {
@@ -63,10 +63,7 @@ public class AiRecipeService(
         return _mapper.Map<AiRecipeResponse>(recipe);
     }
 
-    // Get all recipes added by the patient 
-    public async Task<PaginatedList<AiRecipeResponse>> GetAllAsync(
-    int userId,
-    RequestFilters filters,
+    public async Task<PaginatedList<AiRecipeResponse>> GetAllAsync(int userId, RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
         int patientId = await _unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
@@ -102,8 +99,8 @@ public class AiRecipeService(
         var projectedQuery = query.ProjectTo<AiRecipeResponse>(_mapper.ConfigurationProvider);
 
         return await PaginatedList<AiRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
-    }
-    // Get the 
+    } 
+
     public async Task<AiRecipeResponse> GetByIdAsync(int userId,int recipeId,CancellationToken cancellationToken = default)
     {
         int patientId = await _unitOfWork.PatientRepository
@@ -207,15 +204,76 @@ public class AiRecipeService(
         return _mapper.Map<AiRecipeResponse>(recipeRecord);
     }
 
-    //public async Task DeleteAsync(int recipeId, CancellationToken cancellationToken = default)
-    //{
-    //    var recipe = await _unitOfWork.AiRecipeRepository.GetByIdAsync(recipeId);
+    // [Admin] Get All Global Consultations
+    public async Task<PaginatedList<AiRecipeResponse>> GetAllSystemConsultationsAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var query = _unitOfWork.AiRecipeRepository.GetQueryable(tracked: false);
 
-    //    if (recipe == null)
-    //        throw new KeyNotFoundException("AI Recipe not found.");
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(r =>
+                r.RecommendedRecipeName.ToLower().Contains(search) ||
+                r.Condition.ToLower().Contains(search));
+        }
 
-    //    await _unitOfWork.AiRecipeRepository.DeleteAsync(recipe);
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            query = filters.SortColumn.ToLower() switch
+            {
+                "recommendedrecipename" => isDesc ? query.OrderByDescending(r => r.RecommendedRecipeName) : query.OrderBy(r => r.RecommendedRecipeName),
+                "confidencescore" => isDesc ? query.OrderByDescending(r => r.ConfidenceScore) : query.OrderBy(r => r.ConfidenceScore),
+                _ => isDesc ? query.OrderByDescending(r => r.Id) : query.OrderBy(r => r.Id)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.Id);
+        }
 
-    //    await _unitOfWork.SaveChangesAsync();
-    //}
+        var projectedQuery = query.ProjectTo<AiRecipeResponse>(_mapper.ConfigurationProvider);
+
+        return await PaginatedList<AiRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
+    public async Task<bool> DeleteAsync(int recipeId, CancellationToken cancellationToken = default)
+    {
+        var recipe = await _unitOfWork.AiRecipeRepository.GetAsync(
+            filter: r => r.Id == recipeId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (recipe == null) return false;
+
+        _unitOfWork.AiRecipeRepository.Remove(recipe); 
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<object> GetAiModelStatisticsAsync(CancellationToken cancellationToken = default)
+    {
+        var query = _unitOfWork.AiRecipeRepository.GetQueryable(tracked: false);
+
+        var totalConsultations = await query.CountAsync(cancellationToken);
+
+        double averageConfidence = 0;
+        if (totalConsultations > 0)
+        {
+            averageConfidence = await query.AverageAsync(r => r.ConfidenceScore, cancellationToken);
+        }
+
+        var topCondition = await query
+            .GroupBy(r => r.Condition)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key)
+            .FirstOrDefaultAsync(cancellationToken) ?? "N/A";
+
+        return new
+        {
+            TotalAiConsultations = totalConsultations,
+            AverageConfidenceScore = Math.Round(averageConfidence, 1),
+            MostDiagnosedCondition = topCondition
+        };
+    }
 }

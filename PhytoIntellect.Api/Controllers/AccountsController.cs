@@ -14,8 +14,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterUserAuthRequest model, 
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Register([FromBody] RegisterUserAuthRequest model, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -26,6 +25,111 @@ public class AccountsController(IAuthService authService) : ControllerBase
             return BadRequest(new { result.Message });
 
         return Ok(new { result.Message });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("resend-confirmation-email")]
+    public async Task<IActionResult> ResendConfirmationEmail([FromBody] ResendConfirmationEmailRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { Message = "Email is required." });
+
+        var result = await authService.ResendConfirmationEmailAsync(request.Email);
+
+        if (result.Success)
+            return Ok(result);
+
+        return BadRequest(result);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginAccountRequest model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await authService.LoginAsync(model, cancellationToken);
+
+        if (!result.Success)
+            return Unauthorized(new { result.Message });
+
+        return Ok(result.Data); 
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromForm] ResetPasswordAccountRequest model)
+    {
+        var result = await authService.ResetPasswordAsync(model);
+
+        if (!result.Success)
+            return BadRequest(result.Message);
+
+        return Content("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset Success</title>
+</head>
+
+<body style='font-family:Arial;text-align:center;padding-top:50px;background:#f9f9f9'>
+
+    <h2 style='color:green'>✅ Password reset successfully</h2>
+
+    <p>You can now login with your new password.</p>
+
+</body>
+</html>
+""", "text/html");
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgetPasswordAccountRequest model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await authService.ForgotPasswordAsync(model, cancellationToken);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest model, CancellationToken cancellationToken)
+    {
+        var result = await authService.RefreshTokenAsync(model.RefreshToken, cancellationToken);
+        if (!result.Success) 
+            return Unauthorized(new { result.Message });
+        return Ok(result.Data);
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest model, CancellationToken cancellationToken)
+    {
+        var result = await authService.LogoutAsync(model.RefreshToken, cancellationToken);
+        if (!result.Success) return BadRequest(new { result.Message });
+        return Ok(new { result.Message });
+    }
+
+    [HttpPost("google-login")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    {
+        try
+        {
+            var result = await authService.GoogleLoginAsync(request);
+            return Ok(result);
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized(new { Message = "Invalid Google Token" });
+        }
     }
 
     [AllowAnonymous]
@@ -78,38 +182,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
     }
 
     [AllowAnonymous]
-    [HttpPost("resend-confirmation-email")]
-    public async Task<IActionResult> ResendConfirmationEmail([FromBody] ResendConfirmationEmailRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(request.Email))
-            return BadRequest(new { Message = "Email is required." });
-
-        var result = await authService.ResendConfirmationEmailAsync(request.Email);
-
-        if (result.Success)
-            return Ok(result);
-
-        return BadRequest(result);
-    }
-
-    [AllowAnonymous]
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginAccountRequest model, CancellationToken cancellationToken)
-    {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        var result = await authService.LoginAsync(model, cancellationToken);
-
-        if (!result.Success)
-            return Unauthorized(new { result.Message });
-
-        return Ok(result.Data); 
-    }
-
-    [AllowAnonymous]
     [HttpGet("reset-password")]
-
     public async Task<IActionResult> ResetPasswordPage([FromQuery] string email,[FromQuery] string token)
     {
         var result = await authService.ValidateResetTokenAsync(email, token);
@@ -175,83 +248,5 @@ public class AccountsController(IAuthService authService) : ControllerBase
 """;
 
         return Content(html, "text/html");
-    }
-
-    [AllowAnonymous]
-    [HttpPost("reset-password")]
-    public async Task<IActionResult> ResetPassword([FromForm] ResetPasswordAccountRequest model)
-    {
-        var result = await authService.ResetPasswordAsync(model);
-
-        if (!result.Success)
-            return BadRequest(result.Message);
-
-        return Content("""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Reset Success</title>
-</head>
-
-<body style='font-family:Arial;text-align:center;padding-top:50px;background:#f9f9f9'>
-
-    <h2 style='color:green'>✅ Password reset successfully</h2>
-
-    <p>You can now login with your new password.</p>
-
-</body>
-</html>
-""", "text/html");
-    }
-
-    [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgetPasswordAccountRequest model,
-    CancellationToken cancellationToken)
-    {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        var result = await authService.ForgotPasswordAsync(model, cancellationToken);
-
-        if (!result.Success)
-            return BadRequest(result);
-
-        return Ok(result);
-    }
-
-    [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest model, 
-        CancellationToken cancellationToken)
-    {
-        var result = await authService.RefreshTokenAsync(model.RefreshToken, cancellationToken);
-        if (!result.Success) 
-            return Unauthorized(new { result.Message });
-        return Ok(result.Data);
-    }
-
-    [Authorize]
-    [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest model, 
-        CancellationToken cancellationToken)
-    {
-        var result = await authService.LogoutAsync(model.RefreshToken, cancellationToken);
-        if (!result.Success) return BadRequest(new { result.Message });
-        return Ok(new { result.Message });
-    }
-
-    [HttpPost("google-login")]
-    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
-    {
-        try
-        {
-            var result = await authService.GoogleLoginAsync(request);
-            return Ok(result);
-        }
-        catch (InvalidJwtException)
-        {
-            return Unauthorized(new { Message = "Invalid Google Token" });
-        }
     }
 }

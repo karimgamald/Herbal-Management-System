@@ -65,8 +65,8 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
         if (herbalist == null) throw new KeyNotFoundException("Herbalist not found.");
 
         var aiChatRecipe = await unitOfWork.AiChatRecipeRepository.GetAsync(
-            filter: h => h.Id == request.AiChatRecipeId, // 👈 بنفترض إنك باعت الـ ID في نفس الـ Request DTO القديم
-            tracked: true, // 👈 خليناها true عشان هنعدل فيها 💡
+            filter: h => h.Id == request.AiChatRecipeId, 
+            tracked: true,
             cancellationToken: cancellationToken);
 
         if (aiChatRecipe == null) throw new KeyNotFoundException("This AI Chat recipe does not exist in the system.");
@@ -89,7 +89,6 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
 
         await unitOfWork.HerbalistAiChatRecipeRepository.CreateAsync(entity, cancellationToken);
 
-        // 🔥 التريكة السحرية: تفعيل الـ IsAvailable للمريض 🔥
         aiChatRecipe.IsAvailable = true;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -131,7 +130,7 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
         if (!item.IsActive)
         {
             await CheckAndUpdateAvailability(aiChatRecipeId, herbalist.HerbalistId, cancellationToken);
-        }
+        } 
         else
         {
             var recipe = await unitOfWork.AiChatRecipeRepository.GetAsync(r => r.Id == aiChatRecipeId, tracked: true);
@@ -153,7 +152,6 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
 
         unitOfWork.HerbalistAiChatRecipeRepository.Remove(item);
 
-        // 🔥 هنا كمان بعتنا الـ HerbalistId عشان نستثنيه
         await CheckAndUpdateAvailability(aiChatRecipeId, herbalist.HerbalistId, cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -191,4 +189,54 @@ public class HerbalistAiChatRecipeService(IUnitOfWork unitOfWork, IMapper mapper
             }
         }
     }
+
+    public async Task<PaginatedList<HerbalistAiChatRecipeResponse>> AdminGetAllInventoryAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.HerbalistAiChatRecipeRepository.GetQueryable(tracked: false);
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(h =>
+                h.AiChatRecipe.RecommendedRecipeName.ToLower().Contains(search) ||
+                h.Herbalist.User!.FullName.ToLower().Contains(search));
+        }
+
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            query = filters.SortColumn.ToLower() switch
+            {
+                "recommendedrecipename" => isDesc ? query.OrderByDescending(h => h.AiChatRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiChatRecipe.RecommendedRecipeName),
+                "price" => isDesc ? query.OrderByDescending(h => h.Price) : query.OrderBy(h => h.Price),
+                "herbalistname" => isDesc ? query.OrderByDescending(h => h.Herbalist.User!.FullName) : query.OrderBy(h => h.Herbalist.User.FullName),
+                _ => isDesc ? query.OrderByDescending(h => h.AiChatRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiChatRecipe.RecommendedRecipeName)
+            };
+        }
+        else
+        {
+            query = isDesc ? query.OrderByDescending(h => h.AiChatRecipe.RecommendedRecipeName) : query.OrderBy(h => h.AiChatRecipe.RecommendedRecipeName);
+        }
+
+        var projectedQuery = query.ProjectTo<HerbalistAiChatRecipeResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<HerbalistAiChatRecipeResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
+    public async Task<bool> AdminRemoveAiChatRecipeAsync(int herbalistId, int aiChatRecipeId, CancellationToken cancellationToken = default)
+    {
+        var item = await unitOfWork.HerbalistAiChatRecipeRepository.GetAsync(
+            filter: h => h.AiChatRecipeId == aiChatRecipeId && h.HerbalistId == herbalistId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (item == null) return false;
+
+        unitOfWork.HerbalistAiChatRecipeRepository.Remove(item);
+
+        await CheckAndUpdateAvailability(aiChatRecipeId, herbalistId, cancellationToken);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
 }

@@ -11,7 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PhytoIntellect.Application.Services;
+namespace PhytoIntellect.Application.Services; 
 
 public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedbackService
 {
@@ -107,24 +107,18 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         {
             FeedbackId = feedback.FeedbackId,
 
-            // ✅ IDs (كل الحالات)
             RecipeId = feedback.RecipeId,
             AiRecipeId = feedback.AiRecipeId,
             AiChatRecipeId = feedback.AiChatRecipeId,
 
-            // ⭐ Data
             RatingValue = feedback.RatingValue,
             Comment = feedback.Comment,
             RatingDate = feedback.RatingDate,
 
-            // 👤 Patient Name
             PatientName = feedback.Patient?.User?.FullName ?? "Unknown"
         };
     }
-
-    public async Task<PaginatedList<FeedbackResponse>> GetRecipeFeedbacksAsync(
-     int recipeId,
-     RequestFilters filters,
+    public async Task<PaginatedList<FeedbackResponse>> GetRecipeFeedbacksAsync(int recipeId, RequestFilters filters,
      CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
@@ -157,14 +151,12 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
-
     public async Task<FeedbackResponse?> GetMyRecipeFeedbackAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
     {
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
         var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.RecipeId == recipeId && f.PatientId == patientId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
         return feedback == null ? null : mapper.Map<FeedbackResponse>(feedback);
     }
-
     public async Task<bool> DeleteMyRecipeFeedbackAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
     {
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
@@ -242,24 +234,18 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         {
             FeedbackId = feedback.FeedbackId,
 
-            // ✅ IDs (كل الحالات)
             RecipeId = feedback.RecipeId,
             AiRecipeId = feedback.AiRecipeId,
             AiChatRecipeId = feedback.AiChatRecipeId,
 
-            // ⭐ Data
             RatingValue = feedback.RatingValue,
             Comment = feedback.Comment,
             RatingDate = feedback.RatingDate,
 
-            // 👤 Patient Name
             PatientName = feedback.Patient?.User?.FullName ?? "Unknown"
         };
     }
-
-    public async Task<PaginatedList<FeedbackResponse>> GetAiRecipeFeedbacksAsync(
-    int aiRecipeId,
-    RequestFilters filters,
+    public async Task<PaginatedList<FeedbackResponse>> GetAiRecipeFeedbacksAsync(int aiRecipeId, RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
@@ -292,14 +278,12 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
-
     public async Task<FeedbackResponse?> GetMyAiRecipeFeedbackAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)
     {
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
         var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.AiRecipeId == aiRecipeId && f.PatientId == patientId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
         return feedback == null ? null : mapper.Map<FeedbackResponse>(feedback);
     }
-
     public async Task<bool> DeleteMyAiRecipeFeedbackAsync(int userId, int aiRecipeId, CancellationToken cancellationToken = default)
     {
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
@@ -328,10 +312,7 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         return true;
     }
 
-
-    // ==========================================
-    // (AiChatRecipeId) - NEW Ecosytem
-    // ==========================================
+    // AiChatRecipeId - NEW Ecosytem
 
     public async Task<FeedbackResponse> SubmitAiChatRecipeFeedbackAsync(int userId, int aiChatRecipeId, SubmitFeedbackRequest request, CancellationToken cancellationToken = default)
     {
@@ -355,7 +336,7 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
             existingFeedback.Comment = request.Comment;
             existingFeedback.RatingDate = DateTime.UtcNow;
 
-            aiChatRecipe.Rating = cleanRating; // Update the chat rating directly
+            aiChatRecipe.Rating = cleanRating; 
             feedbackEntity = existingFeedback;
         }
         else
@@ -364,7 +345,7 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
             {
                 RecipeId = null,
                 AiRecipeId = null,
-                AiChatRecipeId = aiChatRecipeId, // 👈 The new field
+                AiChatRecipeId = aiChatRecipeId, 
                 PatientId = patientId,
                 RatingValue = cleanRating,
                 Comment = request.Comment,
@@ -388,24 +369,18 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
         {
             FeedbackId = feedback.FeedbackId,
 
-            // ✅ IDs (كل الحالات)
             RecipeId = feedback.RecipeId,
             AiRecipeId = feedback.AiRecipeId,
             AiChatRecipeId = feedback.AiChatRecipeId,
 
-            // ⭐ Data
             RatingValue = feedback.RatingValue,
             Comment = feedback.Comment,
             RatingDate = feedback.RatingDate,
 
-            // 👤 Patient Name
             PatientName = feedback.Patient?.User?.FullName ?? "Unknown"
         };
     }
-
-    public async Task<PaginatedList<FeedbackResponse>> GetAiChatRecipeFeedbacksAsync(
-    int aiChatRecipeId,
-    RequestFilters filters,
+    public async Task<PaginatedList<FeedbackResponse>> GetAiChatRecipeFeedbacksAsync(int aiChatRecipeId, RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
@@ -438,14 +413,12 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
-
     public async Task<FeedbackResponse?> GetMyAiChatRecipeFeedbackAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken = default)
     {
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
         var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.AiChatRecipeId == aiChatRecipeId && f.PatientId == patientId, tracked: false, includeProperties: "Patient.User", cancellationToken: cancellationToken);
         return feedback == null ? null : mapper.Map<FeedbackResponse>(feedback);
     }
-
     public async Task<bool> DeleteMyAiChatRecipeFeedbackAsync(int userId, int aiChatRecipeId, CancellationToken cancellationToken = default)
     {
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
@@ -465,7 +438,7 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         if (aiChatRecipe != null)
         {
-            aiChatRecipe.Rating = null; // Clear the rating
+            aiChatRecipe.Rating = null; 
         }
 
         unitOfWork.FeedbackRepository.Remove(feedback);
@@ -473,35 +446,24 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
 
         return true;
     }
-
-
-
-    public async Task<PaginatedList<FeedbackResponse>> GetMyFeedbacksAsync(
-    int userId,
-    RequestFilters filters,
+    public async Task<PaginatedList<FeedbackResponse>> GetMyFeedbacksAsync(int userId, RequestFilters filters,
     CancellationToken cancellationToken = default)
     {
-        // 1. نجيب رقم المريض
         int patientId = await unitOfWork.PatientRepository.GetIdByUserIdAsync(userId.ToString());
 
-        // لو المريض مش موجود بنرجع كرتونة Pagination فاضية
         if (patientId == 0)
             return new PaginatedList<FeedbackResponse>(new List<FeedbackResponse>(), filters.PageNumber, 0, filters.PageSize);
 
-        // 2. نجيب الـ IQueryable
         var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
 
-        // الفلتر الأساسي (كل التقييمات بتاعة المريض ده)
         query = query.Where(f => f.PatientId == patientId);
 
-        // 3. البحث
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
             query = query.Where(f => f.Comment.ToLower().Contains(search));
         }
 
-        // 4. الترتيب
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
             bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
@@ -517,10 +479,94 @@ public class FeedbackService(IUnitOfWork unitOfWork, IMapper mapper) : IFeedback
             query = query.OrderByDescending(f => f.RatingDate);
         }
          
-        // 5. المابينج
         var projectedQuery = query.ProjectTo<FeedbackResponse>(mapper.ConfigurationProvider);
 
-        // 6. الـ Pagination
         return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
+
+    public async Task<PaginatedList<FeedbackResponse>> AdminGetAllFeedbacksAsync(RequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var query = unitOfWork.FeedbackRepository.GetQueryable(tracked: false);
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchValue))
+        {
+            var search = filters.SearchValue.ToLower();
+            query = query.Where(f => f.Patient!.User!.FullName.ToLower().Contains(search) || f.Comment.ToLower().Contains(search));
+        }
+
+        bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
+        if (!string.IsNullOrWhiteSpace(filters.SortColumn))
+        {
+            query = filters.SortColumn.ToLower() switch
+            {
+                "ratingvalue" => isDesc ? query.OrderByDescending(f => f.RatingValue) : query.OrderBy(f => f.RatingValue),
+                "date" => isDesc ? query.OrderByDescending(f => f.RatingDate) : query.OrderBy(f => f.RatingDate),
+                "patientname" => isDesc ? query.OrderByDescending(f => f.Patient!.User!.FullName) : query.OrderBy(f => f.Patient!.User!.FullName),
+                _ => isDesc ? query.OrderByDescending(f => f.RatingDate) : query.OrderBy(f => f.RatingDate)
+            };
+        }
+        else
+        {
+            query = isDesc ? query.OrderByDescending(f => f.RatingDate) : query.OrderBy(f => f.RatingDate);
+        }
+
+        var projectedQuery = query.ProjectTo<FeedbackResponse>(mapper.ConfigurationProvider);
+        return await PaginatedList<FeedbackResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
+    }
+
+    public async Task<bool> AdminDeleteFeedbackAsync(int feedbackId, CancellationToken cancellationToken = default)
+    {
+        var feedback = await unitOfWork.FeedbackRepository.GetAsync(f => f.FeedbackId == feedbackId, tracked: true, cancellationToken: cancellationToken);
+        if (feedback == null) return false;
+
+        if (feedback.RecipeId.HasValue)
+        {
+            var recipe = await unitOfWork.RecipeRepository.GetAsync(r => r.RecipeId == feedback.RecipeId.Value, tracked: true, cancellationToken: cancellationToken);
+            if (recipe != null)
+            {
+                if (recipe.TotalRatings <= 1)
+                {
+                    recipe.AverageRating = 0;
+                    recipe.TotalRatings = 0;
+                }
+                else
+                {
+                    var calc = ((recipe.AverageRating * recipe.TotalRatings) - feedback.RatingValue) / (recipe.TotalRatings - 1);
+                    recipe.AverageRating = (float)Math.Round(calc, 1);
+                    recipe.TotalRatings -= 1;
+                }
+
+                var herbalist = await unitOfWork.HerbalistRepository.GetAsync(h => h.HerbalistId == recipe.HerbalistId, tracked: true, cancellationToken: cancellationToken);
+                if (herbalist != null)
+                {
+                    var otherRecipes = await unitOfWork.RecipeRepository.GetAllAsync(
+                        filter: r => r.HerbalistId == recipe.HerbalistId && r.RecipeId != recipe.RecipeId && r.TotalRatings > 0,
+                        tracked: false, cancellationToken: cancellationToken);
+
+                    float otherPoints = otherRecipes.Sum(r => r.AverageRating * r.TotalRatings);
+                    int otherVotes = otherRecipes.Sum(r => r.TotalRatings);
+                    float totalPoints = otherPoints + (recipe.AverageRating * recipe.TotalRatings);
+                    int totalVotes = otherVotes + recipe.TotalRatings;
+
+                    if (totalVotes > 0) herbalist.AverageRating = (float)Math.Round(totalPoints / totalVotes, 1);
+                    else herbalist.AverageRating = 0;
+                }
+            }
+        }
+        else if (feedback.AiRecipeId.HasValue)
+        {
+            var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(r => r.Id == feedback.AiRecipeId.Value, tracked: true, cancellationToken: cancellationToken);
+            if (aiRecipe != null) aiRecipe.Rating = null;
+        }
+        else if (feedback.AiChatRecipeId.HasValue)
+        {
+            var aiChatRecipe = await unitOfWork.AiChatRecipeRepository.GetAsync(r => r.Id == feedback.AiChatRecipeId.Value, tracked: true, cancellationToken: cancellationToken);
+            if (aiChatRecipe != null) aiChatRecipe.Rating = null;
+        }
+
+        unitOfWork.FeedbackRepository.Remove(feedback);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
     }
 }

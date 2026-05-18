@@ -13,7 +13,7 @@ namespace PhytoIntellect.Api.Controllers;
 
 [Route("api/AiChat")]
 [ApiController]
-public class AiChatConsultationsController(IChatAiRecipeService chatAiRecipeService,
+public class AiChatConsultationsController(IAiChatRecipeService chatAiRecipeService,
     ILogger<AiChatConsultationsController> logger) : ControllerBase
 {
     [HttpPost("chat-generate")]
@@ -75,9 +75,6 @@ public class AiChatConsultationsController(IChatAiRecipeService chatAiRecipeServ
         }
     }
 
-    // =========================================
-    // Get Public Recipe By Id
-    // =========================================
     [HttpGet("{id}/catalog")]
     [AllowAnonymous]
     public async Task<IActionResult> GetPublicById(int id,CancellationToken cancellationToken)
@@ -108,9 +105,6 @@ public class AiChatConsultationsController(IChatAiRecipeService chatAiRecipeServ
         }
     }
 
-    // =========================================
-    // Get All Patient Recipes
-    // =========================================
     [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("myConsultations")]
     public async Task<IActionResult> GetAll([FromQuery] RequestFilters filters,
@@ -153,9 +147,6 @@ public class AiChatConsultationsController(IChatAiRecipeService chatAiRecipeServ
         }
     }
 
-    // =========================================
-    // Get Patient Recipe By Id
-    // =========================================
     [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("{id}/myConsultation")]
     public async Task<IActionResult> GetById(int id,CancellationToken cancellationToken)
@@ -197,4 +188,62 @@ public class AiChatConsultationsController(IChatAiRecipeService chatAiRecipeServ
         }
     }
 
+
+    // [Admin] Get All System Consultations
+    [HttpGet("admin/all-consultations")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> GetAllSystemConsultations([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await chatAiRecipeService.GetAllForAdminAsync(filters, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving all consultations for Admin.");
+            return StatusCode(500, new { Message = "Internal server error" });
+        }
+    }
+
+    // [Admin] Toggle Recipe Active Status
+    [HttpPatch("admin/{id}/toggle-status")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> ToggleRecipeStatus(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var success = await chatAiRecipeService.ToggleActiveStatusAsync(id, cancellationToken);
+
+            if (!success)
+                return NotFound(new { Message = "Recipe not found." });
+
+            return Ok(new { Message = "Recipe status updated successfully." });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating recipe status for Admin.");
+            return StatusCode(500, new { Message = "Internal server error" });
+        }
+    }
+
+    // [Admin] Get AI Usage Statistics
+    // 1. Total Recipes Generated
+    // 2. Total Public Recipes
+    // 3. Most common herbs
+    [HttpGet("admin/statistics")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> GetAiStatistics(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var stats = await chatAiRecipeService.GetAdminStatisticsAsync(cancellationToken);
+            return Ok(stats);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving AI statistics for Admin.");
+            return StatusCode(500, new { Message = "Internal server error" });
+        }
+    }
 }

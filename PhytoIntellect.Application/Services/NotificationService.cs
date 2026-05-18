@@ -39,7 +39,7 @@ public class NotificationService(IUnitOfWork unitOfWork) : INotificationService
                 n.IsRead,
                 n.CreatedAt
             });
-    }
+    } 
 
     public async Task<bool> MarkAsReadAsync(int notificationId, int userId, CancellationToken cancellationToken = default)
     {
@@ -51,6 +51,38 @@ public class NotificationService(IUnitOfWork unitOfWork) : INotificationService
         if (notification == null) return false;
 
         notification.IsRead = true;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> DeleteNotificationAsync(int notificationId, int userId, CancellationToken cancellationToken = default)
+    {
+        var notification = await unitOfWork.NotificationRepository.GetAsync(
+            filter: n => n.Id == notificationId && n.UserId == userId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (notification == null) return false;
+
+        unitOfWork.NotificationRepository.Remove(notification);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> MarkAllAsReadAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var notifications = await unitOfWork.NotificationRepository.GetAllAsync(
+            filter: n => n.UserId == userId && !n.IsRead,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (!notifications.Any()) return false;
+
+        foreach (var notification in notifications)
+        {
+            notification.IsRead = true;
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }

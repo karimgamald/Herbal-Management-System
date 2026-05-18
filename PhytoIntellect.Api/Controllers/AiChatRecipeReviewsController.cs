@@ -68,4 +68,27 @@ public class AiChatRecipeReviewsController(IReviewRecipeService reviewService) :
 
         return Ok(new { Message = "Review deleted successfully." });
     }
-}
+
+
+    // [Admin] Get All Global Chat Reviews
+    [HttpGet("~/api/admin/ai-chat-recipe-reviews")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminGetAllChatReviews([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        var reviews = await reviewService.GetAllSystemAiChatReviewsAsync(filters, cancellationToken);
+        return Ok(reviews);
+    }
+
+    // [Admin] Delete Any Chat Review
+    [HttpDelete("~/api/admin/ai-chat-recipe-reviews/{reviewId}")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminDeleteChatReview(int reviewId, CancellationToken cancellationToken)
+    {
+        var success = await reviewService.DeleteAnyAiChatReviewAsync(reviewId, cancellationToken);
+        if (!success)
+            return NotFound(new { Message = "Review not found." });
+
+        return Ok(new { Message = "Review deleted successfully by Admin." });
+    }
+
+} 

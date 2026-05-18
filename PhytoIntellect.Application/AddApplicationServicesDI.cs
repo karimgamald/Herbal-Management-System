@@ -29,7 +29,7 @@ public static class AddApplicationServicesDI
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<ISubOrderService, SubOrderService>();
         services.AddScoped<IAiRecipeService, AiRecipeService>();
-        services.AddScoped<IChatAiRecipeService, ChatAiRecipeService>();
+        services.AddScoped<IAiChatRecipeService, AiChatRecipeService>();
         services.AddScoped<IHerbalistAiRecipeService, HerbalistAiRecipeService>();
         services.AddScoped<IHerbalistAiChatRecipeService, HerbalistAiChatRecipeService>();
         services.AddScoped<IFavoriteService, FavoriteService>();

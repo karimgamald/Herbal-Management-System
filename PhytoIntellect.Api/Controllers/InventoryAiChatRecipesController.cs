@@ -10,11 +10,11 @@ using PhytoIntellect.Core.Constants;
 
 namespace PhytoIntellect.Api.Controllers;
 
-[Route("api/inventory-ai-chat-recipes")] // 👈 Route معزول
+[Route("api/inventory-ai-chat-recipes")]
 [ApiController]
-[Authorize(Roles = AppRoles.Herbalist)]
 public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inventoryService) : ControllerBase
 {
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpGet("my-inventory")]
     public async Task<IActionResult> GetMyInventory([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
@@ -23,6 +23,7 @@ public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inve
         return Ok(result);
     }
 
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpPost("add")]
     public async Task<IActionResult> AddToInventory([FromBody] AddAiChatRecipeToInventoryRequest request, CancellationToken cancellationToken)
     {
@@ -31,6 +32,7 @@ public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inve
         return Ok(result);
     }
 
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpPatch("{id}/price")]
     public async Task<IActionResult> UpdatePrice(int id, [FromBody] UpdatePriceRequest request, CancellationToken cancellationToken)
     {
@@ -39,6 +41,7 @@ public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inve
         return Ok(new { Message = "Price updated successfully." });
     }
 
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> ToggleStatus(int id, CancellationToken cancellationToken)
     {
@@ -52,6 +55,7 @@ public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inve
         });
     }
 
+    [Authorize(Roles = AppRoles.Herbalist)]
     [HttpDelete("{id}/delete")]
     public async Task<IActionResult> RemoveFromInventory(int id, CancellationToken cancellationToken)
     {
@@ -62,8 +66,7 @@ public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inve
 
     [HttpGet("{id}/herbalists")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetHerbalistsForAiChatRecipe([FromRoute] int id,
-        [FromQuery] bool isActive = true, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetHerbalistsForAiChatRecipe([FromRoute] int id, [FromQuery] bool isActive = true, CancellationToken cancellationToken = default)
     {
         var result = await inventoryService.GetHerbalistsByAiChatRecipeAsync(id, isActive, cancellationToken);
 
@@ -71,5 +74,25 @@ public class InventoryAiChatRecipesController(IHerbalistAiChatRecipeService inve
             return NotFound(new { Message = "No herbalists currently offer this chat recipe." });
 
         return Ok(result);
+    }
+
+    // Admin Endpoints
+    [HttpGet("~/api/admin/inventory-ai-chat-recipes")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminGetAllInventory([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        var result = await inventoryService.AdminGetAllInventoryAsync(filters, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("~/api/admin/inventory-ai-chat-recipes/{herbalistId}/{recipeId}")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> AdminRemoveFromInventory(int herbalistId, int recipeId, CancellationToken cancellationToken)
+    {
+        var success = await inventoryService.AdminRemoveAiChatRecipeAsync(herbalistId, recipeId, cancellationToken);
+        if (!success)
+            return NotFound(new { Message = "Inventory item not found." });
+
+        return Ok(new { Message = "Chat Recipe removed from herbalist's inventory by Admin." });
     }
 }

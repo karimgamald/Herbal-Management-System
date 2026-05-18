@@ -7,6 +7,7 @@ public class Disease : LocalizedEntity
     public string? DiseaseType { get; set; } 
     public string? Description { get; set; }
     public string? Symptoms { get; set; }
+    public bool IsApproved { get; set; } = false;
     public bool IsSupportedByAi { get; set; } = false;
 
     // Navigation Property
