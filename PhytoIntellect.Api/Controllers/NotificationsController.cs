@@ -13,8 +13,8 @@ namespace PhytoIntellect.Api.Controllers;
 [Authorize]
 public class NotificationsController(INotificationService notificationService) : ControllerBase
 {
-    [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("my-notifications")]
+    [Authorize(Roles = $"{AppRoles.Patient} , {AppRoles.Herbalist}")]
     public async Task<IActionResult> GetMyNotifications([FromQuery] bool? isRead = null, CancellationToken cancellationToken = default)
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -22,8 +22,8 @@ public class NotificationsController(INotificationService notificationService) :
         return Ok(notis);
     }
 
-    [Authorize(Roles = AppRoles.Patient)]
     [HttpPatch("{id}/mark-as-read")]
+    [Authorize(Roles = $"{AppRoles.Patient} , {AppRoles.Herbalist}")]
     public async Task<IActionResult> MarkAsRead(int id, CancellationToken cancellationToken)
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -33,8 +33,8 @@ public class NotificationsController(INotificationService notificationService) :
         return Ok(new { Message = "Marked as read successfully." });
     }
 
-    [Authorize(Roles = AppRoles.Patient)]
     [HttpPatch("mark-all-as-read")]
+    [Authorize(Roles = $"{AppRoles.Patient} , {AppRoles.Herbalist}")]
     public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -46,8 +46,8 @@ public class NotificationsController(INotificationService notificationService) :
         return Ok(new { Message = "All notifications marked as read successfully." });
     }
 
-    [Authorize(Roles = AppRoles.Patient)]
     [HttpDelete("{id}/delete")]
+    [Authorize(Roles = $"{AppRoles.Patient} , {AppRoles.Herbalist}")]
     public async Task<IActionResult> DeleteNotification(int id, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -60,12 +60,10 @@ public class NotificationsController(INotificationService notificationService) :
     }
 
     // ================= Admin Endpoints =================
-    // send group notification to herbalists or patients or the same => for 
     [Authorize(Roles = AppRoles.Admin)]
     [HttpPost("~/api/admin/notifications/send-bulk")]
     public async Task<IActionResult> SendBulkNotification([FromBody] AdminNotificationRequest request, CancellationToken cancellationToken)
     {
-        // التحقق من صحة المدخلات الخاصة بالـ Role المستهدف
         if (request.TargetRole != AppRoles.Herbalist && request.TargetRole != AppRoles.Patient && request.TargetRole.ToLower() != "all")
         {
             return BadRequest(new { Message = "Invalid Target Role. Use 'Herbalist', 'Patient', or 'All'." });
