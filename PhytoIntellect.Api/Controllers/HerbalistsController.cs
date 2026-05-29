@@ -73,6 +73,14 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
         return Ok(herbalists);
     }
 
+    [HttpGet("~/api/admin/herbalists/stats")]
+    [Authorize(Roles = AppRoles.Admin)]
+    public async Task<IActionResult> GetHerbalistsStats(CancellationToken cancellationToken)
+    {
+        var stats = await herbalistService.GetHerbalistsStatsAsync(cancellationToken);
+        return Ok(stats);
+    }
+
     [HttpDelete("~/api/admin/herbalists/{id}")]
     [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> DeleteHerbalistByAdmin(int id, CancellationToken cancellationToken)
@@ -82,13 +90,5 @@ public class HerbalistsController(IHerbalistService herbalistService) : Controll
             return NotFound(new { Message = "Herbalist not found." });
 
         return Ok(new { Message = "Herbalist deleted successfully by Admin." });
-    }
-
-    [HttpGet("~/api/admin/herbalists/stats")]
-    [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> GetHerbalistsStats(CancellationToken cancellationToken)
-    {
-        var stats = await herbalistService.GetHerbalistsStatsAsync(cancellationToken);
-        return Ok(stats);
     }
 }

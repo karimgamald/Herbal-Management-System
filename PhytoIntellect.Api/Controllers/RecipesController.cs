@@ -109,9 +109,8 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
     }
 
     // New Endpoint: Force delete a recipe by Admin
-    // متاح فقط للمسؤول (Admin) لحذف أي وصفة نهائياً من النظام
     [Authorize(Roles = AppRoles.Admin)]
-    [HttpDelete("admin/delete/{id:int}")]
+    [HttpDelete("~/api/admin/delete/{id:int}")]
     public async Task<IActionResult> DeleteRecipeByAdmin(int id, CancellationToken cancellationToken)
     {
         try

@@ -14,11 +14,12 @@ public class PatientService(IUnitOfWork unitOfWork, IMapper mapper) : IPatientSe
 {
     public async Task<PatientRequest?> GetMyProfileAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: false, includeProperties: "MedicalHistory", cancellationToken: cancellationToken);
+        var patient = await unitOfWork.PatientRepository
+            .GetAsync(p => p.UserId == userId, tracked: false, includeProperties: "MedicalHistory", cancellationToken: cancellationToken);
         return patient == null ? null : mapper.Map<PatientRequest>(patient);
     }
 
-    public async Task<string> UpdateMyProfileAsync(int userId, UpdatePatientRequest request, 
+    public async Task<string> UpdateMyProfileAsync(int userId, UpdatePatientRequest request,  
         CancellationToken cancellationToken = default)
     {
         var patient = await unitOfWork.PatientRepository.GetAsync(p => p.UserId == userId, tracked: true, includeProperties: "MedicalHistory", cancellationToken: cancellationToken);

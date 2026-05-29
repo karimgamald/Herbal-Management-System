@@ -59,6 +59,7 @@ public class AccountsController(IAuthService authService) : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("reset-password")]
+    // this work with forget and reset password
     public async Task<IActionResult> ResetPassword([FromForm] ResetPasswordAccountRequest model)
     {
         var result = await authService.ResetPasswordAsync(model);

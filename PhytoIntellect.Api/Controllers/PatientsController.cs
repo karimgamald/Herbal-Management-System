@@ -37,11 +37,11 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         if (patient == null) return NotFound(new { Message = "Patient not found." });
 
 
-        var loggedInUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        if (patient.UserId != loggedInUserId)
-        {
-            return BadRequest(new { Message = "Invalid Patient ID requested." });
-        }
+        //var loggedInUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        //if (patient.UserId != loggedInUserId)
+        //{
+        //    return BadRequest(new { Message = "Invalid Patient ID requested." });
+        //}
 
         return Ok(patient);
     }
@@ -67,14 +67,12 @@ public class PatientsController(IPatientService patientService) : ControllerBase
         return Ok(new { Message = result });
     }
     // Endpoint: Delete patient profile and user account by Admin
-    // متاح فقط للمسؤول (Admin) لحذف حساب المريض نهائياً من النظام
     [Authorize(Roles = AppRoles.Admin)]
-    [HttpDelete("admin/delete/{patientId:int}")]
+    [HttpDelete("~/api/admin/delete/{patientId:int}")]
     public async Task<IActionResult> DeletePatient(int patientId, CancellationToken cancellationToken)
     {
         try
         {
-            // استدعاء الخدمة هنا يتم من خلال المتغير المحقون بالـ Controller (مثال: _patientService)
             var isDeleted = await patientService.DeletePatientAsync(patientId, cancellationToken);
 
             if (!isDeleted)

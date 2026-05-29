@@ -29,7 +29,7 @@ public class PatientProfile : Profile
 
         if (birthDate.Value > today.AddYears(-age))
         {
-            age--;
+            age--; 
         }
 
         return age;
