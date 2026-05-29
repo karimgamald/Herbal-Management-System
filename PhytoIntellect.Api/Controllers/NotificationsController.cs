@@ -13,7 +13,7 @@ namespace PhytoIntellect.Api.Controllers;
 [Authorize]
 public class NotificationsController(INotificationService notificationService) : ControllerBase
 {
-    [Authorize(Roles = AppRoles.Patient)]
+    [Authorize(Roles = $"{AppRoles.Patient},{AppRoles.Herbalist}")]
     [HttpGet("my-notifications")]
     public async Task<IActionResult> GetMyNotifications([FromQuery] bool? isRead = null, CancellationToken cancellationToken = default)
     {
