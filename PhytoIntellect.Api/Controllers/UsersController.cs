@@ -15,6 +15,22 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class UsersController(IUserService userService, IAuthService authService) : ControllerBase
 {
+    [HttpGet("get-all")]
+    public async Task<IActionResult> GetAllUsers([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    {
+        var users = await userService.GetAllUsersAsync(filters, cancellationToken);
+        return Ok(users);
+    }
+
+    [HttpGet("get/{id}")]
+    public async Task<IActionResult> GetUserById(int id, CancellationToken cancellationToken)
+    {
+        var user = await userService.GetUserByIdAsync(id, cancellationToken);
+        if (user == null)
+            return NotFound(new { Message = "User not found." });
+        return Ok(user);
+    }
+
     [Authorize]
     [HttpPatch("update-my-address")]
     public async Task<IActionResult> UpdateAddress([FromBody] UpdateUserAddressRequest model, CancellationToken cancellationToken)
@@ -58,22 +74,22 @@ public class UsersController(IUserService userService, IAuthService authService)
     }
 
     // Admin Endpoints
-    [HttpGet("~/api/admin/users")]
-    [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> GetAllUsers([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
-    {
-        var users = await userService.GetAllUsersAsync(filters, cancellationToken);
-        return Ok(users);
-    }
+    //[HttpGet("~/api/admin/users")]
+    //[Authorize(Roles = AppRoles.Admin)]
+    //public async Task<IActionResult> GetAllUsers([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
+    //{
+    //    var users = await userService.GetAllUsersAsync(filters, cancellationToken);
+    //    return Ok(users);
+    //}
 
-    [HttpGet("~/api/admin/users/{id}")]
-    [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> GetUserById(int id, CancellationToken cancellationToken)
-    {
-        var user = await userService.GetUserByIdAsync(id, cancellationToken);
-        if (user == null) return NotFound(new { Message = "User not found." });
-        return Ok(user);
-    }
+    //[HttpGet("~/api/admin/users/{id}")]
+    //[Authorize(Roles = AppRoles.Admin)]
+    //public async Task<IActionResult> GetUserById(int id, CancellationToken cancellationToken)
+    //{
+    //    var user = await userService.GetUserByIdAsync(id, cancellationToken);
+    //    if (user == null) return NotFound(new { Message = "User not found." });
+    //    return Ok(user);
+    //}
 
     [HttpPost("~/api/admin/users/add")]
     [Authorize(Roles = AppRoles.Admin)]
