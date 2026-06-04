@@ -66,9 +66,10 @@ public class PatientsController(IPatientService patientService) : ControllerBase
 
         return Ok(new { Message = result });
     }
+
     // Endpoint: Delete patient profile and user account by Admin
     [Authorize(Roles = AppRoles.Admin)]
-    [HttpDelete("~/api/admin/delete/{patientId:int}")]
+    [HttpDelete("admin/delete/{id:int}")]
     public async Task<IActionResult> DeletePatient(int patientId, CancellationToken cancellationToken)
     {
         try

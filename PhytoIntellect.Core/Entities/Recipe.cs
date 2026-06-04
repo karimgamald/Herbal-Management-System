@@ -14,6 +14,7 @@ public class Recipe : LocalizedEntity
     public string? Instructions { get; set; }
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
+    public bool IsBanned { get; set; } = false;
     public decimal Price { get; set; }
 
     public float AverageRating { get; set; }

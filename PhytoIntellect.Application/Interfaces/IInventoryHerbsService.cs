@@ -15,5 +15,5 @@ public interface IInventoryHerbsService
 
     Task<bool> RemoveHerbAsync(int userId,int herbId,CancellationToken cancellationToken);
     Task<PaginatedList<InventoryResponse>> GetAllInventoryByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default);
-    Task<bool> RemoveHerbByAdminAsync(int herbalistId, int herbId, CancellationToken cancellationToken = default);
+    Task<bool> RemoveHerbFromHerbalistInventoryByAdminAsync(int herbalistId, int herbId, CancellationToken cancellationToken = default);
 }

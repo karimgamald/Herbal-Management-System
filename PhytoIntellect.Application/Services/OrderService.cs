@@ -3,6 +3,7 @@ using AutoMapper.QueryableExtensions;
 using PhytoIntellect.Application.Contracts.Orders;
 using PhytoIntellect.Application.Interfaces;
 using PhytoIntellect.Application.Paginations;
+using PhytoIntellect.Core.Constants;
 using PhytoIntellect.Core.Entities;
 using PhytoIntellect.Core.Enums;
 
@@ -179,30 +180,57 @@ public class OrderService(IUnitOfWork unitOfWork, IMapper mapper, INotificationS
         return _mapper.Map<OrderDetailsResponse>(order);
     }
 
-    public async Task CancelOrderAsync(int orderId, string userId, CancellationToken cancellationToken = default)
+    public async Task CancelOrderAsync(int orderId, string userId, string userRole, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(userId, out int parsedUserId)) throw new Exception("Invalid User ID.");
+        if (!int.TryParse(userId, out int parsedUserId))
+            throw new Exception("Invalid User ID.");
 
-        var patient = await _unitOfWork.PatientRepository.GetAsync(p => p.UserId == parsedUserId, tracked: false, cancellationToken: cancellationToken);
-        if (patient == null) throw new Exception("Patient not found.");
+        Order? order = null;
 
-        var order = await _unitOfWork.OrderRepository.GetAsync(
-            filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
-            includeProperties: "SubOrders",
-            tracked: true,
-            cancellationToken: cancellationToken);
+        // 1. إذا كان المستخدم "أدمن"، جلب الطلب مباشرة بدون قيود الملكية
+        if (userRole == AppRoles.Admin) // تأكد من مطابقة اسم الـ Constant للأدمن لديك
+        {
+            order = await _unitOfWork.OrderRepository.GetAsync(
+                filter: o => o.OrderId == orderId,
+                includeProperties: "SubOrders",
+                tracked: true,
+                cancellationToken: cancellationToken);
+        }
+        //  2. إذا كان المستخدم مريضاً، تحقق من ملكيته للطلب
+        else
+        {
+            var patient = await _unitOfWork.PatientRepository.GetAsync(
+                p => p.UserId == parsedUserId,
+                tracked: false,
+                cancellationToken: cancellationToken);
 
-        if (order == null) throw new Exception("Order not found.");
+            if (patient == null)
+                throw new Exception("Patient profile not found.");
 
+            order = await _unitOfWork.OrderRepository.GetAsync(
+                filter: o => o.OrderId == orderId && o.PatientId == patient.PatientId,
+                includeProperties: "SubOrders",
+                tracked: true,
+                cancellationToken: cancellationToken);
+        }
+
+        // 3. التحقق من وجود الطلب
+        if (order == null)
+            throw new Exception("Order not found or you don't have permission to access it.");
+
+        // 4. التحقق من حالة الطلب الفرعي (الـ Business Logic الخاص بك)
         if (order.SubOrders.Any(s => s.Status != SubOrderStatus.Pending.ToString()))
             throw new Exception("Cannot cancel order because some items are already being prepared or shipped.");
 
+        // 5. تحديث الحالات إلى ملغى
         order.OrderStatus = OrderStatus.Cancelled.ToString();
+
         foreach (var subOrder in order.SubOrders)
         {
             subOrder.Status = SubOrderStatus.Cancelled.ToString();
         }
 
+        // 6. حفظ التغييرات
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

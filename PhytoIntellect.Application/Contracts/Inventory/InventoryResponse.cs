@@ -9,6 +9,7 @@ public class InventoryResponse
     public int HerbId { get; set; }
 
     public string HerbName { get; set; } = string.Empty;
+    public int HerbalistId { get; set; }
 
     public decimal? Price { get; set; }
 

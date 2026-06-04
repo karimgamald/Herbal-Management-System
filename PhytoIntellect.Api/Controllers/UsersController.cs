@@ -15,6 +15,7 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class UsersController(IUserService userService, IAuthService authService) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpGet("get-all")]
     public async Task<IActionResult> GetAllUsers([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
     {
@@ -22,6 +23,7 @@ public class UsersController(IUserService userService, IAuthService authService)
         return Ok(users);
     }
 
+    [AllowAnonymous]
     [HttpGet("get/{id}")]
     public async Task<IActionResult> GetUserById(int id, CancellationToken cancellationToken)
     {
@@ -72,24 +74,6 @@ public class UsersController(IUserService userService, IAuthService authService)
 
         return Ok(new { Message = result });
     }
-
-    // Admin Endpoints
-    //[HttpGet("~/api/admin/users")]
-    //[Authorize(Roles = AppRoles.Admin)]
-    //public async Task<IActionResult> GetAllUsers([FromQuery] RequestFilters filters, CancellationToken cancellationToken)
-    //{
-    //    var users = await userService.GetAllUsersAsync(filters, cancellationToken);
-    //    return Ok(users);
-    //}
-
-    //[HttpGet("~/api/admin/users/{id}")]
-    //[Authorize(Roles = AppRoles.Admin)]
-    //public async Task<IActionResult> GetUserById(int id, CancellationToken cancellationToken)
-    //{
-    //    var user = await userService.GetUserByIdAsync(id, cancellationToken);
-    //    if (user == null) return NotFound(new { Message = "User not found." });
-    //    return Ok(user);
-    //}
 
     [HttpPost("~/api/admin/users/add")]
     [Authorize(Roles = AppRoles.Admin)]

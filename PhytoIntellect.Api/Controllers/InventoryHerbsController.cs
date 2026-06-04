@@ -88,9 +88,9 @@ public class InventoryHerbsController(IInventoryHerbsService inventoryService) :
 
     [HttpDelete("~/api/admin/inventory-herbs/{herbalistId:int}/{herbId:int}")]
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> RemoveFromInventoryByAdmin([FromRoute] int herbalistId, [FromRoute] int herbId, CancellationToken cancellationToken)
+    public async Task<IActionResult> RemoveHerbFromHerbalistInventoryByAdminAsync([FromRoute] int herbalistId, [FromRoute] int herbId, CancellationToken cancellationToken)
     {
-        var success = await inventoryService.RemoveHerbByAdminAsync(herbalistId, herbId, cancellationToken);
+        var success = await inventoryService.RemoveHerbFromHerbalistInventoryByAdminAsync(herbalistId, herbId, cancellationToken);
         if (!success)
             return NotFound(new { Message = "Inventory item not found." });
 

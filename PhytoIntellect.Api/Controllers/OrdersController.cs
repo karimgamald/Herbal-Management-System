@@ -75,11 +75,20 @@ public class OrdersController(IOrderService _orderService) : ControllerBase
     [HttpPut("{id}/cancel")]
     public async Task<IActionResult> CancelOrder(int id, CancellationToken cancellationToken)
     {
+        // 1. جلب الـ UserId والـ Role الخاص بالمستخدم الحالي من الـ Claims
         var userId = User.GetUserId().ToString();
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(userRole))
+        {
+            return Unauthorized(new { Message = "User role not found in token." });
+        }
 
         try
         {
-            await _orderService.CancelOrderAsync(id, userId!, cancellationToken);
+            // 2. تمرير الـ userRole كباراميتر ثالث إلى الـ Service
+            await _orderService.CancelOrderAsync(id, userId, userRole, cancellationToken);
+
             return Ok(new { Message = "Order cancelled successfully." });
         }
         catch (Exception ex)

@@ -182,29 +182,6 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
         return await GetRecipeByIdAsync(recipe.RecipeId, cancellationToken);
     }
 
-    public async Task<bool?> ToggleRecipeAvailabilityAsync(int userId, int recipeId, CancellationToken cancellationToken = default)
-    {
-        var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
-            filter: h => h.UserId == userId,
-            tracked: false,
-            cancellationToken: cancellationToken);
-
-        if (herbalist == null) return null;
-
-        var recipe = await unitOfWork.RecipeRepository.GetAsync(
-            filter: r => r.RecipeId == recipeId,
-            tracked: true,
-            cancellationToken: cancellationToken);
-
-        if (recipe == null || recipe.HerbalistId != herbalist.HerbalistId) return null;
-
-        recipe.IsActive = !recipe.IsActive;
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return recipe.IsActive;
-    }
-
     public async Task<PaginatedList<RecipeResponse>> GetRecipesByHerbalistIdAsync(int herbalistId,RequestFilters filters,bool? isActive = null,CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.RecipeRepository
@@ -259,25 +236,49 @@ public class RecipeService(IUnitOfWork unitOfWork, IMapper mapper) : IRecipeServ
         return result;
     }
 
-    public async Task<bool> DeleteRecipeByAdminAsync(int recipeId, CancellationToken cancellationToken = default)
+    //For Herbalist
+    public async Task<bool?> ToggleRecipeAvailabilityAsync(int userId, int recipeId, CancellationToken cancellationToken)
     {
-        // 1. جلب الوصفة من قاعدة البيانات مع تتبع التغييرات لحذفها
         var recipe = await unitOfWork.RecipeRepository.GetAsync(
-            filter: r => r.RecipeId == recipeId, // أو حسب اسم الحقل لديك Id / RecipeId
+            filter: r => r.RecipeId == recipeId,
             tracked: true,
             cancellationToken: cancellationToken);
 
-        // 2. إذا كانت الوصفة غير موجودة نرجع false للـ Controller
-        if (recipe == null) return false;
+        // التحقق من وجود الوصفة وأن العشّاب هو صاحبها الفعلي
+        if (recipe == null || recipe.HerbalistId != userId) return null;
 
-        // 3. استدعاء أمر الحذف من الـ Repository الخاص بالوصفات
-        unitOfWork.RecipeRepository.Remove(recipe);
+        // 🔒 قفل الأمان: إذا كانت الوصفة محظورة من الأدمن، نمنع العشّاب تماماً من تعديل إتاحتها
+        if (recipe.IsBanned)
+        {
+            return null;
+        }
 
-        // 4. حفظ التغييرات نهائياً في قاعدة البيانات
+        // التبديل العادي للإتاحة التجارية (إن لم تكن محظورة)
+        recipe.IsActive = !recipe.IsActive;
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return true;
+        return recipe.IsActive;
     }
 
+    //For Admin
+    public async Task<bool> DeactivateRecipeByAdminAsync(int recipeId, string reason, CancellationToken cancellationToken)
+    {
+        var recipe = await unitOfWork.RecipeRepository.GetAsync(
+            filter: r => r.RecipeId == recipeId,
+            tracked: true,
+            cancellationToken: cancellationToken);
+
+        if (recipe == null) return false;
+
+        // تعطيل الوصفة تماماً
+        recipe.IsBanned = true;
+        recipe.IsActive = false;
+
+        // 💡 ممارسة ممتازة: إذا كان لديك حقل للوصف أو الملاحظات في الداتابيز يمكنك تخزين السبب فيه
+        // recipe.AdminNotes = $"Banned by Admin. Reason: {reason}"; 
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 
 }

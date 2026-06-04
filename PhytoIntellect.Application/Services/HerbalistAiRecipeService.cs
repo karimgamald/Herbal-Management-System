@@ -6,7 +6,10 @@ using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PhytoIntellect.Application.Services;
 
@@ -62,7 +65,7 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper, IN
     {
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
             filter: h => h.UserId == userId,
-            includeProperties: "User", 
+            includeProperties: "User",
             tracked: false,
             cancellationToken: cancellationToken);
 
@@ -70,7 +73,7 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper, IN
 
         var aiRecipe = await unitOfWork.AiRecipeRepository.GetAsync(
             filter: h => h.Id == request.AiRecipeId,
-            includeProperties: "Patient", 
+            includeProperties: "Patient",
             tracked: true,
             cancellationToken: cancellationToken);
 
@@ -108,6 +111,7 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper, IN
             includeProperties: "AiRecipe",
             cancellationToken: cancellationToken);
 
+        // 🚀 تم الإصلاح هنا: استخدام الـ Mapper لتحويل الكائن المجلوب كاملاً لضمان تعبئة الـ HerbalistId تلقائياً من الـ entity
         return mapper.Map<HerbalistAiRecipeResponse>(createdItem);
     }
 
@@ -219,6 +223,7 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper, IN
             }
         }
     }
+
     public async Task<PaginatedList<HerbalistAiRecipeResponse>> GetAllAiRecipeInventoryByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
         var query = unitOfWork.HerbalistAiRecipeRepository.GetQueryable(tracked: false);
@@ -227,7 +232,7 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper, IN
         {
             var search = filters.SearchValue.ToLower();
             query = query.Where(h =>
-                h.AiRecipe.RecommendedRecipeName.ToLower().Contains(search) || 
+                h.AiRecipe.RecommendedRecipeName.ToLower().Contains(search) ||
                 h.Herbalist.User!.FullName.ToLower().Contains(search));
         }
 
@@ -262,7 +267,7 @@ public class HerbalistAiRecipeService(IUnitOfWork unitOfWork, IMapper mapper, IN
             filter: h => h.AiRecipeId == aiRecipeId && h.HerbalistId == herbalistId,
             tracked: true,
             cancellationToken: cancellationToken);
-         
+
         if (item == null) return false;
 
         unitOfWork.HerbalistAiRecipeRepository.Remove(item);

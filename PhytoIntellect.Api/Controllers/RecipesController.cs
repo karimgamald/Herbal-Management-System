@@ -13,8 +13,9 @@ namespace PhytoIntellect.Api.Controllers;
 [ApiController]
 public class RecipesController(IRecipeService recipeService) : ControllerBase
 {
-    [HttpGet("all")]
+
     [AllowAnonymous]
+    [HttpGet("all")]
     public async Task<IActionResult> GetAllRecipes([FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
         var recipes = await recipeService.GetAllActiveRecipesAsync(filters,cancellationToken);
@@ -108,23 +109,32 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         });
     }
 
-    // New Endpoint: Force delete a recipe by Admin
+    // New Endpoint: Admin deactivates/bans a harmful recipe
     [Authorize(Roles = AppRoles.Admin)]
-    [HttpDelete("~/api/admin/delete/{id:int}")]
-    public async Task<IActionResult> DeleteRecipeByAdmin(int id, CancellationToken cancellationToken)
+    [HttpPatch("admin/{id}/deactivate")]
+    public async Task<IActionResult> DeactivateRecipeByAdmin(int id, [FromBody] string reason, CancellationToken cancellationToken)
     {
+        // التحقق من أن الأدمن قام بكتابة سبب الحظر
+        if (string.IsNullOrWhiteSpace(reason))
+            return BadRequest(new { Message = "You must provide a valid reason for banning this recipe." });
+
         try
         {
-            var isDeleted = await recipeService.DeleteRecipeByAdminAsync(id, cancellationToken);
+            // استدعاء الخدمة المحدثة التي تقوم بجعل IsBanned = true و IsActive = false
+            var isBanned = await recipeService.DeactivateRecipeByAdminAsync(id, reason, cancellationToken);
 
-            if (!isDeleted)
+            if (!isBanned)
                 return NotFound(new { Message = "Recipe not found on the system." });
 
-            return Ok(new { Message = "Recipe Deleted successfully by Admin." });
+            return Ok(new { Message = "Recipe has been successfully banned and deactivated by Admin." });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { Message = "An error occured when deleting this recipe.", Details = ex.Message });
+            return StatusCode(500, new
+            {
+                Message = "An error occurred while banning this recipe.",
+                Details = ex.Message
+            });
         }
     }
 } 

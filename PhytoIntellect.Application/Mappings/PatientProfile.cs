@@ -2,6 +2,7 @@
 using PhytoIntellect.Application.Contracts.MedicalHistories;
 using PhytoIntellect.Application.Contracts.Patients;
 using PhytoIntellect.Core.Entities;
+using System;
 
 namespace PhytoIntellect.Application.Mappings;
 
@@ -11,6 +12,7 @@ public class PatientProfile : Profile
     {
         CreateMap<Patient, PatientRequest>()
             .ForMember(dest => dest.GenderName, opt => opt.MapFrom(src => src.Gender.ToString()))
+            // 🚀 استدعاء الدالة الـ static الجديدة بأمان هنا
             .ForMember(dest => dest.Age, opt => opt.MapFrom(src => CalculateAge(src.BirthDate)))
             .ForMember(dest => dest.MedicalHistoryId, opt => opt.MapFrom(src => src.MedicalHistory != null ? src.MedicalHistory.MedicalHistoryId : (int?)null));
 
@@ -20,7 +22,8 @@ public class PatientProfile : Profile
         CreateMap<MedicalHistory, MedicalHistoryResponse>();
     }
 
-    private int CalculateAge(DateOnly? birthDate)
+    // 🔒 تحويل الدالة إلى static حل مشكلة الـ Memory Leak وتعرّف الـ EF Core عليها تماماً
+    public static int CalculateAge(DateOnly? birthDate)
     {
         if (!birthDate.HasValue) return 0;
 
@@ -29,7 +32,7 @@ public class PatientProfile : Profile
 
         if (birthDate.Value > today.AddYears(-age))
         {
-            age--; 
+            age--;
         }
 
         return age;

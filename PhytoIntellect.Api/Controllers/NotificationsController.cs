@@ -13,7 +13,6 @@ namespace PhytoIntellect.Api.Controllers;
 [Authorize]
 public class NotificationsController(INotificationService notificationService) : ControllerBase
 {
-    [Authorize(Roles = AppRoles.Patient)]
     [HttpGet("my-notifications")]
     [Authorize(Roles = $"{AppRoles.Patient} , {AppRoles.Herbalist}")]
     public async Task<IActionResult> GetMyNotifications([FromQuery] bool? isRead = null, CancellationToken cancellationToken = default)
@@ -48,7 +47,7 @@ public class NotificationsController(INotificationService notificationService) :
     }
 
     [HttpDelete("{id}/delete")]
-    [Authorize(Roles = $"{AppRoles.Patient} , {AppRoles.Herbalist}")]
+    [Authorize(Roles = $"{AppRoles.Patient} , {AppRoles.Herbalist},{AppRoles.Admin}")]
     public async Task<IActionResult> DeleteNotification(int id, CancellationToken cancellationToken)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

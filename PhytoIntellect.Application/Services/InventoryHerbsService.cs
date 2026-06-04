@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PhytoIntellect.Application.Contracts.Inventory;
 using PhytoIntellect.Application.Paginations;
 using PhytoIntellect.Core.Entities;
-using PhytoIntellect.Core.Interfaces; // تأكد من وجود الـ Interface للـ UnitOfWork
+using PhytoIntellect.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +20,6 @@ public class InventoryHerbsService(IUnitOfWork unitOfWork, IMapper mapper) : IIn
         RequestFilters filters,
         CancellationToken cancellationToken = default)
     {
-        // 1. نتأكد إن العشاب موجود
         var herbalist = await unitOfWork.HerbalistRepository.GetAsync(
             h => h.UserId == userId,
             tracked: false,
@@ -29,18 +28,15 @@ public class InventoryHerbsService(IUnitOfWork unitOfWork, IMapper mapper) : IIn
         if (herbalist == null)
             throw new KeyNotFoundException("Herbalist not found.");
 
-        // 2. نجيب الـ IQueryable (مخزون العشاب ده بس)
         var query = unitOfWork.HerbalistHerbRepository.GetQueryable(tracked: false)
             .Where(h => h.HerbalistId == herbalist.HerbalistId);
 
-        // 3. البحث (هيبحث في اسم العشبة اللي جوه جدول الـ Herb)
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
         {
             var search = filters.SearchValue.ToLower();
             query = query.Where(h => h.Herb.HerbName.ToLower().Contains(search));
         }
 
-        // 4. الترتيب (رتبنا بالاسم أو السعر)
         if (!string.IsNullOrWhiteSpace(filters.SortColumn))
         {
             bool isDesc = filters.SortDirection?.ToUpper() == "DESC";
@@ -56,10 +52,8 @@ public class InventoryHerbsService(IUnitOfWork unitOfWork, IMapper mapper) : IIn
             query = query.OrderByDescending(h => h.HerbId);
         }
 
-        // 5. تم التحويل إلى ProjectTo لتوحيد الأداء والنقاء البرمجي
         var projectedQuery = query.ProjectTo<InventoryResponse>(mapper.ConfigurationProvider);
 
-        // 6. تطبيق الـ Pagination
         return await PaginatedList<InventoryResponse>.CreateAsync(
             projectedQuery,
             filters.PageNumber,
@@ -156,8 +150,10 @@ public class InventoryHerbsService(IUnitOfWork unitOfWork, IMapper mapper) : IIn
         await unitOfWork.HerbalistHerbRepository.CreateAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // 🚀 تم الإصلاح هنا: إرجاع الـ HerbalistId يدوياً في الـ Response المتولد من الـ Add
         return new InventoryResponse
         {
+            HerbalistId = entity.HerbalistId, // 👈 تم التعيين بنجاح
             HerbId = herb.HerbId,
             HerbName = herb.HerbName,
             Price = entity.Price,
@@ -213,7 +209,6 @@ public class InventoryHerbsService(IUnitOfWork unitOfWork, IMapper mapper) : IIn
 
     public async Task<PaginatedList<InventoryResponse>> GetAllInventoryByAdminAsync(RequestFilters filters, CancellationToken cancellationToken = default)
     {
-        // تم الإصلاح: الاستعلام يجب أن يبدأ من الـ HerbalistHerbRepository لرؤية المخزون المشترك
         var query = unitOfWork.HerbalistHerbRepository.GetQueryable(tracked: false);
 
         if (!string.IsNullOrWhiteSpace(filters.SearchValue))
@@ -230,7 +225,7 @@ public class InventoryHerbsService(IUnitOfWork unitOfWork, IMapper mapper) : IIn
             query = filters.SortColumn.ToLower() switch
             {
                 "herbname" => isDesc ? query.OrderByDescending(h => h.Herb.HerbName) : query.OrderBy(h => h.Herb.HerbName),
-                "price" => isDesc ? query.OrderByDescending(h => h.Price) : query.OrderBy(h => h.Price), // تم تعديلها من quantity إلى price بناءً على جدول الأعشاب
+                "price" => isDesc ? query.OrderByDescending(h => h.Price) : query.OrderBy(h => h.Price),
                 "herbalistname" => isDesc ? query.OrderByDescending(h => h.Herbalist.User!.FullName) : query.OrderBy(h => h.Herbalist.User!.FullName),
                 _ => isDesc ? query.OrderByDescending(h => h.Herb.HerbName) : query.OrderBy(h => h.Herb.HerbName)
             };
@@ -244,9 +239,8 @@ public class InventoryHerbsService(IUnitOfWork unitOfWork, IMapper mapper) : IIn
         return await PaginatedList<InventoryResponse>.CreateAsync(projectedQuery, filters.PageNumber, filters.PageSize, cancellationToken);
     }
 
-    public async Task<bool> RemoveHerbByAdminAsync(int herbalistId, int herbId, CancellationToken cancellationToken = default)
+    public async Task<bool> RemoveHerbFromHerbalistInventoryByAdminAsync(int herbalistId, int herbId, CancellationToken cancellationToken = default)
     {
-        // تم الإصلاح: الحذف يتم من مستودع الـ HerbalistHerbRepository المشترك
         var item = await unitOfWork.HerbalistHerbRepository.GetAsync(
             filter: h => h.HerbId == herbId && h.HerbalistId == herbalistId,
             tracked: true,
